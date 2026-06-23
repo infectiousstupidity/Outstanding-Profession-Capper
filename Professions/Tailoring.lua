@@ -48,10 +48,10 @@ addonTable.getTailoringCurrentSkillLevelRecipeToCraft = function(rank)
     elseif rank > 159 and rank < 170 then -- 160-169
         shouldCraft = {8762}; -- Silk Headband
         shouldCraftRecipe = {"3x Bolt of Silk Cloth, 2x Fine Thread"};
-    elseif rank > 169 and rank < 175 then -- 170-174
+    elseif rank > 169 and rank < 180 then -- 170-174
         shouldCraft = {3871}; -- Formal White Shirt
         shouldCraftRecipe = {"3x Bolt of Silk Cloth, 2x Bleach, 1x Fine Thread"};
-    elseif rank > 174 and rank < 185 then -- 175-184
+    elseif rank > 179 and rank < 185 then -- 175-184
         shouldCraft = {3865}; -- Bolt of Mageweave
         shouldCraftRecipe = {"4x Mageweave Cloth"};
     elseif rank > 184 and rank < 205 then -- 185-204

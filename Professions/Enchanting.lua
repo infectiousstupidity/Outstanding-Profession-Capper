@@ -268,10 +268,12 @@ addonTable.getEnchantingCurrentSkillLevelRecipeToCraft = function(rank)
         };
     elseif rank > 224 and rank < 235 then -- 225-234
         shouldCraft = {
+            13815, -- Enchant Gloves - Agility
             13794, -- Enchant Cloak - Resistance
             13746, -- Enchant Cloak - Greater Defense
         };
         shouldCraftRecipe = {
+            "1x Lesser Nether Essence, 1x Vision Dust", -- Enchant Gloves - Agility
             "1x Lesser Nether Essence", -- Enchant Cloak - Resistance
             "3x Vision Dust" ------------- Enchant Cloak - Greater Defense
         };

@@ -54,12 +54,9 @@ addonTable.getLeatherworkingCurrentSkillLevelRecipeToCraft = function(rank)
     elseif rank > 164 and rank < 180 then -- 165-179
         shouldCraft = {3780}; -- Heavy Armor Kit
         shouldCraftRecipe = {"5x Heavy Leather, 1x Fine Thread"};
-    elseif rank > 179 and rank < 190 then -- 180-189
-        shouldCraft = {7151}; -- Barbaric Shoulders
-        shouldCraftRecipe = {"8x Heavy Leather, 1x Cured Heavy Hide, 2x Fine Thread"};
-    elseif rank > 189 and rank < 200 then -- 190-199
-        shouldCraft = {7156}; -- Guardian Gloves
-        shouldCraftRecipe = {"4x Heavy Leather, 1x Cured Heavy Hide, 1x Silken Thread"};
+    elseif rank > 179 and rank < 200 then -- 180-199
+        shouldCraft = {10482}; -- Cured Thick Hide
+        shouldCraftRecipe = {"1x Thick Hide, 1x Stone salt"};
     elseif rank > 199 and rank < 205 then -- 200-204
         shouldCraft = {10487}; -- Thick Armor Kit
         shouldCraftRecipe = {"5x Thick Leather, 1x Silken Thread"};

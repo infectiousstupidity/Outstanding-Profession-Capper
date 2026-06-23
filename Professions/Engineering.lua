@@ -122,7 +122,7 @@ addonTable.getEngineeringCurrentSkillLevelRecipeToCraft = function(rank)
             "4x Steel Bar", --- Gyromatic Micro-Adjustor
             "2x Solid Stone" -- Solid Blasting Powder
         };
-    elseif rank > 175 and rank < 195 then -- 176-194
+    elseif rank > 175 and rank < 185 then -- 176-184
         shouldCraft = {
             12585, -- Solid Blasting Powder
             12590, -- Gyromatic Micro-Adjustor
@@ -130,6 +130,20 @@ addonTable.getEngineeringCurrentSkillLevelRecipeToCraft = function(rank)
         shouldCraftRecipe = {
             "2x Solid Stone", -- Solid Blasting Powder
             "4x Steel Bar" ----- Gyromatic Micro-Adjustor
+        };
+    elseif rank > 184 and rank < 190 then -- 185-189
+        shouldCraft = {
+            3961, -- Gyrochronotron
+        };
+        shouldCraftRecipe = {
+            "1x Iron Bar, 1x Golden Power Core",
+        };
+    elseif rank > 189 and rank < 195 then -- 190-194
+        shouldCraft = {
+            3962, -- Iron grenade
+        };
+        shouldCraftRecipe = {
+            "1x Iron Bar, 1x Heavy Blasting Powder, 1x Silk Cloth",
         };
     elseif rank > 194 and rank < 200 then -- 195-199
         shouldCraft = {12589}; -- Mithril Tube

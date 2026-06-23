@@ -26,6 +26,18 @@ local function buildSpellIndexMap()
     end
 end
 
+local function getRecipeIngredients(recipeIndex)
+    local numReagents = GetTradeSkillNumReagents(recipeIndex)
+    local parts = {}
+    for j = 1, numReagents do
+        local reagentName, _, reagentCount = GetTradeSkillReagentInfo(recipeIndex, j)
+        if reagentName then
+            table.insert(parts, reagentCount .. "x " .. reagentName)
+        end
+    end
+    return table.concat(parts, ", ")
+end
+
 -- Map localized profession names to their handler functions.
 -- Add entries here for each language/locale your server uses.
 local professionHandlers = {
@@ -51,6 +63,17 @@ local professionHandlers = {
     ["Alquimia"]      = function(r) return addonTable.getAlchemyCurrentSkillLevelRecipeToCraft(r) end,
     ["Primeros auxilios"] = function(r) return addonTable.getFirstAidCurrentSkillLevelRecipeToCraft(r) end,
     ["Cocina"]        = function(r) return addonTable.getCookingCurrentSkillLevelRecipeToCraft(r) end,
+    -- Русский
+    ["Наложение чар"] = function(r) return addonTable.getEnchantingCurrentSkillLevelRecipeToCraft(r) end,
+    ["Портняжное дело"] = function(r) return addonTable.getTailoringCurrentSkillLevelRecipeToCraft(r) end,
+    ["Ювелирное дело"] = function(r) return addonTable.getJewelcraftingCurrentSkillLevelRecipeToCraft(r) end,
+    ["Кузнечное дело"] = function(r) return addonTable.getBlacksmithingCurrentSkillLevelRecipeToCraft(r) end,
+    ["Кожевничество"] = function(r) return addonTable.getLeatherworkingCurrentSkillLevelRecipeToCraft(r) end,
+    ["Инженерное дело"] = function(r) return addonTable.getEngineeringCurrentSkillLevelRecipeToCraft(r) end,
+    ["Начертание"]   = function(r) return addonTable.getInscriptionCurrentSkillLevelRecipeToCraft(r) end,
+    ["Алхимия"]       = function(r) return addonTable.getAlchemyCurrentSkillLevelRecipeToCraft(r) end,
+    ["Первая помощь"] = function(r) return addonTable.getFirstAidCurrentSkillLevelRecipeToCraft(r) end,
+    ["Кулинария"] = function(r) return addonTable.getCookingCurrentSkillLevelRecipeToCraft(r) end,
 }
 
 ------------------------------------------------------------------------------------------------------------
@@ -120,6 +143,7 @@ function displayRecipe()
         return s
     end
     local L = addonTable.L
+    local R = addonTable.R
     local hasRecipeChanged = concatIds(shouldCraft) ~= concatIds(previousShouldCraft);
     local skillName, skillType, numAvailable
     local craftButtonText
@@ -162,14 +186,15 @@ function displayRecipe()
         end
 
         txtShouldCraft:SetText(skillName)
+        txtShouldCraftRecipe:SetText(L["recipe_prefix"] .. getRecipeIngredients(idx));
     else
         shouldCraftIcon = "Interface\\InventoryItems\\WoWUnknownItem01"
         craftButtonText = L["craft_button_unavail"]
         MainFrameCoreCraft:Disable()
         txtShouldCraft:SetText(L["not_learned"])
+        txtShouldCraftRecipe:SetText(L["unknown_recipe_prefix"] .. shouldCraftRecipe[craftRecipeOptionsIndex]);
     end
 
-    txtShouldCraftRecipe:SetText(L["recipe_prefix"] .. shouldCraftRecipe[craftRecipeOptionsIndex]);
     imgSkillIcon:SetTexture(shouldCraftIcon);
     MainFrameCoreCraft:SetText(craftButtonText)
     MainFrameCore:SetHeight(250);

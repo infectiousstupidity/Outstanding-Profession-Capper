@@ -1,8 +1,8 @@
-﻿# Improved Profession Capper
+﻿# Outstanding Profession Capper
 
-**Improved Profession Capper** is a World of Warcraft (3.3.5 / WotLK) addon that tells you which recipe to craft next in order to level your trade skills to the cap (450), based on your current skill level.
+**Outstanding Profession Capper** is a World of Warcraft (3.3.5 / WotLK) addon that tells you which recipe to craft next in order to level your trade skills to the cap (450), based on your current skill level.
 
-This is a fork of [Profession Capper](https://github.com/SamuelLira99/Profession-Capper) by [SamuelLira99](https://github.com/SamuelLira99), improved and maintained by [DarkChimu](https://github.com/DarkChimu).
+This is a fork of [Improved Profession Capper](https://github.com/DarkChimu/Improved-Profession-Capper) by [DarkChimu](https://github.com/DarkChimu), improved and maintained by [Utkuchix](https://github.com/Utkuchix).
 
 When you open your **Profession frame**, the **Profession Capper frame** opens alongside it, showing you the optimal recipe to craft next. You can cycle through alternative recipes using the `<` and `>` buttons and craft directly from the addon UI.
 
@@ -12,17 +12,15 @@ By default the frame appears at the **bottom left** corner of the screen — dra
 
 ## What's new in this fork
 
-- **Spell ID-based recipe matching** — recipes are now looked up by spell ID instead of name string, making matching O(1) and locale-independent
-- **Localization support (i18n)** — all UI strings are now localized; Spanish (`esES` / `esMX`) is fully supported alongside English
-- **Improved unavailable recipe message** — when a recipe is not learned yet, the UI clearly says so instead of showing a generic "Unavailable"
-- **Spanish locale profession name support** — the addon correctly handles localized profession names returned by the WoW client (e.g. `"Cocina"` instead of `"Cooking"`)
-- **Bug fixes** — fixed silent Lua errors that caused the frame to not appear on certain rank ranges
+- **Shows missing recipe names instead of required ingredients** — if you didnt learn recipe yet, it will show you recipe name in your locale language, you can look up trainer or merchant for it using AckisRecipeList addon
+- **Extended localization support (i18n)** — recipe names are now localized, also ingredient names are pulled from your client and shown in your client's language
+- **Russian locale support** — added support for russian client
 
 ---
 
 ## Installation
 
-1. Download the latest release from [GitHub](https://github.com/DarkChimu/Improved-Profession-Capper/releases)
+1. Download the latest release from [GitHub](https://github.com/Utkuchix/Outstanding-Profession-Capper/releases)
 2. Extract the zip file
 3. Move the `Profession_Capper` folder to `<WoW folder>/Interface/AddOns`
 4. Reload the UI in-game: `/reload`
@@ -99,7 +97,8 @@ Herbalism, Mining, and Skinning are not supported and likely won't be — these 
 
 - Original addon by [SamuelLira99](https://github.com/SamuelLira99) — [Profession-Capper](https://github.com/SamuelLira99/Profession-Capper)
 - Fork improvements by [DarkChimu](https://github.com/DarkChimu)
+- Fork improvements by [Utkuchix](https://github.com/Utkuchix)
 
 ## Support
 
-Open an issue on [this repo](https://github.com/DarkChimu/Improved-Profession-Capper/issues).
+Open an issue on [this repo](https://github.com/Utkuchix/Outstanding-Profession-Capper/issues).
