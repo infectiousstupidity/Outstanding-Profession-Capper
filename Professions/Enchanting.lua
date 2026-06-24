@@ -265,6 +265,7 @@ addonTable.getEnchantingCurrentSkillLevelRecipeToCraft = function(rank)
             47672,
         };
     end
+    addonTable.sortRecipesByNumAvailable(shouldCraft)
     shouldCraftRecipe = {}
     for i, v in pairs(shouldCraft) do
         shouldCraftRecipe[i] = addonTable.Enchanting[tostring(v)]

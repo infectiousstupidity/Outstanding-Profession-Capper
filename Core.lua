@@ -26,6 +26,21 @@ local function buildSpellIndexMap()
     end
 end
 
+local function getNumAvailableForSpell(spellId)
+    local idx = spellIndexMap[spellId]
+    if not idx then
+        return 0
+    end
+    local _, _, numAvailable = GetTradeSkillInfo(idx)
+    return numAvailable or 0
+end
+
+function addonTable.sortRecipesByNumAvailable(recipes)
+    table.sort(recipes, function(spellIdA, spellIdB)
+        return getNumAvailableForSpell(spellIdA) > getNumAvailableForSpell(spellIdB)
+    end)
+end
+
 local function getRecipeIngredients(recipeIndex)
     local numReagents = GetTradeSkillNumReagents(recipeIndex)
     local parts = {}

@@ -177,6 +177,7 @@ addonTable.getEngineeringCurrentSkillLevelRecipeToCraft = function(rank)
     elseif rank >= 435 and rank < 450 then
         shouldCraft = {56462};
     end
+    addonTable.sortRecipesByNumAvailable(shouldCraft)
     shouldCraftRecipe = {}
     for i, v in pairs(shouldCraft) do
         shouldCraftRecipe[i] = addonTable.Engineering[tostring(v)]

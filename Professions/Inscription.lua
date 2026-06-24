@@ -303,6 +303,7 @@ addonTable.getInscriptionCurrentSkillLevelRecipeToCraft = function(rank)
             61177,
         };
     end
+    addonTable.sortRecipesByNumAvailable(shouldCraft)
     shouldCraftRecipe = {}
     for i, v in pairs(shouldCraft) do
         shouldCraftRecipe[i] = addonTable.Inscription[tostring(v)]
