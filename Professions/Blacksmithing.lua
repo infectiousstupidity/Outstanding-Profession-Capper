@@ -114,7 +114,7 @@ addonTable.getBlacksmithingCurrentSkillLevelRecipeToCraft = function(rank)
     end
     shouldCraftRecipe = {}
     for i, v in pairs(shouldCraft) do
-        shouldCraftRecipe[i] = addonTable.BS[tostring(v)]
+        shouldCraftRecipe[i] = addonTable.Blacksmithing[tostring(v)]
     end
     return shouldCraft, shouldCraftRecipe
 end

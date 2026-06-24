@@ -94,7 +94,7 @@ addonTable.getAlchemyCurrentSkillLevelRecipeToCraft = function(rank)
     end
     shouldCraftRecipe = {}
     for i, v in pairs(shouldCraft) do
-        shouldCraftRecipe[i] = addonTable.AL[tostring(v)]
+        shouldCraftRecipe[i] = addonTable.Alchemy[tostring(v)]
     end
     return shouldCraft, shouldCraftRecipe
 end

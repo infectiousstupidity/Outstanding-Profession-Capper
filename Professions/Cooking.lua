@@ -142,6 +142,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
         };
     elseif rank >= 225 and rank < 250 then
         shouldCraft = {
+            64054,
             15933,
             22480,
             15915,
@@ -259,7 +260,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
     end
     shouldCraftRecipe = {}
     for i, v in pairs(shouldCraft) do
-        shouldCraftRecipe[i] = addonTable.CO[tostring(v)]
+        shouldCraftRecipe[i] = addonTable.Cooking[tostring(v)]
     end
     return shouldCraft, shouldCraftRecipe
 end
