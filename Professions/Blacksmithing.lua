@@ -112,10 +112,12 @@ addonTable.getBlacksmithingCurrentSkillLevelRecipeToCraft = function(rank)
     elseif rank >= 440 and rank < 450 then
         shouldCraft = {55303};
     end
-    addonTable.sortRecipesByNumAvailable(shouldCraft)
-    shouldCraftRecipe = {}
-    for i, v in pairs(shouldCraft) do
-        shouldCraftRecipe[i] = addonTable.Blacksmithing[tostring(v)]
+    if shouldCraft and #shouldCraft > 0 then
+        shouldCraftRecipe = {}
+        addonTable.sortRecipesByNumAvailable(shouldCraft)
+        for i, v in pairs(shouldCraft) do
+            shouldCraftRecipe[i] = addonTable.Alchemy[tostring(v)]
+        end
     end
     return shouldCraft, shouldCraftRecipe
 end

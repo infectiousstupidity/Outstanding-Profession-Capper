@@ -98,10 +98,12 @@ addonTable.getLeatherworkingCurrentSkillLevelRecipeToCraft = function(rank)
             62177,
         };
     end
-    addonTable.sortRecipesByNumAvailable(shouldCraft)
-    shouldCraftRecipe = {}
-    for i, v in pairs(shouldCraft) do
-        shouldCraftRecipe[i] = addonTable.Leatherworking[tostring(v)]
+    if shouldCraft and #shouldCraft > 0 then
+        shouldCraftRecipe = {}
+        addonTable.sortRecipesByNumAvailable(shouldCraft)
+        for i, v in pairs(shouldCraft) do
+            shouldCraftRecipe[i] = addonTable.Alchemy[tostring(v)]
+        end
     end
     return shouldCraft, shouldCraftRecipe;
 end
