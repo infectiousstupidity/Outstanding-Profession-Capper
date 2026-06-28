@@ -76,7 +76,7 @@ addonTable.getFirstAidCurrentSkillLevelRecipeToCraft = function(rank)
         shouldCraftRecipe = {}
         addonTable.sortRecipesByNumAvailable(shouldCraft)
         for i, v in pairs(shouldCraft) do
-            shouldCraftRecipe[i] = addonTable.Alchemy[tostring(v)]
+            shouldCraftRecipe[i] = addonTable.FirstAid[tostring(v)]
         end
     end
     return shouldCraft, shouldCraftRecipe
