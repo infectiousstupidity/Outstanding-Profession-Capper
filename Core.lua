@@ -97,20 +97,19 @@ function GetCraftingToDo()
     local handler = professionHandlers[tradeSkillName]
     if handler then
         shouldCraft, shouldCraftRecipe = handler(rank)
-    end
-
-    if rank > 0 and rank < 450 then
-        displayRecipe()
-    else
-        shouldCraft = {"unknown"};
-        shouldCraftRecipe = {"unknown"};
-        txtShouldCraft:SetText(addonTable.L["profession_cap"]);
-        imgSkillIcon:SetTexture(GetSpellTexture(tradeSkillName));
-        txtShouldCraftRecipe:SetText('');
-        MainFrameCoreCraft:Hide();
-        MainFrameCoreNextRecipe:Hide();
-        MainFrameCorePreviousRecipe:Hide();
-        MainFrameCore:SetHeight(150);
+        if rank > 0 and rank < 450 then
+            displayRecipe()
+        else
+            shouldCraft = {"unknown"};
+            shouldCraftRecipe = {"unknown"};
+            txtShouldCraft:SetText(addonTable.L["profession_cap"]);
+            imgSkillIcon:SetTexture(GetSpellTexture(tradeSkillName));
+            txtShouldCraftRecipe:SetText('');
+            MainFrameCoreCraft:Hide();
+            MainFrameCoreNextRecipe:Hide();
+            MainFrameCorePreviousRecipe:Hide();
+            MainFrameCore:SetHeight(150);
+        end
     end
 end
 
@@ -142,9 +141,13 @@ function fnOnEvent()
     if not isLinked then
         if event == "TRADE_SKILL_UPDATE" then
             tradeSkillName, rank, maxLevel = GetTradeSkillLine();
-            buildSpellIndexMap()
-            GetCraftingToDo();
-            MainFrameCore:Show()
+            if professionHandlers[tradeSkillName] then
+                buildSpellIndexMap()
+                GetCraftingToDo();
+                MainFrameCore:Show()
+            else
+                MainFrameCore:Hide();
+            end
         elseif event == "TRADE_SKILL_CLOSE" then
             MainFrameCore:Hide();
         end
