@@ -9,6 +9,12 @@ local craftRecipeOptionsIndex = 1
 local previousRecipeKey = ""
 local recipeCache = {}
 local transientSpellIndexMap = {}
+local materialRows = {}
+
+local MATERIAL_ROW_HEIGHT = 28
+local MATERIALS_TOP = 236
+local FOOTER_SPACE = 78
+local MIN_PANEL_HEIGHT = 340
 
 local tradeSkillStateMutation = false
 local suppressTradeSkillUpdatesUntil = 0
@@ -330,12 +336,19 @@ local function cacheRecipeReagents(spellID)
     local numReagents = GetTradeSkillNumReagents(recipeIndex)
 
     for i = 1, numReagents do
-        local reagentName, _, reagentCount, reagentOwned = GetTradeSkillReagentInfo(recipeIndex, i)
+        local reagentName, reagentTexture, reagentCount, reagentOwned = GetTradeSkillReagentInfo(recipeIndex, i)
         if reagentName then
+            local itemLink
+            if GetTradeSkillReagentItemLink then
+                itemLink = GetTradeSkillReagentItemLink(recipeIndex, i)
+            end
+
             table.insert(data.reagents, {
                 name = reagentName,
+                texture = reagentTexture,
+                itemLink = itemLink,
                 count = reagentCount or 0,
-                owned = reagentOwned,
+                owned = reagentOwned or 0,
             })
         end
     end
@@ -386,21 +399,166 @@ local function getCraftTimeSeconds(spellId)
     return castTime / 1000
 end
 
-local function getRecipeIngredients(reagents, plannedCrafts)
-    local parts = {}
-
-    for i = 1, table.getn(reagents or {}) do
-        local reagent = reagents[i]
-        local totalRequired = reagent.count * math.max(1, plannedCrafts or 1)
-
-        if reagent.owned ~= nil then
-            table.insert(parts, reagent.name .. ": " .. reagent.owned .. "/" .. totalRequired)
-        else
-            table.insert(parts, totalRequired .. "x " .. reagent.name)
-        end
+local function formatSkillUps(count)
+    if count == 1 then
+        return addonTable.L["skill_up_one"]
     end
 
-    return table.concat(parts, ", ")
+    return string.format(addonTable.L["skill_up_many"], count)
+end
+
+local function clearMaterialRows()
+    for i = 1, table.getn(materialRows) do
+        materialRows[i]:Hide()
+        materialRows[i].itemLink = nil
+        materialRows[i].reagentName = nil
+    end
+
+    if txtMaterialsLabel then
+        txtMaterialsLabel:Hide()
+    end
+end
+
+local function setAuctionSearchText(reagentName)
+    local auctionFrame = _G["AuctionFrame"]
+    local browseName = _G["BrowseName"]
+
+    if auctionFrame and auctionFrame:IsShown() and browseName then
+        browseName:SetText(reagentName)
+        if browseName.SetFocus then
+            browseName:SetFocus()
+        end
+        if browseName.HighlightText then
+            browseName:HighlightText()
+        end
+        return true
+    end
+
+    if UIErrorsFrame and addonTable.L["auction_house_not_open"] then
+        UIErrorsFrame:AddMessage(addonTable.L["auction_house_not_open"], 1, 0.25, 0.25, 1)
+    end
+
+    return false
+end
+
+local function materialRowOnEnter(self)
+    self.highlight:Show()
+
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    if self.itemLink then
+        GameTooltip:SetHyperlink(self.itemLink)
+    else
+        GameTooltip:SetText(self.reagentName or "")
+    end
+    GameTooltip:AddLine(addonTable.L["material_tooltip_hint"], 0.7, 0.7, 0.7, true)
+    GameTooltip:Show()
+end
+
+local function materialRowOnLeave(self)
+    self.highlight:Hide()
+    GameTooltip:Hide()
+end
+
+local function materialRowOnClick(self, button)
+    if button == "RightButton" and IsShiftKeyDown() then
+        setAuctionSearchText(self.reagentName)
+        return
+    end
+
+    if self.itemLink and IsModifiedClick() and HandleModifiedItemClick then
+        HandleModifiedItemClick(self.itemLink)
+    end
+end
+
+local function getMaterialRow(index)
+    if materialRows[index] then
+        return materialRows[index]
+    end
+
+    local row = CreateFrame("Button", nil, MainFrameCoreMaterials)
+    row:SetWidth(356)
+    row:SetHeight(24)
+    row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    row:SetScript("OnEnter", materialRowOnEnter)
+    row:SetScript("OnLeave", materialRowOnLeave)
+    row:SetScript("OnClick", materialRowOnClick)
+
+    row.highlight = row:CreateTexture(nil, "BACKGROUND")
+    row.highlight:SetAllPoints(row)
+    row.highlight:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+    row.highlight:SetBlendMode("ADD")
+    row.highlight:SetAlpha(0.22)
+    row.highlight:Hide()
+
+    row.icon = row:CreateTexture(nil, "ARTWORK")
+    row.icon:SetWidth(22)
+    row.icon:SetHeight(22)
+    row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
+    row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+
+    row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.name:SetPoint("LEFT", row.icon, "RIGHT", 8, 0)
+    row.name:SetWidth(250)
+    row.name:SetHeight(20)
+    row.name:SetJustifyH("LEFT")
+
+    row.count = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.count:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+    row.count:SetWidth(68)
+    row.count:SetHeight(20)
+    row.count:SetJustifyH("RIGHT")
+
+    materialRows[index] = row
+    return row
+end
+
+local function renderMaterials(reagents, plannedCrafts)
+    clearMaterialRows()
+
+    local count = table.getn(reagents or {})
+    if count == 0 then
+        return 0
+    end
+
+    txtMaterialsLabel:Show()
+
+    for i = 1, count do
+        local reagent = reagents[i]
+        local totalRequired = reagent.count * math.max(1, plannedCrafts or 1)
+        local owned = reagent.owned or 0
+        local row = getMaterialRow(i)
+
+        row:ClearAllPoints()
+        row:SetPoint("TOPLEFT", MainFrameCoreMaterials, "TOPLEFT", 0, -((i - 1) * MATERIAL_ROW_HEIGHT))
+        row.itemLink = reagent.itemLink
+        row.reagentName = reagent.name
+        row.icon:SetTexture(reagent.texture or UNKNOWN_ICON)
+        row.name:SetText(reagent.name)
+        row.count:SetText(owned .. " / " .. totalRequired)
+
+        local _, _, quality = GetItemInfo(reagent.itemLink or reagent.name)
+        if quality then
+            local r, g, b = GetItemQualityColor(quality)
+            row.name:SetTextColor(r, g, b)
+        else
+            row.name:SetTextColor(1, 1, 1)
+        end
+
+        if owned < totalRequired then
+            row.count:SetTextColor(1, 0.35, 0.35)
+        else
+            row.count:SetTextColor(0.92, 0.92, 0.92)
+        end
+
+        row:Show()
+    end
+
+    return count
+end
+
+local function updatePanelHeight(materialCount)
+    local requiredHeight = MATERIALS_TOP + (materialCount * MATERIAL_ROW_HEIGHT) + FOOTER_SPACE
+    MainFrameCore:SetHeight(math.max(MIN_PANEL_HEIGHT, requiredHeight))
 end
 
 local function recipeKey(recipes)
@@ -513,7 +671,7 @@ local function updateCraftProgress(currentID, effectiveTarget, craftSeconds)
             ))
         end
     elseif session.needsContinue and remainingSkillUps > 0 then
-        txtCraftProgress:SetText(string.format(addonTable.L["craft_batch_done"], remainingSkillUps))
+        txtCraftProgress:SetText(string.format(addonTable.L["craft_batch_done"], formatSkillUps(remainingSkillUps)))
     end
 end
 
@@ -522,13 +680,14 @@ local function showStatus(message)
     txtShouldCraft:SetText(message)
     imgSkillIcon:SetTexture(GetSpellTexture(tradeSkillName) or UNKNOWN_ICON)
     txtTarget:SetText("")
+    txtRecipeStatus:SetText("")
     txtCraftStats:SetText("")
     txtCraftProgress:SetText("")
     txtCraftEta:SetText("")
-    txtShouldCraftRecipe:SetText("")
     txtRecipePosition:SetText("")
+    clearMaterialRows()
     hideCraftControls()
-    MainFrameCore:SetHeight(255)
+    MainFrameCore:SetHeight(MIN_PANEL_HEIGHT)
 end
 
 function GetCraftingToDo()
@@ -743,6 +902,7 @@ function displayRecipe()
     updateProfessionHeader()
     txtTarget:SetText(string.format(L["target_line"], rank, effectiveTarget))
     txtRecipePosition:SetText(string.format(L["recipe_position"], craftRecipeOptionsIndex, table.getn(shouldCraft)))
+    txtRecipeStatus:SetText("")
 
     if data then
         local exactCraftCount = data.skillType == "optimal"
@@ -756,8 +916,13 @@ function displayRecipe()
 
         txtShouldCraft:SetText(data.name)
         imgSkillIcon:SetTexture(icon or UNKNOWN_ICON)
-        txtCraftStats:SetText(string.format(L[statsKey], skillUpsNeeded, data.numAvailable, plannedCrafts))
-        txtShouldCraftRecipe:SetText(L["recipe_prefix"] .. getRecipeIngredients(data.reagents, plannedCrafts))
+        txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))
+
+        if data.numAvailable <= 0 and skillUpsNeeded > 0 then
+            txtRecipeStatus:SetText(L["missing_materials"])
+        end
+
+        local materialCount = renderMaterials(data.reagents, plannedCrafts)
 
         local craftSeconds = getCraftTimeSeconds(currentID)
         if craftSeconds then
@@ -785,18 +950,25 @@ function displayRecipe()
             MainFrameCoreCraft:SetText(L["craft_button_unavail"])
         end
     else
-        imgSkillIcon:SetTexture(UNKNOWN_ICON)
-        txtShouldCraft:SetText(L["not_learned"])
-        txtCraftStats:SetText(string.format(L["stats_unlearned"], skillUpsNeeded))
+        imgSkillIcon:SetTexture(GetSpellTexture(currentID) or UNKNOWN_ICON)
+        txtShouldCraft:SetText(shouldCraftRecipe[craftRecipeOptionsIndex] or tostring(currentID))
+        txtRecipeStatus:SetText(L["recipe_not_learned"])
+        txtCraftStats:SetText(string.format(L["stats_unlearned"], formatSkillUps(skillUpsNeeded)))
         txtCraftProgress:SetText("")
-        txtCraftEta:SetText(L["eta_unavailable"])
-        txtShouldCraftRecipe:SetText(L["unknown_recipe_prefix"] .. (shouldCraftRecipe[craftRecipeOptionsIndex] or tostring(currentID)))
+        txtCraftEta:SetText("")
+        clearMaterialRows()
         MainFrameCoreCraft:Disable()
         MainFrameCoreCraft:SetText(L["craft_button_unavail"])
     end
 
     MainFrameCoreCraft:Show()
-    MainFrameCore:SetHeight(330)
+
+    local visibleMaterialCount = 0
+    if data then
+        visibleMaterialCount = table.getn(data.reagents or {})
+    end
+    updatePanelHeight(visibleMaterialCount)
+
     previousRecipeKey = currentKey
 end
 
@@ -873,11 +1045,12 @@ function resetValues()
     txtShouldCraft:SetText("")
     imgSkillIcon:SetTexture(UNKNOWN_ICON)
     txtTarget:SetText("")
+    txtRecipeStatus:SetText("")
     txtCraftStats:SetText("")
     txtCraftProgress:SetText("")
     txtCraftEta:SetText("")
-    txtShouldCraftRecipe:SetText("")
     txtRecipePosition:SetText("")
+    clearMaterialRows()
 
     local L = addonTable.L
     MainFrameCoreCraft:SetText(L and L["craft_button_unavail"] or "Craft")

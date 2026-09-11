@@ -13,7 +13,7 @@ This fork descends from SamuelLira99/Profession-Capper, DarkChimu/Improved-Profe
 - Automatic queue stop when the target skill is reached.
 - A Continue-to-target action when yellow/green RNG leaves the batch short; the addon does not automate a second protected craft action.
 - Live batch progress and remaining-time estimate.
-- Material totals for the planned batch, using localized client reagent names.
+- A vertical interactive materials list with item icons, owned/required counts, item tooltips, normal modified-item clicks, and Shift+Right-click Auction House search insertion.
 - Recipe discovery that works even when Blizzard's profession list is filtered or categories are collapsed.
 - Profession training-cap handling.
 - A compact panel attached to the Blizzard profession window by default.
