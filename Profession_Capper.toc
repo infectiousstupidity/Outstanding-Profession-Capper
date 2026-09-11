@@ -21,6 +21,7 @@ RouteSolver.lua
 ShoppingPlan.lua
 DynamicRecommendations.lua
 Settings.lua
+EnchantConfirmation.lua
 Session.lua
 Professions\Enchanting.lua
 Professions\Tailoring.lua

@@ -24,6 +24,7 @@ REQUIRED_ORDER = [
     "ShoppingPlan.lua",
     "DynamicRecommendations.lua",
     "Settings.lua",
+    "EnchantConfirmation.lua",
     "Session.lua",
 ]
 
