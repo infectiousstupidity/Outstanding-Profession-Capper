@@ -55,6 +55,7 @@ This file governs implementation work. Keep it current as work progresses.
 | Task | Status | Purpose |
 | --- | --- | --- |
 | [10 Dynamic recommendation UI](docs/tasks/10-dynamic-recommendation-ui.md) | IN PROGRESS | Present cheapest-route recommendations, acquisition guidance, costs, and confidence. |
+| [12 Targeted Enchant repeat workflow](docs/tasks/12-targeted-enchant-repeat.md) | IN PROGRESS | Repeat item-targeted enchants without fake batch state; remember the target and support until-change/fixed counts. |
 
 ## Dependency order
 
@@ -70,4 +71,4 @@ Task 06 may be completed before or after Task 07, but Task 08 must not assume ac
 
 ## Current task
 
-Task 10 is in manual acceptance. Cheapest now now compares the live game-reported orange/yellow recipes for the current step, ranks them by current purchase cost per expected skill-up, understands Greater/Lesser enchanting essence conversions, exposes per-application cost, and keeps the current recommendation usable even when a complete route cannot yet be priced.
+Task 10 remains in manual acceptance. Task 12 is now implemented in code and awaiting in-game acceptance: targeted Enchanting no longer pretends one click can queue multiple item-target enchants, repeat mode supports Until change or a fixed count, and the first manually selected target is remembered so later hardware clicks can reapply to the same bag/equipment slot.

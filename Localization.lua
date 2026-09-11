@@ -87,6 +87,21 @@ local function applyEnglish()
     L["route_tooltip_craft"] = "%d-%d  %s  ·  ~%d crafts  ·  ~%s"
     L["route_tooltip_training"] = "Train %d -> %d  ·  %s"
     L["route_tooltip_more"] = "+%d more segments"
+    L["repeat_label"] = "Repeat:"
+    L["repeat_until_change"] = "Until change"
+    L["repeat_fixed"] = "Fixed count"
+    L["enchant_until_change"] = "Enchant until change"
+    L["enchant_fixed"] = "Enchant (%d)"
+    L["enchant_again"] = "Enchant again"
+    L["enchant_again_fixed"] = "Enchant again (%d/%d)"
+    L["enchanting_button"] = "Enchanting..."
+    L["enchant_select_target"] = "Select the item to enchant; it will be remembered"
+    L["enchant_applying"] = "Applying enchant..."
+    L["enchant_repeat_progress_fixed"] = "%d/%d applied · click Enchant again"
+    L["enchant_repeat_progress_auto"] = "%d applied · continue until recommendation changes"
+    L["enchant_repeat_complete"] = "Repeat complete · %d/%d applied"
+    L["enchant_started_fixed"] = "[Profession Capper] enchanting application %d/%d:"
+    L["enchant_started_auto"] = "[Profession Capper] enchanting; repeat until recommendation changes:"
 end
 
 local function applySpanish()

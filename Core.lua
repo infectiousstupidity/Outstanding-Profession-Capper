@@ -667,6 +667,185 @@ local function findVisibleRecipeIndex(spellID)
     return nil
 end
 
+local ENCHANTING_PROFESSIONS = {
+    ["Enchanting"] = true,
+    ["Encantamiento"] = true,
+    ["Наложение чар"] = true,
+}
+
+local targetHooksInstalled = false
+
+local function isTargetedEnchantRecipe(spellID)
+    local data = recipeCache[spellID]
+    return professionContext
+        and ENCHANTING_PROFESSIONS[professionContext.professionName]
+        and data
+        and not data.outputItemLink
+end
+
+local function getEnchantRepeatSettings()
+    local db = addonTable.getSettings()
+    local mode = db.enchantRepeatMode == "fixed" and "fixed" or "until_change"
+    local count = math.max(1, math.min(999, math.floor(tonumber(db.enchantRepeatCount) or 5)))
+    return mode, count
+end
+
+local function updateEnchantRepeatControls(visible)
+    if not MainFrameCoreRepeatMode or not MainFrameCoreRepeatCount or not txtRepeatLabel then
+        return
+    end
+
+    if not visible then
+        txtRepeatLabel:Hide()
+        MainFrameCoreRepeatMode:Hide()
+        MainFrameCoreRepeatCount:Hide()
+        return
+    end
+
+    local mode, count = getEnchantRepeatSettings()
+    txtRepeatLabel:SetText(addonTable.L["repeat_label"])
+    txtRepeatLabel:Show()
+
+    MainFrameCoreRepeatMode:SetText(
+        mode == "fixed"
+            and addonTable.L["repeat_fixed"]
+            or addonTable.L["repeat_until_change"]
+    )
+    MainFrameCoreRepeatMode:Show()
+
+    if not MainFrameCoreRepeatCount:HasFocus() then
+        MainFrameCoreRepeatCount:SetText(tostring(count))
+    end
+    if mode == "fixed" then
+        MainFrameCoreRepeatCount:Enable()
+        MainFrameCoreRepeatCount:SetTextColor(1, 1, 1)
+    else
+        MainFrameCoreRepeatCount:Disable()
+        MainFrameCoreRepeatCount:SetTextColor(0.5, 0.5, 0.5)
+    end
+    MainFrameCoreRepeatCount:Show()
+end
+
+function toggleEnchantRepeatMode()
+    local mode = getEnchantRepeatSettings()
+    addonTable.setEnchantRepeatMode(mode == "fixed" and "until_change" or "fixed")
+    if targetSkill then
+        displayRecipe()
+    end
+end
+
+function enchantRepeatCountChanged(editBox)
+    if not editBox or not editBox.GetText then
+        return
+    end
+
+    local text = editBox:GetText()
+    if not text or text == "" then
+        return
+    end
+
+    local count = tonumber(text)
+    if count and count >= 1 then
+        addonTable.setEnchantRepeatCount(count)
+    end
+end
+
+function enchantRepeatCountCommit(editBox)
+    local _, count = getEnchantRepeatSettings()
+    if editBox then
+        local entered = tonumber(editBox:GetText())
+        if entered and addonTable.setEnchantRepeatCount(entered) then
+            _, count = getEnchantRepeatSettings()
+        end
+        editBox:SetText(tostring(count))
+        editBox:ClearFocus()
+    end
+    if targetSkill then
+        displayRecipe()
+    end
+end
+
+local function captureEnchantTarget(kind, bag, slot)
+    local session = addonTable.getCraftSession()
+    if not session or session.mode ~= "targeted_enchant" or not session.active then
+        return
+    end
+
+    local itemLink
+    if kind == "bag" and GetContainerItemLink then
+        itemLink = GetContainerItemLink(bag, slot)
+    elseif kind == "inventory" and GetInventoryItemLink then
+        itemLink = GetInventoryItemLink("player", slot)
+    end
+
+    local itemID = addonTable.getItemIDFromLink and addonTable.getItemIDFromLink(itemLink) or nil
+    addonTable.setCraftSessionTarget(kind, bag, slot, itemID)
+end
+
+local function installEnchantTargetHooks()
+    if targetHooksInstalled or not hooksecurefunc then
+        return
+    end
+    targetHooksInstalled = true
+
+    if UseContainerItem then
+        hooksecurefunc("UseContainerItem", function(bag, slot)
+            captureEnchantTarget("bag", bag, slot)
+        end)
+    end
+
+    if PickupInventoryItem then
+        hooksecurefunc("PickupInventoryItem", function(slot)
+            captureEnchantTarget("inventory", nil, slot)
+        end)
+    end
+end
+
+local function targetStillMatches(target)
+    if not target then
+        return false
+    end
+
+    local itemLink
+    if target.kind == "bag" and GetContainerItemLink then
+        itemLink = GetContainerItemLink(target.bag, target.slot)
+    elseif target.kind == "inventory" and GetInventoryItemLink then
+        itemLink = GetInventoryItemLink("player", target.slot)
+    end
+
+    if not itemLink then
+        return false
+    end
+
+    if target.itemID and addonTable.getItemIDFromLink then
+        return addonTable.getItemIDFromLink(itemLink) == target.itemID
+    end
+
+    return true
+end
+
+local function reuseRememberedEnchantTarget()
+    local target = addonTable.getCraftSessionTarget()
+    if not target or not targetStillMatches(target) then
+        addonTable.clearCraftSessionTarget()
+        return false
+    end
+
+    if not SpellCanTargetItem or not SpellCanTargetItem() then
+        return false
+    end
+
+    if target.kind == "bag" and UseContainerItem then
+        UseContainerItem(target.bag, target.slot)
+        return true
+    elseif target.kind == "inventory" and PickupInventoryItem then
+        PickupInventoryItem(target.slot)
+        return true
+    end
+
+    return false
+end
+
 local professionHandlers = {
     ["Enchanting"] = function(r) return addonTable.getEnchantingCurrentSkillLevelRecipeToCraft(r) end,
     ["Tailoring"] = function(r) return addonTable.getTailoringCurrentSkillLevelRecipeToCraft(r) end,
@@ -706,6 +885,7 @@ local function hideCraftControls()
     MainFrameCoreCraft:Hide()
     MainFrameCoreNextRecipe:Hide()
     MainFrameCorePreviousRecipe:Hide()
+    updateEnchantRepeatControls(false)
 end
 
 local function getEffectiveTarget()
@@ -1077,6 +1257,36 @@ local function updateCraftProgress(currentID, effectiveTarget, craftSeconds)
         return
     end
 
+    if session.mode == "targeted_enchant" then
+        if session.active then
+            if addonTable.getCraftSessionTarget() then
+                txtCraftProgress:SetText(addonTable.L["enchant_applying"])
+            else
+                txtCraftProgress:SetText(addonTable.L["enchant_select_target"])
+            end
+        elseif session.needsContinue then
+            if session.repeatMode == "fixed" then
+                txtCraftProgress:SetText(string.format(
+                    addonTable.L["enchant_repeat_progress_fixed"],
+                    session.completed,
+                    session.queued
+                ))
+            else
+                txtCraftProgress:SetText(string.format(
+                    addonTable.L["enchant_repeat_progress_auto"],
+                    session.completed
+                ))
+            end
+        elseif session.finished and session.repeatMode == "fixed" then
+            txtCraftProgress:SetText(string.format(
+                addonTable.L["enchant_repeat_complete"],
+                session.completed,
+                session.queued
+            ))
+        end
+        return
+    end
+
     local remainingSkillUps = math.max(0, effectiveTarget - professionContext.baseSkill)
     if session.active then
         local remainingSeconds = addonTable.getCraftSessionRemainingSeconds(craftSeconds)
@@ -1188,6 +1398,14 @@ function GetCraftingToDo()
     if not shouldCraft or table.getn(shouldCraft) == 0 or not targetSkill then
         showStatus(L["no_guide_step"])
         return
+    end
+
+    local session = addonTable.getCraftSession()
+    if session and session.mode == "targeted_enchant" then
+        local recommendedID = shouldCraft[1]
+        if session.spellID ~= recommendedID then
+            addonTable.clearCraftSession()
+        end
     end
 
     displayRecipe()
@@ -1401,6 +1619,7 @@ function fnOnLoad()
     if MainFrameCoreRoute then
         MainFrameCoreRoute:SetText(L["route_button"])
     end
+    installEnchantTargetHooks()
     updateModeControls()
     print("|cff" .. addonTable.chat_frame_default_color .. L["loaded_for"] .. "|r |cff" .. addonTable.chat_frame_player_name_color .. "[" .. UnitLevel("player") .. "]" .. UnitName("player") .. "|r")
 
@@ -1499,6 +1718,7 @@ function displayRecipe()
 
     local currentID = shouldCraft[craftRecipeOptionsIndex]
     local data = recipeCache[currentID]
+    local targetedEnchant = data and isTargetedEnchantRecipe(currentID) or false
     local effectiveTarget = getEffectiveTarget()
     local displayedTarget = getDisplayedTarget(effectiveTarget)
     local skillUpsNeeded = math.max(0, effectiveTarget - professionContext.baseSkill)
@@ -1508,6 +1728,14 @@ function displayRecipe()
             1,
             math.ceil(tonumber(dynamicRecommendation.currentSegment.expectedCrafts) or plannedCrafts)
         )
+    end
+
+    local materialCrafts = plannedCrafts
+    if targetedEnchant then
+        local repeatMode, repeatCount = getEnchantRepeatSettings()
+        if repeatMode == "fixed" then
+            materialCrafts = repeatCount
+        end
     end
 
     updateProfessionHeader()
@@ -1520,6 +1748,7 @@ function displayRecipe()
     txtRecipeStatus:SetText("")
     updateModeControls()
     updateRecommendationSummary()
+    updateEnchantRepeatControls(targetedEnchant)
 
     if data then
         local exactCraftCount = data.skillType == "optimal"
@@ -1555,7 +1784,7 @@ function displayRecipe()
             txtRecipeStatus:SetText(status)
         end
 
-        local materialCount = renderMaterials(data.reagents, plannedCrafts)
+        local materialCount = renderMaterials(data.reagents, materialCrafts)
 
         local craftSeconds = getCraftTimeSeconds(currentID)
         if usingDynamic then
@@ -1572,10 +1801,34 @@ function displayRecipe()
         local batchCount = math.min(data.numAvailable, plannedCrafts)
         if session and session.spellID == currentID and session.active then
             MainFrameCoreCraft:Disable()
-            MainFrameCoreCraft:SetText(L["crafting_button"])
+            MainFrameCoreCraft:SetText(targetedEnchant and L["enchanting_button"] or L["crafting_button"])
         elseif batchCount > 0 and skillUpsNeeded > 0 then
             MainFrameCoreCraft:Enable()
-            if session and session.spellID == currentID and session.needsContinue then
+            if targetedEnchant then
+                local repeatMode, repeatCount = getEnchantRepeatSettings()
+                if session
+                    and session.spellID == currentID
+                    and session.mode == "targeted_enchant"
+                    and session.needsContinue
+                then
+                    if session.repeatMode == "fixed" then
+                        MainFrameCoreCraft:SetText(string.format(
+                            L["enchant_again_fixed"],
+                            session.completed + 1,
+                            session.queued
+                        ))
+                    else
+                        MainFrameCoreCraft:SetText(L["enchant_again"])
+                    end
+                elseif repeatMode == "fixed" then
+                    MainFrameCoreCraft:SetText(string.format(
+                        L["enchant_fixed"],
+                        math.min(data.numAvailable, repeatCount)
+                    ))
+                else
+                    MainFrameCoreCraft:SetText(L["enchant_until_change"])
+                end
+            elseif session and session.spellID == currentID and session.needsContinue then
                 MainFrameCoreCraft:SetText(string.format(L["continue_to"], displayedTarget))
             elseif usingDynamic and plannedCrafts > skillUpsNeeded then
                 MainFrameCoreCraft:SetText(string.format(L["craft_toward"], displayedTarget))
@@ -1594,6 +1847,7 @@ function displayRecipe()
         txtCraftProgress:SetText("")
         txtCraftEta:SetText("")
         clearMaterialRows()
+        updateEnchantRepeatControls(false)
         MainFrameCoreCraft:Disable()
         MainFrameCoreCraft:SetText(L["craft_button_unavail"])
     end
@@ -1636,9 +1890,11 @@ function craftRecipe()
         return
     end
 
+    local targetedEnchant = isTargetedEnchantRecipe(currentID)
     local crafted = false
     local craftedName
     local craftedCount = 0
+    local repeatMode
     local craftSeconds = getCraftTimeSeconds(currentID)
 
     withUnfilteredTradeSkill(function()
@@ -1649,13 +1905,67 @@ function craftRecipe()
 
         local skillName, _, numAvailable = GetTradeSkillInfo(recipeIndex)
         numAvailable = numAvailable or 0
+        if numAvailable <= 0 then
+            return
+        end
+
+        if targetedEnchant then
+            local configuredCount
+            repeatMode, configuredCount = getEnchantRepeatSettings()
+            local plannedApplications = repeatMode == "fixed"
+                and math.min(numAvailable, configuredCount)
+                or numAvailable
+
+            if plannedApplications <= 0 then
+                return
+            end
+
+            local canResume = existingSession
+                and existingSession.spellID == currentID
+                and existingSession.mode == "targeted_enchant"
+                and existingSession.needsContinue
+                and existingSession.repeatMode == repeatMode
+                and existingSession.completed < existingSession.queued
+                and (repeatMode ~= "fixed" or existingSession.queued == plannedApplications)
+
+            if canResume then
+                addonTable.resumeCraftSession(currentID)
+            else
+                addonTable.startCraftSession(
+                    currentID,
+                    skillName,
+                    effectiveTarget,
+                    plannedApplications,
+                    craftSeconds,
+                    professionContext.baseSkill,
+                    {
+                        mode = "targeted_enchant",
+                        repeatMode = repeatMode,
+                    }
+                )
+            end
+
+            DoTradeSkill(recipeIndex, 1)
+            reuseRememberedEnchantTarget()
+            crafted = true
+            craftedName = skillName
+            craftedCount = 1
+            return
+        end
 
         local batchCount = math.min(numAvailable, skillUpsNeeded)
         if batchCount <= 0 then
             return
         end
 
-        addonTable.startCraftSession(currentID, skillName, effectiveTarget, batchCount, craftSeconds, professionContext.baseSkill)
+        addonTable.startCraftSession(
+            currentID,
+            skillName,
+            effectiveTarget,
+            batchCount,
+            craftSeconds,
+            professionContext.baseSkill
+        )
         DoTradeSkill(recipeIndex, batchCount)
         crafted = true
         craftedName = skillName
@@ -1664,7 +1974,22 @@ function craftRecipe()
 
     if crafted then
         local L = addonTable.L
-        print("|cff" .. addonTable.chat_frame_default_color .. L["crafting"] .. "|r |cff" .. addonTable.chat_frame_player_name_color .. craftedCount .. "x |r|cff" .. addonTable.chat_frame_default_color .. craftedName .. "|r")
+        if targetedEnchant then
+            local session = addonTable.getCraftSession()
+            if repeatMode == "fixed" and session then
+                print("|cff" .. addonTable.chat_frame_default_color
+                    .. string.format(L["enchant_started_fixed"], session.completed + 1, session.queued)
+                    .. "|r |cff" .. addonTable.chat_frame_player_name_color
+                    .. craftedName .. "|r")
+            else
+                print("|cff" .. addonTable.chat_frame_default_color
+                    .. L["enchant_started_auto"]
+                    .. "|r |cff" .. addonTable.chat_frame_player_name_color
+                    .. craftedName .. "|r")
+            end
+        else
+            print("|cff" .. addonTable.chat_frame_default_color .. L["crafting"] .. "|r |cff" .. addonTable.chat_frame_player_name_color .. craftedCount .. "x |r|cff" .. addonTable.chat_frame_default_color .. craftedName .. "|r")
+        end
         displayRecipe()
     end
 end
@@ -1692,6 +2017,7 @@ function resetValues()
         txtCostSummary:SetText("")
     end
     clearMaterialRows()
+    updateEnchantRepeatControls(false)
     updateModeControls()
 
     local L = addonTable.L
