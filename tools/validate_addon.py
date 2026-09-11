@@ -37,8 +37,8 @@ def main():
         if earlier in positions and later in positions and positions[earlier] >= positions[later]:
             errors.append(f"TOC load order must place {earlier} before {later}")
 
-    if "Profession_Capper.xml" not in files:
-        errors.append("TOC must load Profession_Capper.xml")
+    if "Profession_capper.xml" not in files:
+        errors.append("TOC must load Profession_capper.xml")
 
     try:
         ET.parse(ROOT / "Profession_capper.xml")
