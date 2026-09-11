@@ -12,6 +12,7 @@ REQUIRED_ORDER = [
     "Localization.lua",
     "Guide.lua",
     "CharacterSkill.lua",
+    "PriceProvider.lua",
     "Settings.lua",
     "Session.lua",
 ]
