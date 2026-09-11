@@ -270,6 +270,153 @@ function addonTable.chooseCheapestEquivalentUnitPrice(item, purpose, options)
     return nil, directReason or alternateReason or "price_unavailable"
 end
 
+local function ceilPositive(value)
+    value = math.max(0, tonumber(value) or 0)
+    if value <= 0 then
+        return 0
+    end
+    return math.ceil(value - 0.0000001)
+end
+
+local function buildQuantityChoice(
+    choice,
+    requestedItemID,
+    requestedQuantity,
+    sourceItemID,
+    sourceQuantity,
+    converted,
+    equivalent
+)
+    if not choice then
+        return nil
+    end
+
+    local result = copyChoice(choice)
+    result.requestedItemID = requestedItemID
+    result.requestedQuantity = requestedQuantity
+    result.sourceItemID = sourceItemID
+    result.sourceQuantity = sourceQuantity
+    result.sourceUnitPrice = choice.unitPrice
+    result.totalCost = sourceQuantity * choice.unitPrice
+    result.effectiveUnitPrice = requestedQuantity > 0
+        and (result.totalCost / requestedQuantity)
+        or 0
+    result.unitPrice = result.effectiveUnitPrice
+    result.converted = converted and true or false
+
+    if converted and equivalent then
+        result.conversionRatio = equivalent.ratio
+        result.conversionDirection = equivalent.direction
+        if equivalent.direction == "greater_to_lesser" then
+            result.producedQuantity = sourceQuantity * equivalent.ratio
+        else
+            result.producedQuantity = sourceQuantity / equivalent.ratio
+        end
+        result.excessQuantity = math.max(0, result.producedQuantity - requestedQuantity)
+    else
+        result.producedQuantity = requestedQuantity
+        result.excessQuantity = 0
+    end
+
+    return result
+end
+
+function addonTable.chooseCheapestEquivalentPurchase(item, quantity, purpose, options)
+    options = options or {}
+    quantity = math.max(0, tonumber(quantity) or 0)
+    if quantity <= 0 then
+        return {
+            requestedItemID = parseItemID(item),
+            requestedQuantity = 0,
+            sourceItemID = parseItemID(item),
+            sourceQuantity = 0,
+            sourceUnitPrice = 0,
+            totalCost = 0,
+            effectiveUnitPrice = 0,
+            unitPrice = 0,
+            producedQuantity = 0,
+            excessQuantity = 0,
+            converted = false,
+        }
+    end
+
+    local lookup = getPriceLookup(options)
+    local chooser = getPriceChooser(options)
+    if type(lookup) ~= "function" or type(chooser) ~= "function" then
+        return nil, "price_provider_unavailable"
+    end
+
+    local itemID = parseItemID(item)
+    local directChoice, directReason = chooseItemPrice(item, purpose, lookup, chooser, options.now)
+    local direct = buildQuantityChoice(
+        directChoice,
+        itemID,
+        quantity,
+        itemID,
+        ceilPositive(quantity),
+        false,
+        nil
+    )
+
+    local equivalent = itemID and ESSENCE_EQUIVALENTS[itemID] or nil
+    if not equivalent then
+        return direct, directReason
+    end
+
+    local alternateChoice, alternateReason = chooseItemPrice(
+        equivalent.alternateItemID,
+        purpose,
+        lookup,
+        chooser,
+        options.now
+    )
+
+    local alternateSourceQuantity
+    if equivalent.direction == "greater_to_lesser" then
+        alternateSourceQuantity = ceilPositive(quantity / equivalent.ratio)
+    else
+        alternateSourceQuantity = ceilPositive(quantity * equivalent.ratio)
+    end
+
+    local alternate = buildQuantityChoice(
+        alternateChoice,
+        itemID,
+        quantity,
+        equivalent.alternateItemID,
+        alternateSourceQuantity,
+        true,
+        equivalent
+    )
+
+    local chosen
+    if direct and alternate then
+        if alternate.totalCost < direct.totalCost then
+            chosen = alternate
+        else
+            chosen = direct
+        end
+    else
+        chosen = alternate or direct
+    end
+
+    if not chosen then
+        return nil, directReason or alternateReason or "price_unavailable"
+    end
+
+    chosen.directTotalCost = direct and direct.totalCost or nil
+    chosen.alternateTotalCost = alternate and alternate.totalCost or nil
+    chosen.alternateItemID = equivalent.alternateItemID
+
+    if direct and alternate then
+        local otherCost = chosen.converted and direct.totalCost or alternate.totalCost
+        chosen.savings = math.max(0, otherCost - chosen.totalCost)
+    else
+        chosen.savings = 0
+    end
+
+    return chosen
+end
+
 local function resolveAcquisition(recipe, state, skillContext, options)
     if type(addonTable.resolveRecipeAcquisition) == "function" then
         local modeled = addonTable.resolveRecipeAcquisition(recipe, state, skillContext, options)
@@ -506,33 +653,45 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
             local reusable = reagent.reusable and true or false
             local reusableKey = reusable and getReagentKey(reagent) or nil
             local alreadyAcquired = reusableKey and acquiredOneTime[reusableKey]
+            local owned = getInventoryCount(inventoryRemaining, reagent)
+            local ownedUsed = math.min(quantity, owned)
+            local purchaseQuantity = math.max(0, quantity - ownedUsed)
             local equivalentOptions = {
                 priceLookup = priceLookup,
                 unitPriceChooser = priceChooser,
                 now = options.now,
             }
-            local marketChoice, marketReason = addonTable.chooseCheapestEquivalentUnitPrice(
+            local marketChoice, marketReason = addonTable.chooseCheapestEquivalentPurchase(
                 item,
+                quantity,
                 "market",
                 equivalentOptions
             )
-            local purchaseChoice, purchaseReason = addonTable.chooseCheapestEquivalentUnitPrice(
+            local purchaseChoice, purchaseReason = addonTable.chooseCheapestEquivalentPurchase(
                 item,
+                quantity,
                 "purchase",
                 equivalentOptions
             )
+            local neededPurchaseChoice
+            local neededPurchaseReason
+            if purchaseQuantity > 0 then
+                neededPurchaseChoice, neededPurchaseReason = addonTable.chooseCheapestEquivalentPurchase(
+                    item,
+                    purchaseQuantity,
+                    "purchase",
+                    equivalentOptions
+                )
+            end
 
-            if not marketChoice or not purchaseChoice then
+            if not marketChoice or not purchaseChoice or (purchaseQuantity > 0 and not neededPurchaseChoice) then
                 result.incomplete = true
                 addMissingFlag(
                     result.missingPrices,
                     item,
-                    marketReason or purchaseReason or "price_unavailable"
+                    marketReason or purchaseReason or neededPurchaseReason or "price_unavailable"
                 )
             else
-                local owned = getInventoryCount(inventoryRemaining, reagent)
-                local ownedUsed = math.min(quantity, owned)
-                local purchaseQuantity = math.max(0, quantity - ownedUsed)
                 local itemKey = reagent.itemID or reagent.item or reagent.itemLink
                 if itemKey ~= nil then
                     inventoryRemaining[itemKey] = math.max(0, owned - ownedUsed)
@@ -541,9 +700,9 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                     end
                 end
 
-                local craftMarket = quantity * marketChoice.unitPrice
-                local craftGold = purchaseQuantity * purchaseChoice.unitPrice
-                local craftCurrentPurchase = quantity * purchaseChoice.unitPrice
+                local craftMarket = marketChoice.totalCost
+                local craftGold = neededPurchaseChoice and neededPurchaseChoice.totalCost or 0
+                local craftCurrentPurchase = purchaseChoice.totalCost
                 local multiplier = reusable and 1 or expectedCrafts
 
                 if alreadyAcquired then
@@ -592,14 +751,22 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                     purchaseQuantity = purchaseQuantity,
                     reusable = reusable,
                     reusableKey = reusableKey,
-                    marketUnitPrice = marketChoice.unitPrice,
+                    marketUnitPrice = marketChoice.effectiveUnitPrice,
                     marketPriceType = marketChoice.priceType,
-                    purchaseUnitPrice = purchaseChoice.unitPrice,
+                    purchaseUnitPrice = purchaseChoice.effectiveUnitPrice,
+                    purchaseSourceUnitPrice = purchaseChoice.sourceUnitPrice,
                     purchasePriceType = purchaseChoice.priceType,
+                    purchaseTotalCost = purchaseChoice.totalCost,
                     source = purchaseChoice.source or marketChoice.source,
                     freshness = purchaseChoice.freshness or marketChoice.freshness,
                     ageSeconds = purchaseChoice.ageSeconds or marketChoice.ageSeconds,
                     sourceItemID = purchaseChoice.sourceItemID,
+                    sourceQuantity = purchaseChoice.sourceQuantity,
+                    producedQuantity = purchaseChoice.producedQuantity,
+                    excessQuantity = purchaseChoice.excessQuantity,
+                    directTotalCost = purchaseChoice.directTotalCost,
+                    alternateTotalCost = purchaseChoice.alternateTotalCost,
+                    savings = purchaseChoice.savings,
                     converted = purchaseChoice.converted and true or false,
                     conversionRatio = purchaseChoice.conversionRatio,
                     conversionDirection = purchaseChoice.conversionDirection,
