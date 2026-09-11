@@ -13,6 +13,7 @@ REQUIRED_ORDER = [
     "Guide.lua",
     "CharacterSkill.lua",
     "PriceProvider.lua",
+    "TSMPriceProvider.lua",
     "Settings.lua",
     "Session.lua",
 ]

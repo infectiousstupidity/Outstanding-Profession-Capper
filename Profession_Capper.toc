@@ -3,12 +3,14 @@
 ## Notes: Tells you which recipe you should craft based on your current professions skill level
 ## Version: v3.0.0-alpha4
 ## SavedVariables: ProfessionCapperDB
+## OptionalDeps: TradeSkillMaster, TradeSkillMaster_AuctionDB
 
 constants.lua
 Localization.lua
 Guide.lua
 CharacterSkill.lua
 PriceProvider.lua
+TSMPriceProvider.lua
 Settings.lua
 Session.lua
 Professions\Enchanting.lua
