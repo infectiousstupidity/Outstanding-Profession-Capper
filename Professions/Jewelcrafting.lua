@@ -1,130 +1,167 @@
-local addonName, addonTable = ...;
+local addonName, addonTable = ...
 
-local shouldCraft, shouldCraftRecipe;
-
-addonTable.getJewelcraftingCurrentSkillLevelRecipeToCraft = function(rank)
-    shouldCraft, shouldCraftRecipe = nil, nil
-    local targetSkill = nil
-    if rank > 0 and rank < 30 then
-        targetSkill = 30
-        shouldCraft = {25255};
-    elseif rank >= 30 and rank < 50 then
-        targetSkill = 50
-        shouldCraft = {
+local steps = {
+    {
+        minSkill = 1,
+        targetSkill = 30,
+        recipes = {25255},
+    },
+    {
+        minSkill = 30,
+        targetSkill = 50,
+        recipes = {
             32179,
             32178,
-        };
-    elseif rank >= 50 and rank < 80 then
-        targetSkill = 80
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 50,
+        targetSkill = 80,
+        recipes = {
             25278,
             32179,
             32178,
-        };
-    elseif rank >= 80 and rank < 100 then
-        targetSkill = 100
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 80,
+        targetSkill = 100,
+        recipes = {
             25317,
             25287,
             25284,
-        };
-    elseif rank >= 100 and rank < 110 then
-        targetSkill = 110
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 100,
+        targetSkill = 110,
+        recipes = {
             25318,
             25317,
             25287,
             25284,
-        };
-    elseif rank >= 110 and rank < 120 then
-        targetSkill = 120
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 110,
+        targetSkill = 120,
+        recipes = {
             32807,
             25318,
             25317,
-        };
-    elseif rank >= 120 and rank < 150 then
-        targetSkill = 150
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 120,
+        targetSkill = 150,
+        recipes = {
             25610,
             32807,
             25318,
-        };
-    elseif rank >= 150 and rank < 180 then
-        targetSkill = 180
-        shouldCraft = {25615};
-    elseif rank >= 180 and rank < 200 then
-        targetSkill = 200
-        shouldCraft = {25620};
-    elseif rank >= 200 and rank < 220 then
-        targetSkill = 220
-        shouldCraft = {25621};
-    elseif rank >= 220 and rank < 225 then
-        targetSkill = 225
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 150,
+        targetSkill = 180,
+        recipes = {25615},
+    },
+    {
+        minSkill = 180,
+        targetSkill = 200,
+        recipes = {25620},
+    },
+    {
+        minSkill = 200,
+        targetSkill = 220,
+        recipes = {25621},
+    },
+    {
+        minSkill = 220,
+        targetSkill = 225,
+        recipes = {
             26876,
             25621,
-        };
-    elseif rank >= 225 and rank < 245 then
-        targetSkill = 245
-        shouldCraft = {26880};
-    elseif rank >= 245 and rank < 260 then
-        targetSkill = 260
-        shouldCraft = {26883};
-    elseif rank >= 260 and rank < 280 then
-        targetSkill = 280
-        shouldCraft = {26902};
-    elseif rank >= 280 and rank < 290 then
-        targetSkill = 290
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 225,
+        targetSkill = 245,
+        recipes = {26880},
+    },
+    {
+        minSkill = 245,
+        targetSkill = 260,
+        recipes = {26883},
+    },
+    {
+        minSkill = 260,
+        targetSkill = 280,
+        recipes = {26902},
+    },
+    {
+        minSkill = 280,
+        targetSkill = 290,
+        recipes = {
             34960,
             26908,
             26907,
-        };
-    elseif rank >= 290 and rank < 300 then
-        targetSkill = 300
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 290,
+        targetSkill = 300,
+        recipes = {
             34961,
             34960,
             26908,
             26907,
-        };
-    elseif rank >= 300 and rank < 320 then
-        targetSkill = 320
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 300,
+        targetSkill = 320,
+        recipes = {
             28903,
             28938,
             28950,
             28916,
             28910,
             28925,
-        };
-    elseif rank >= 320 and rank < 325 then
-        targetSkill = 325
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 320,
+        targetSkill = 325,
+        recipes = {
             28905,
             28917,
             28953,
-        };
-    elseif rank >= 325 and rank < 340 then
-        targetSkill = 340
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 325,
+        targetSkill = 340,
+        recipes = {
             38068,
             28948,
             28936,
             28924,
-        };
-    elseif rank >= 340 and rank < 350 then
-        targetSkill = 350
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 340,
+        targetSkill = 350,
+        recipes = {
             31052,
             28948,
             28936,
             28924,
-        };
-    elseif rank >= 350 and rank < 395 then
-        targetSkill = 395
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 350,
+        targetSkill = 395,
+        recipes = {
             53831,
             53835,
             53832,
@@ -133,24 +170,30 @@ addonTable.getJewelcraftingCurrentSkillLevelRecipeToCraft = function(rank)
             53892,
             53866,
             53852,
-        };
-    elseif rank >= 395 and rank < 400 then
-        targetSkill = 400
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 395,
+        targetSkill = 400,
+        recipes = {
             56193,
             58142,
             58141,
             56194,
-        };
-    elseif rank >= 400 and rank < 420 then
-        targetSkill = 420
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 400,
+        targetSkill = 420,
+        recipes = {
             58145,
             58146,
-        };
-    elseif rank >= 420 and rank < 425 then
-        targetSkill = 425
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 420,
+        targetSkill = 425,
+        recipes = {
             54007,
             53969,
             53947,
@@ -158,11 +201,13 @@ addonTable.getJewelcraftingCurrentSkillLevelRecipeToCraft = function(rank)
             53989,
             53953,
             56531,
-        };
-    elseif rank >= 425 and rank < 450 then
-        targetSkill = 450
-        shouldCraft = {
-            55394, 
+        },
+    },
+    {
+        minSkill = 425,
+        targetSkill = 450,
+        recipes = {
+            55394,
             55386,
             55389,
             55390,
@@ -183,14 +228,10 @@ addonTable.getJewelcraftingCurrentSkillLevelRecipeToCraft = function(rank)
             55404,
             55400,
             55403,
-        };
-    end
-    if shouldCraft and #shouldCraft > 0 then
-        shouldCraftRecipe = {}
-        addonTable.sortRecipesByNumAvailable(shouldCraft)
-        for i, v in pairs(shouldCraft) do
-            shouldCraftRecipe[i] = addonTable.Jewelcrafting[tostring(v)]
-        end
-    end
-    return shouldCraft, shouldCraftRecipe, targetSkill;
-end
+        },
+    },
+}
+
+addonTable.registerProfessionGuide("Jewelcrafting", steps, addonTable.Jewelcrafting)
+
+print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper] loaded Jewelcrafting module|r")
