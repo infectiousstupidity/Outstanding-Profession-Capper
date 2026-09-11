@@ -794,6 +794,7 @@ function fnOnLoad()
     local L = addonTable.L
 
     txtHeaderLabel:SetText(L["header_label"])
+    txtMaterialsLabel:SetText(L["materials_label"])
     print("|cff" .. addonTable.chat_frame_default_color .. L["loaded_for"] .. "|r |cff" .. addonTable.chat_frame_player_name_color .. "[" .. UnitLevel("player") .. "]" .. UnitName("player") .. "|r")
 
     addonTable.getSettings()
