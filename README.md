@@ -1,130 +1,82 @@
-﻿# Outstanding Profession Capper
+# Outstanding Profession Capper
 
-**Outstanding Profession Capper** is a World of Warcraft (3.3.5 / WotLK) addon that tells you which recipe to craft next in order to level your trade skills to the cap (450), based on your current skill level.
+A World of Warcraft 3.3.5 / WotLK profession-leveling addon. Open a supported profession and the addon tells you what to craft next, how far to craft it, whether you have enough materials, and roughly how long the current step will take.
 
-This is a fork of [Improved Profession Capper](https://github.com/DarkChimu/Improved-Profession-Capper) by [DarkChimu](https://github.com/DarkChimu), improved and maintained by [Utkuchix](https://github.com/Utkuchix).
+This fork descends from SamuelLira99/Profession-Capper, DarkChimu/Improved-Profession-Capper, and Utkuchix/Outstanding-Profession-Capper.
 
-When you open your **Profession frame**, the **Profession Capper frame** opens alongside it, showing you the optimal recipe to craft next. You can cycle through alternative recipes using the `<` and `>` buttons and craft directly from the addon UI.
+## What v3 adds
 
-By default the frame appears at the **bottom left** corner of the screen — drag it wherever you like.
+- Spell-ID based recipe matching instead of English recipe-name matching.
+- Target-aware leveling steps: current skill, next guide breakpoint, skill-ups needed, and craftable quantity.
+- Exact craft counts for orange recipes and clearly labelled minimums for non-guaranteed skill-ups.
+- Craft-to-target batches that never intentionally queue more crafts than the current step requires.
+- Automatic queue stop when the target skill is reached.
+- A Continue-to-target action when yellow/green RNG leaves the batch short; the addon does not automate a second protected craft action.
+- Live batch progress and remaining-time estimate.
+- Material totals for the planned batch, using localized client reagent names.
+- Recipe discovery that works even when Blizzard's profession list is filtered or categories are collapsed.
+- Profession training-cap handling.
+- A compact panel attached to the Blizzard profession window by default.
+- Persistent attach/detach, lock and position settings.
+- English, Spanish and Russian UI strings plus localized recipe fallback names.
+- Automated Lua 5.1, TOC/XML, guide-range and recipe-metadata validation.
 
----
+## Commands
 
-## What's new in this fork
+- /pcapper — toggle the addon.
+- /pcapper show / /pcapper hide
+- /pcapper attach / /pcapper detach
+- /pcapper lock / /pcapper unlock
+- /pcapper reset — restore default settings and attach the panel again.
+- /pcapper help
 
-- **Shows missing recipe names instead of required ingredients** — if you didnt learn recipe yet, it will show you recipe name in your locale language, you can look up trainer or merchant for it using AckisRecipeList addon
-- **Extended localization support (i18n)** — recipe names are now localized, also ingredient names are pulled from your client and shown in your client's language
-- **Russian locale support** — added support for russian client
-- **Sort recipes by availability** — recipes are now shown sorted based on number of items you can create with ingredients you have
+Dragging an attached, unlocked panel automatically detaches it and saves its new position.
 
----
+## Craft-count semantics
+
+Need is the number of skill points required to reach the next guide step.
+
+For an orange recipe, one craft guarantees one skill-up, so the displayed craft count is exact. For yellow/green recipes, the addon shows a minimum because some crafts may not grant a point. The craft-to-target action queues only that minimum batch and stops early if the target is reached; if RNG leaves you short, use the Continue action.
+
+The addon deliberately does not start another crafting batch automatically after an event because crafting is a protected player action.
+
+## Supported professions
+
+Primary: Alchemy, Blacksmithing, Enchanting, Engineering, Inscription, Jewelcrafting, Leatherworking and Tailoring.
+
+Secondary: Cooking and First Aid.
+
+Gathering professions and Fishing are not handled because they do not level through the same recipe-crafting flow.
 
 ## Installation
 
-1. Download the latest release from [GitHub](https://github.com/Utkuchix/Outstanding-Profession-Capper/releases)
-2. Extract the zip file
-3. Move the `Profession_Capper` folder to `<WoW folder>/Interface/AddOns`
-4. Reload the UI in-game: `/reload`
+1. Download a release ZIP.
+2. Extract it so the folder is named Profession_Capper.
+3. Put that folder in World of Warcraft/Interface/AddOns/.
+4. Reload the UI or restart the client.
 
----
+## Guide data
 
-## How to add your locale
+Guide steps are declarative tables under Professions/. Structural validation guarantees complete, non-overlapping coverage from skill 1 through 449 and verifies that every referenced recipe has fallback metadata.
 
-1. Find letter code for your locale used on WowHead website. For example, russian locale is `ru` and link to the spell will be like `https://www.wowhead.com/wotlk/ru/spell=64054`
-2. Use helper tool to fetch info from WowHead: [https://github.com/Utkuchix/WowHeadNameFetcher](https://github.com/Utkuchix/WowHeadNameFetcher). You can use pre-compiled release for win, linux, macos, or get source and compile yourself (you will need one of last versions of golang installed).
-3. Get lua code generated by helper and add it to the constants.lua, similar way as its done for other locales
+The external audit baseline and caveats are documented in docs/GUIDE-SOURCES.md. Realm prices can make a different valid recipe cheaper, so alternatives are preserved where useful.
 
----
+## Development
 
-## Professions
+Every push to master runs:
 
-### Primary Trade Skills
+- Lua 5.1 syntax validation.
+- TOC dependency/order checks.
+- XML well-formedness validation.
+- Full profession range validation.
+- Recipe fallback-metadata validation.
 
-| Profession | Status |
-|---|---|
-| Enchanting | Fully supported |
-| Tailoring | Fully supported |
-| Blacksmithing | Fully supported |
-| Alchemy | Fully supported |
-| Engineering | Fully supported |
-| Jewelcrafting | Fully supported |
-| Leatherworking | Fully supported |
-| Inscription | Fully supported |
-
-### Secondary Professions
-
-| Profession | Status |
-|---|---|
-| Cooking | Fully supported |
-| First Aid | Fully supported |
-| Fishing | Not supported |
-
-### Gathering Skills
-
-Herbalism, Mining, and Skinning are not supported and likely won't be — these level up through gathering, not crafting.
-
----
-
-## Screenshots
-
-#### Cap already reached
-![Profession Capper - cap already reached](https://imgur.com/viU8cIc.jpg)
-
-#### Enchanting
-![Profession Capper - Enchanting](https://imgur.com/Zb8udRn.jpg)
-
-#### Tailoring
-![Profession Capper - Tailoring](https://imgur.com/qN6gBAN.jpg)
-
-#### Blacksmithing
-![Profession Capper - Blacksmithing](https://imgur.com/m36QPKT.jpg)
-
-#### Alchemy
-![Profession Capper - Alchemy](https://imgur.com/74Cw1lp.jpg)
-
-#### Jewelcrafting
-![Profession Capper - Jewelcrafting](https://imgur.com/rMzesUO.jpg)
-
-#### Leatherworking
-![Profession Capper - Leatherworking](https://imgur.com/7Gn10JT.jpg)
-
-#### Inscription
-![Profession Capper - Inscription](https://imgur.com/Zef1GWz.jpg)
-
-#### Cooking
-![Profession Capper - Cooking](https://imgur.com/wlDzjSS.jpg)
-
-#### First Aid
-![Profession Capper - First Aid](https://imgur.com/voG9Ecr.jpg)
-
-#### Recipe not learned yet
-![Profession Capper - Recipe not learnt yet](https://imgur.com/Q2eXK6f.jpg)
-
----
+Tags matching v* produce a ready-to-install Profession_Capper-<tag>.zip GitHub release.
 
 ## Credits
 
-- Original addon by [SamuelLira99](https://github.com/SamuelLira99) — [Profession-Capper](https://github.com/SamuelLira99/Profession-Capper)
-- Fork improvements by [DarkChimu](https://github.com/DarkChimu)
-- Fork improvements by [Utkuchix](https://github.com/Utkuchix)
+- SamuelLira99 — original Profession-Capper.
+- DarkChimu — spell-ID matching and localization improvements.
+- Utkuchix — additional localization, dynamic ingredients, availability sorting and fixes.
 
-## Support
-
-Open an issue on [this repo](https://github.com/Utkuchix/Outstanding-Profession-Capper/issues).
-
-
-## v3 development
-
-The v3 work is focused on making the addon safer and more useful while leveling:
-
-- Each guide step exposes its target skill level.
-- The recommendation panel shows how many skill-ups are needed before the next guide step.
-- Craft counts are exact for orange recipes and explicitly shown as a minimum when a skill-up is not guaranteed.
-- The addon estimates crafting time from the recipe cast time.
-- The Craft button no longer blindly queues every item you can make. It queues at most the amount needed for the current guide step.
-- Material requirements are calculated for the planned amount and compared with the amount currently owned.
-- Profession training caps are respected; the addon tells you to train instead of recommending unreachable skill levels.
-- CI validates Lua 5.1 syntax and checks that every supported profession covers skills 1-449 exactly once.
-- Recipe discovery is independent of the Blizzard profession window's search, level, subclass, slot, makeable-only, skill-up-only, and collapsed-category state. Profession Capper temporarily scans the full list and restores the player's view afterwards.
-
-The existing profession data is being migrated incrementally so recommendations remain easy to compare with the proven upstream guide data.
+See the repository history for full attribution.

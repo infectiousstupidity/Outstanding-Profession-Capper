@@ -7,6 +7,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFESSIONS = ROOT / "Professions"
+CONSTANTS = (ROOT / "constants.lua").read_text(encoding="utf-8")
 STEP_RE = re.compile(
     r"\{\s*minSkill\s*=\s*(\d+)\s*,\s*targetSkill\s*=\s*(\d+)\s*,\s*recipes\s*=\s*\{(.*?)\}\s*,?\s*\}",
     re.S,
@@ -24,9 +25,15 @@ def parse_steps(path: Path):
     return steps
 
 
+def has_fallback_name(profession: str, recipe_id: int) -> bool:
+    pattern = rf'{re.escape(profession)}\["{recipe_id}"\]\s*='
+    return re.search(pattern, CONSTANTS) is not None
+
+
 def validate_file(path: Path):
     errors = []
     steps = parse_steps(path)
+    profession = path.stem
 
     if not steps:
         return [f"{path.name}: no declarative guide steps found"]
@@ -43,6 +50,12 @@ def validate_file(path: Path):
             errors.append(f"{path.name}: step {index} has no recipes")
         if len(set(recipes)) != len(recipes):
             errors.append(f"{path.name}: step {index} contains duplicate recipe IDs")
+
+        for recipe_id in recipes:
+            if recipe_id <= 0:
+                errors.append(f"{path.name}: step {index} has invalid recipe ID {recipe_id}")
+            if not has_fallback_name(profession, recipe_id):
+                errors.append(f"{path.name}: recipe {recipe_id} has no fallback name in constants.lua")
 
         for rank in range(max(1, min_skill), min(450, target_skill)):
             coverage[rank] += 1
@@ -78,7 +91,7 @@ def main():
             print(" -", error)
         return 1
 
-    print("Guide validation passed: declarative guides cover skills 1-449 exactly once.")
+    print("Guide validation passed: ranges and fallback recipe metadata are complete.")
     return 0
 
 
