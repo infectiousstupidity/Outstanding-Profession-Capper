@@ -1,0 +1,72 @@
+# Task 16 — Inline recipe comparison and optimizer explanation
+
+Status: QUEUED  
+Phase: 5 — UI/UX polish  
+Depends on: Task 15
+
+## Goal
+
+Make it obvious why Profession Capper selected the current recipe.
+
+The user should not need to trust a black box or decode a tooltip.
+
+## Implement
+
+Change `Compare` from a hover-only explanation into a toggle for a compact inline comparison section.
+
+Default rows:
+
+```text
+WHY THIS ONE
+1  Greater Agility   Yellow   ~2g 40s/app   ~3g 20s/skill-up
+2  Major Mana        Yellow   ~3g 10s/app   ~4g 08s/skill-up
+3  Major Health      Orange   ~4g 80s/app   ~4g 80s/skill-up
+```
+
+Use existing `dynamicRecommendation.candidates`.
+
+## Rules
+
+- Order by the exact ranking used by Cheapest now.
+- Current winner is visibly highlighted.
+- Show live recipe difficulty.
+- Show cost/application and expected cost/skill-up.
+- Green recipes must not appear as Cheapest-now competitors.
+- Mark stale-price candidates.
+- If a candidate cannot be priced, either omit it with a clear summary or show `price unavailable`; do not display zero.
+- Show a maximum sensible number of rows by default. If more exist, use a small `+N more` control.
+- Do not make the section a nested card.
+
+## Route detail
+
+If a complete route exists, comparison detail may continue with a short `Route` subsection.
+
+If a full route does not exist, say so briefly without making the current-step recommendation look invalid.
+
+## Interaction
+
+- Click `Compare` to show/hide.
+- Do not require hover.
+- Preserve the existing tooltip only if it still adds useful detail; otherwise remove duplicate information.
+- Toggling compare must not change the selected recipe.
+
+## Suggested file changes
+
+- `Core.lua`
+- `Profession_capper.xml`
+- `Localization.lua`
+
+## Acceptance criteria
+
+- Player can explain why the winner beat the #2 candidate from visible numbers.
+- Ranking matches optimizer order.
+- Orange/yellow live difficulty matches the TradeSkill window.
+- Current winner is visually obvious.
+- Stale/missing prices are clearly distinguished.
+- Incomplete full route does not disable current comparison.
+- Panel resizes cleanly when comparison opens/closes.
+- Comparison remains readable with at least five candidates.
+
+## Commit
+
+Suggested message: `feat: show inline cheapest-recipe comparison`
