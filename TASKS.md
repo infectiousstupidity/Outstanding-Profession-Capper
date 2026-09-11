@@ -65,7 +65,7 @@ Source of truth: [UI polish plan](docs/UI-POLISH-PLAN.md)
 
 | Task | Status | Purpose |
 | --- | --- | --- |
-| [15 Core UI hierarchy and material redesign](docs/tasks/15-ui-polish-core-hierarchy.md) | QUEUED | Make the current recommendation, costs, and purchase actions visually clear at a glance. |
+| [15 Core UI hierarchy and material redesign](docs/tasks/15-ui-polish-core-hierarchy.md) | IN PROGRESS | Make the current recommendation, costs, and purchase actions visually clear at a glance. |
 | [16 Inline recipe comparison](docs/tasks/16-ui-polish-comparison.md) | QUEUED | Show why the selected recipe is cheapest without relying on a tooltip. |
 | [17 Compact and expanded detail modes](docs/tasks/17-ui-polish-detail-modes.md) | QUEUED | Keep the default panel focused while preserving deeper comparison/route detail. |
 | [18 Enchant repeat workflow presentation](docs/tasks/18-ui-polish-enchant-workflow.md) | QUEUED | Make target, repeat mode, and progress obvious during repeated enchants. |
@@ -97,4 +97,4 @@ Do not start Task 19 until the preceding UI tasks have had their required in-gam
 
 Task 10 remains in manual acceptance. Tasks 12 and 13 are awaiting in-game Enchant repeat testing. Task 14 is implemented in code and awaiting in-game purchase-guidance checks: equivalent Greater/Lesser Essence pricing is quantity-aware, and converted material rows explicitly tell the player what form and quantity to buy, the direct-vs-recommended cost, and the savings.
 
-Phase 5 is planned but not started. The next implementation task after the current Phase 4 acceptance work is Task 15. Implement Tasks 15–19 in order; each remains one implementation commit.
+Phase 5 Task 15 is implemented in code and awaiting its required in-game acceptance checks. The redesigned default panel now emphasizes the current recipe, live difficulty/skill range, current-step costs, availability, price freshness, and explicit material purchase guidance. Tasks 16–19 remain queued and must not start until Task 15 is manually accepted. Each remains one implementation commit.

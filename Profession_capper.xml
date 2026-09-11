@@ -9,7 +9,7 @@
       <OnDragStop>ProfessionCapper_OnDragStop();</OnDragStop>
     </Scripts>
 
-    <Size><AbsDimension x="390" y="413"/></Size>
+    <Size><AbsDimension x="420" y="390"/></Size>
 
     <Backdrop bgFile="Interface\Tooltips\UI-Tooltip-Background" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
       <TileSize><AbsValue val="16"/></TileSize>
@@ -20,123 +20,99 @@
     <Layers>
       <Layer level="ARTWORK">
         <FontString name="txtHeaderLabel" inherits="GameFontNormalLarge" justifyH="LEFT">
-          <Anchors>
-            <Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-16"/></Offset></Anchor>
-          </Anchors>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-16"/></Offset></Anchor></Anchors>
         </FontString>
 
         <FontString name="txtProfessionProgress" inherits="GameFontHighlightSmall" justifyH="LEFT">
-          <Size><AbsDimension x="320" y="18"/></Size>
-          <Anchors>
-            <Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-75"/></Offset></Anchor>
-          </Anchors>
+          <Size><AbsDimension x="360" y="18"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-42"/></Offset></Anchor></Anchors>
         </FontString>
 
+        <Texture name="texHeaderSeparator" file="Interface\ChatFrame\ChatFrameBackground">
+          <Size><AbsDimension x="384" y="1"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-99"/></Offset></Anchor></Anchors>
+          <Color r="0.28" g="0.28" b="0.28" a="0.8"/>
+        </Texture>
+
         <Texture name="imgSkillIcon" file="Interface\InventoryItems\WoWUnknownItem01">
-          <Size><AbsDimension x="44" y="44"/></Size>
-          <Anchors>
-            <Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-104"/></Offset></Anchor>
-          </Anchors>
+          <Size><AbsDimension x="46" y="46"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-113"/></Offset></Anchor></Anchors>
         </Texture>
 
         <FontString name="txtShouldCraft" inherits="GameFontNormal" justifyH="LEFT">
-          <Size><AbsDimension x="288" y="20"/></Size>
-          <Anchors>
-            <Anchor point="TOPLEFT"><Offset><AbsDimension x="76" y="-102"/></Offset></Anchor>
-          </Anchors>
+          <Size><AbsDimension x="318" y="22"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="76" y="-110"/></Offset></Anchor></Anchors>
         </FontString>
 
-        <FontString name="txtTarget" inherits="GameFontHighlightSmall" justifyH="LEFT">
-          <Size><AbsDimension x="288" y="18"/></Size>
-          <Anchors>
-            <Anchor point="TOPLEFT"><Offset><AbsDimension x="76" y="-125"/></Offset></Anchor>
-          </Anchors>
+        <FontString name="txtTarget" inherits="GameFontNormalSmall" justifyH="LEFT">
+          <Size><AbsDimension x="318" y="18"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="76" y="-134"/></Offset></Anchor></Anchors>
         </FontString>
 
-        <FontString name="txtRecipeStatus" inherits="GameFontNormalSmall" justifyH="LEFT">
-          <Size><AbsDimension x="288" y="34"/></Size>
-          <Anchors>
-            <Anchor point="TOPLEFT"><Offset><AbsDimension x="76" y="-147"/></Offset></Anchor>
-          </Anchors>
-        </FontString>
-
-        <FontString name="txtCraftStats" inherits="GameFontHighlightSmall" justifyH="LEFT">
-          <Size><AbsDimension x="354" y="20"/></Size>
-          <Anchors>
-            <Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-186"/></Offset></Anchor>
-          </Anchors>
-        </FontString>
-
-        <FontString name="txtCraftProgress" inherits="GameFontNormalSmall" justifyH="LEFT">
-          <Size><AbsDimension x="354" y="18"/></Size>
-          <Anchors>
-            <Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-210"/></Offset></Anchor>
-          </Anchors>
-        </FontString>
-
-        <FontString name="txtCraftEta" inherits="GameFontNormalSmall" justifyH="LEFT">
-          <Size><AbsDimension x="354" y="18"/></Size>
-          <Anchors>
-            <Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-232"/></Offset></Anchor>
-          </Anchors>
+        <FontString name="txtRecipeStatus" inherits="GameFontDisableSmall" justifyH="LEFT">
+          <Size><AbsDimension x="318" y="20"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="76" y="-154"/></Offset></Anchor></Anchors>
         </FontString>
 
         <FontString name="txtCostSummary" inherits="GameFontHighlightSmall" justifyH="LEFT">
-          <Size><AbsDimension x="354" y="38"/></Size>
-          <Anchors>
-            <Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-254"/></Offset></Anchor>
-          </Anchors>
+          <Size><AbsDimension x="384" y="20"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-185"/></Offset></Anchor></Anchors>
         </FontString>
 
-        <FontString name="txtMaterialsLabel" inherits="GameFontNormal" justifyH="LEFT" text="Materials">
-          <Size><AbsDimension x="354" y="18"/></Size>
-          <Anchors>
-            <Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-294"/></Offset></Anchor>
-          </Anchors>
+        <FontString name="txtCraftStats" inherits="GameFontHighlightSmall" justifyH="LEFT">
+          <Size><AbsDimension x="384" y="18"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-208"/></Offset></Anchor></Anchors>
+        </FontString>
+
+        <FontString name="txtCraftEta" inherits="GameFontDisableSmall" justifyH="LEFT">
+          <Size><AbsDimension x="384" y="18"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-229"/></Offset></Anchor></Anchors>
+        </FontString>
+
+        <FontString name="txtCraftProgress" inherits="GameFontNormalSmall" justifyH="LEFT">
+          <Size><AbsDimension x="384" y="18"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-250"/></Offset></Anchor></Anchors>
+        </FontString>
+
+        <Texture name="texMaterialsSeparator" file="Interface\ChatFrame\ChatFrameBackground">
+          <Size><AbsDimension x="384" y="1"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-273"/></Offset></Anchor></Anchors>
+          <Color r="0.28" g="0.28" b="0.28" a="0.8"/>
+        </Texture>
+
+        <FontString name="txtMaterialsLabel" inherits="GameFontNormalSmall" justifyH="LEFT" text="Materials">
+          <Size><AbsDimension x="384" y="18"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-282"/></Offset></Anchor></Anchors>
         </FontString>
 
         <FontString name="txtRepeatLabel" inherits="GameFontHighlightSmall" justifyH="LEFT" hidden="true">
           <Size><AbsDimension x="42" y="18"/></Size>
-          <Anchors>
-            <Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="18" y="53"/></Offset></Anchor>
-          </Anchors>
+          <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="18" y="55"/></Offset></Anchor></Anchors>
         </FontString>
 
         <FontString name="txtRecipePosition" inherits="GameFontDisableSmall" justifyH="RIGHT">
           <Size><AbsDimension x="70" y="18"/></Size>
-          <Anchors>
-            <Anchor point="BOTTOMRIGHT"><Offset><AbsDimension x="-18" y="52"/></Offset></Anchor>
-          </Anchors>
+          <Anchors><Anchor point="BOTTOMRIGHT"><Offset><AbsDimension x="-18" y="54"/></Offset></Anchor></Anchors>
         </FontString>
       </Layer>
     </Layers>
 
     <Frames>
       <Button name="$parentCheapestMode" text="Cheapest now" inherits="UIPanelButtonTemplate">
-        <Size><AbsDimension x="112" y="24"/></Size>
-        <Anchors>
-          <Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-40"/></Offset></Anchor>
-        </Anchors>
-        <Scripts>
-          <OnClick>setRecommendationMode("dynamic");</OnClick>
-        </Scripts>
+        <Size><AbsDimension x="116" y="24"/></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-66"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>setRecommendationMode("dynamic");</OnClick></Scripts>
       </Button>
 
       <Button name="$parentStaticMode" text="Static guide" inherits="UIPanelButtonTemplate">
-        <Size><AbsDimension x="96" y="24"/></Size>
-        <Anchors>
-          <Anchor point="TOPLEFT"><Offset><AbsDimension x="136" y="-40"/></Offset></Anchor>
-        </Anchors>
-        <Scripts>
-          <OnClick>setRecommendationMode("static");</OnClick>
-        </Scripts>
+        <Size><AbsDimension x="102" y="24"/></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="138" y="-66"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>setRecommendationMode("static");</OnClick></Scripts>
       </Button>
 
-      <Button name="$parentRoute" text="Route" inherits="UIPanelButtonTemplate" hidden="true">
-        <Size><AbsDimension x="68" y="24"/></Size>
-        <Anchors>
-          <Anchor point="TOPRIGHT"><Offset><AbsDimension x="-26" y="-40"/></Offset></Anchor>
-        </Anchors>
+      <Button name="$parentRoute" text="Compare" inherits="UIPanelButtonTemplate" hidden="true">
+        <Size><AbsDimension x="74" y="24"/></Size>
+        <Anchors><Anchor point="TOPRIGHT"><Offset><AbsDimension x="-18" y="-66"/></Offset></Anchor></Anchors>
         <Scripts>
           <OnEnter>showDynamicRouteTooltip(self);</OnEnter>
           <OnLeave>GameTooltip:Hide();</OnLeave>
@@ -144,36 +120,24 @@
       </Button>
 
       <Frame name="MainFrameCoreMaterials">
-        <Size><AbsDimension x="356" y="224"/></Size>
-        <Anchors>
-          <Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-312"/></Offset></Anchor>
-        </Anchors>
+        <Size><AbsDimension x="384" y="260"/></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-300"/></Offset></Anchor></Anchors>
       </Frame>
 
       <Button name="$parentClose" inherits="UIPanelCloseButton">
-        <Anchors>
-          <Anchor point="TOPRIGHT"><Offset><AbsDimension x="-5" y="-5"/></Offset></Anchor>
-        </Anchors>
-        <Scripts>
-          <OnClick>TogglePcapperFrame("hide");</OnClick>
-        </Scripts>
+        <Anchors><Anchor point="TOPRIGHT"><Offset><AbsDimension x="-5" y="-5"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>TogglePcapperFrame("hide");</OnClick></Scripts>
       </Button>
 
       <Button name="$parentRepeatMode" text="Until change" inherits="UIPanelButtonTemplate" hidden="true">
         <Size><AbsDimension x="108" y="22"/></Size>
-        <Anchors>
-          <Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="60" y="49"/></Offset></Anchor>
-        </Anchors>
-        <Scripts>
-          <OnClick>toggleEnchantRepeatMode();</OnClick>
-        </Scripts>
+        <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="60" y="51"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>toggleEnchantRepeatMode();</OnClick></Scripts>
       </Button>
 
       <EditBox name="$parentRepeatCount" inherits="InputBoxTemplate" autoFocus="false" hidden="true">
         <Size><AbsDimension x="42" y="20"/></Size>
-        <Anchors>
-          <Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="180" y="50"/></Offset></Anchor>
-        </Anchors>
+        <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="180" y="52"/></Offset></Anchor></Anchors>
         <Scripts>
           <OnLoad>self:SetNumeric(true); self:SetMaxLetters(3); self:SetJustifyH("CENTER");</OnLoad>
           <OnTextChanged>enchantRepeatCountChanged(self);</OnTextChanged>
@@ -185,32 +149,20 @@
 
       <Button name="$parentPreviousRecipe" text="&lt;" inherits="UIPanelButtonTemplate">
         <Size><AbsDimension x="36" y="28"/></Size>
-        <Anchors>
-          <Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="18" y="16"/></Offset></Anchor>
-        </Anchors>
-        <Scripts>
-          <OnClick>displayPreviousRecipe();</OnClick>
-        </Scripts>
+        <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="18" y="16"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>displayPreviousRecipe();</OnClick></Scripts>
       </Button>
 
       <Button name="$parentCraft" text="Craft" inherits="UIPanelButtonTemplate">
-        <Size><AbsDimension x="228" y="28"/></Size>
-        <Anchors>
-          <Anchor point="BOTTOM"><Offset><AbsDimension x="0" y="16"/></Offset></Anchor>
-        </Anchors>
-        <Scripts>
-          <OnClick>craftRecipe();</OnClick>
-        </Scripts>
+        <Size><AbsDimension x="252" y="28"/></Size>
+        <Anchors><Anchor point="BOTTOM"><Offset><AbsDimension x="0" y="16"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>craftRecipe();</OnClick></Scripts>
       </Button>
 
       <Button name="$parentNextRecipe" text="&gt;" inherits="UIPanelButtonTemplate">
         <Size><AbsDimension x="36" y="28"/></Size>
-        <Anchors>
-          <Anchor point="BOTTOMRIGHT"><Offset><AbsDimension x="-18" y="16"/></Offset></Anchor>
-        </Anchors>
-        <Scripts>
-          <OnClick>displayNextRecipe();</OnClick>
-        </Scripts>
+        <Anchors><Anchor point="BOTTOMRIGHT"><Offset><AbsDimension x="-18" y="16"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>displayNextRecipe();</OnClick></Scripts>
       </Button>
     </Frames>
   </Frame>
