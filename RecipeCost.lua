@@ -147,7 +147,23 @@ local function selectPurchaseChoice(priceResult, chooser)
     return nil, "no_current_purchase_price"
 end
 
-local function resolveAcquisition(recipe, state)
+local function resolveAcquisition(recipe, state, skillContext, options)
+    if type(addonTable.resolveRecipeAcquisition) == "function" then
+        local modeled = addonTable.resolveRecipeAcquisition(recipe, state, skillContext, options)
+        if modeled and modeled.handled then
+            return {
+                available = modeled.available == true,
+                alreadyAcquired = modeled.alreadyAcquired == true,
+                marketCost = modeled.marketCost,
+                goldCost = modeled.goldCost,
+                key = modeled.key,
+                source = modeled.sourceType or modeled.source,
+                reason = modeled.reason,
+                model = modeled,
+            }
+        end
+    end
+
     local spellID = recipe.spellID or recipe.recipeID
     local learnedRecipes = state and state.learnedRecipes
     if spellID and type(learnedRecipes) == "table" and learnedRecipes[spellID] then
@@ -312,7 +328,7 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
         return result
     end
 
-    local acquisition = resolveAcquisition(recipe, state)
+    local acquisition = resolveAcquisition(recipe, state, skillContext, options)
     result.acquisition = acquisition
     if not acquisition.available then
         result.incomplete = acquisition.reason == "missing_acquisition_metadata" or acquisition.reason == "missing_acquisition_cost"

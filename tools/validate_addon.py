@@ -14,6 +14,8 @@ REQUIRED_ORDER = [
     "CharacterSkill.lua",
     "RecipeDifficulty.lua",
     "RecipeDifficultyData.lua",
+    "RecipeAcquisition.lua",
+    "RecipeAcquisitionData.lua",
     "PriceProvider.lua",
     "TSMPriceProvider.lua",
     "RecipeCost.lua",

@@ -39,7 +39,7 @@ This file governs implementation work. Keep it current as work progresses.
 | Task | Status | Purpose |
 | --- | --- | --- |
 | [04 Recipe difficulty metadata](docs/tasks/04-recipe-difficulty-metadata.md) | DONE | Model orange/yellow/green/gray thresholds for route calculations. |
-| [05 Recipe acquisition model](docs/tasks/05-recipe-acquisition-model.md) | QUEUED | Model trainer/vendor/AH/reputation/drop acquisition and costs. |
+| [05 Recipe acquisition model](docs/tasks/05-recipe-acquisition-model.md) | DONE | Model trainer/vendor/AH/reputation/drop acquisition and costs. |
 | [06 Acquisition provider integration](docs/tasks/06-acquisition-provider-integration.md) | QUEUED | Optionally consume compatible existing addon data without copying restricted databases. |
 
 ### Phase 3 — Cost engine and optimizer
@@ -70,4 +70,4 @@ Task 06 may be completed before or after Task 07, but Task 08 must not assume ac
 
 ## Current task
 
-Task 04 is complete with verified WotLK recipe difficulty metadata and modifier-aware evaluation. Task 05 (recipe acquisition model) is next; dynamic recommendations remain dormant until acquisition metadata is trustworthy, and the deterministic static guide remains the fallback.
+Tasks 04/05 are complete. Recipe difficulty and acquisition now have validated internal models, with unknown/non-guaranteed sources excluded from instant optimized routes. Task 06 (optional acquisition-provider integration) is next; the deterministic static guide remains the fallback.
