@@ -6,7 +6,6 @@ addonTable.chat_frame_player_name_color = "6BC6FF" --- pastel blue
 -- TODO: refactor / split by language file
 
 -- Localization — defaults are English, overrides applied in applyLocale()
-local L = {}
 local Alchemy = {}
 local Cooking = {}
 local Blacksmithing = {}
@@ -18,7 +17,6 @@ local Jewelcrafting = {}
 local Leatherworking = {}
 local Tailoring = {}
 
-addonTable.L = L
 addonTable.Alchemy = Alchemy
 addonTable.Cooking = Cooking
 addonTable.Blacksmithing = Blacksmithing
@@ -29,34 +27,6 @@ addonTable.Inscription = Inscription
 addonTable.Jewelcrafting = Jewelcrafting
 addonTable.Leatherworking = Leatherworking
 addonTable.Tailoring = Tailoring
-
-L["craft_button"]          = "Craft (%d)"
-L["craft_button_unavail"]  = "Unavailable"
-L["not_learned"]           = "Not learned or unavailable"
-L["profession_cap"]        = "Profession Cap already reached"
-L["recipe_prefix"]         = "Recipe: "
-L["unknown_recipe_prefix"] = "Name: "
-L["header_label"]          = "Profession Capper"
-L["loaded_for"]            = "[Profession Capper] all modules loaded for"
-L["crafting"]              = "[Profession Capper] crafting"
-L["train_profession"]       = "Train the next profession rank to continue"
-L["no_guide_step"]          = "No guide step is available for this skill level"
-L["profession_progress"]    = "%s  %d / %d"
-L["target_line"]            = "Skill %d → %d"
-L["stats_exact"]            = "Need: %d skill-ups · Can: %d · Crafts: %d"
-L["stats_minimum"]          = "Need: %d skill-ups · Can: %d · Crafts: at least %d"
-L["stats_unlearned"]        = "Need: %d skill-ups"
-L["eta_exact"]              = "Estimated time: %s"
-L["eta_minimum"]            = "Minimum time: %s"
-L["eta_unavailable"]        = "Estimated time: unavailable"
-L["craft_to"]               = "Craft to %d"
-L["continue_to"]            = "Continue to %d"
-L["crafting_button"]        = "Crafting..."
-L["craft_progress"]         = "Crafting %d/%d · ~%s left"
-L["craft_progress_no_eta"]  = "Crafting %d/%d"
-L["craft_batch_done"]       = "Batch complete · %d skill-ups still needed"
-L["target_reached"]         = "Target reached"
-L["recipe_position"]        = "%d / %d"
 
 Alchemy["2330"] = "Minor Healing Potion"
 Alchemy["2337"] = "Lesser Healing Potion"
@@ -668,36 +638,9 @@ Tailoring["55923"] = "Duskweave Shoulders"
 Tailoring["55924"] = "Duskweave Boots"
 Tailoring["56007"] = "Frostweave Bag"
 
-addonTable.applyLocale = function()
+addonTable.applyRecipeLocale = function()
     local locale = GetLocale()
     if locale == "esES" or locale == "esMX" then
-        L["craft_button"]          = "Fabricar (%d)"
-        L["craft_button_unavail"]  = "No disponible"
-        L["not_learned"]           = "No aprendida o no disponible"
-        L["profession_cap"]        = "Ya alcanzaste el nivel maximo"
-        L["recipe_prefix"]         = "Receta: "
-        L["unknown_recipe_prefix"] = "Nombre: "
-        L["header_label"]          = "Profession Capper"
-        L["loaded_for"]            = "[Profession Capper] modulos cargados para"
-        L["crafting"]              = "[Profession Capper] fabricando"
-        L["train_profession"]      = "Entrena el siguiente rango de profesión para continuar"
-        L["no_guide_step"]         = "No hay un paso de guía para este nivel"
-        L["profession_progress"]   = "%s  %d / %d"
-        L["target_line"]           = "Habilidad %d → %d"
-        L["stats_exact"]           = "Faltan: %d puntos · Puedes: %d · Fabricaciones: %d"
-        L["stats_minimum"]         = "Faltan: %d puntos · Puedes: %d · Fabricaciones: al menos %d"
-        L["stats_unlearned"]       = "Faltan: %d puntos"
-        L["eta_exact"]             = "Tiempo estimado: %s"
-        L["eta_minimum"]           = "Tiempo mínimo: %s"
-        L["eta_unavailable"]       = "Tiempo estimado: no disponible"
-        L["craft_to"]              = "Fabricar hasta %d"
-        L["continue_to"]           = "Continuar hasta %d"
-        L["crafting_button"]       = "Fabricando..."
-        L["craft_progress"]        = "Fabricando %d/%d · ~%s restantes"
-        L["craft_progress_no_eta"] = "Fabricando %d/%d"
-        L["craft_batch_done"]      = "Lote terminado · faltan %d puntos"
-        L["target_reached"]        = "Objetivo alcanzado"
-        L["recipe_position"]       = "%d / %d"
 
         Alchemy["2330"] = "Poción de sanación menor"
         Alchemy["2337"] = "Poción de sanación inferior"
@@ -1309,33 +1252,6 @@ addonTable.applyLocale = function()
         Tailoring["56007"] = "Bolsa de tejido de Escarcha"
         
     elseif locale == "ruRU" then
-        L["craft_button"]          = "Изготовить (%d)"
-        L["craft_button_unavail"]  = "Недоступно"
-        L["not_learned"]           = "Не изучен или недоступен"
-        L["profession_cap"]        = "Вы достигли максимального уровня"
-        L["recipe_prefix"]         = "Рецепт: "
-        L["unknown_recipe_prefix"] = "Название: "
-        L["header_label"]          = "Profession Capper"
-        L["loaded_for"]            = "[Profession Capper] модули загружены для"
-        L["crafting"]              = "[Profession Capper] изготовление"
-        L["train_profession"]      = "Изучите следующий ранг профессии, чтобы продолжить"
-        L["no_guide_step"]         = "Для этого уровня навыка нет шага руководства"
-        L["profession_progress"]   = "%s  %d / %d"
-        L["target_line"]           = "Навык %d → %d"
-        L["stats_exact"]           = "Нужно: %d очк. · Можно: %d · Создать: %d"
-        L["stats_minimum"]         = "Нужно: %d очк. · Можно: %d · Создать: минимум %d"
-        L["stats_unlearned"]       = "Нужно: %d очк."
-        L["eta_exact"]             = "Примерное время: %s"
-        L["eta_minimum"]           = "Минимальное время: %s"
-        L["eta_unavailable"]       = "Примерное время: недоступно"
-        L["craft_to"]              = "Создать до %d"
-        L["continue_to"]           = "Продолжить до %d"
-        L["crafting_button"]       = "Создание..."
-        L["craft_progress"]        = "Создание %d/%d · ~%s осталось"
-        L["craft_progress_no_eta"] = "Создание %d/%d"
-        L["craft_batch_done"]      = "Партия завершена · осталось %d очк."
-        L["target_reached"]        = "Цель достигнута"
-        L["recipe_position"]       = "%d / %d"
 
         Alchemy["2330"] = "Крохотный флакон с лечебным зельем"
         Alchemy["2337"] = "Маленький флакон с лечебным зельем"
