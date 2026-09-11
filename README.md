@@ -111,3 +111,19 @@ Herbalism, Mining, and Skinning are not supported and likely won't be — these 
 ## Support
 
 Open an issue on [this repo](https://github.com/Utkuchix/Outstanding-Profession-Capper/issues).
+
+
+## v3 development
+
+The v3 work is focused on making the addon safer and more useful while leveling:
+
+- Each guide step exposes its target skill level.
+- The recommendation panel shows how many skill-ups are needed before the next guide step.
+- Craft counts are exact for orange recipes and explicitly shown as a minimum when a skill-up is not guaranteed.
+- The addon estimates crafting time from the recipe cast time.
+- The Craft button no longer blindly queues every item you can make. It queues at most the amount needed for the current guide step.
+- Material requirements are calculated for the planned amount and compared with the amount currently owned.
+- Profession training caps are respected; the addon tells you to train instead of recommending unreachable skill levels.
+- CI validates Lua 5.1 syntax and checks that every supported profession covers skills 1-449 exactly once.
+
+The existing profession data is being migrated incrementally so recommendations remain easy to compare with the proven upstream guide data.
