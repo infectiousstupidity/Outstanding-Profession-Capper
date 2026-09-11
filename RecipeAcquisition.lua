@@ -2,8 +2,100 @@ local addonName, addonTable = ...
 
 local recordsBySpell = {}
 local recordsByKey = {}
+local acquisitionProviders = {}
 addonTable.recipeAcquisitionRecords = recordsBySpell
 addonTable.professionAcquisitionRecords = recordsByKey
+addonTable.recipeAcquisitionProviders = acquisitionProviders
+
+function addonTable.registerRecipeAcquisitionProvider(provider)
+    if type(provider) ~= "table"
+        or type(provider.name) ~= "string"
+        or provider.name == ""
+        or type(provider.isAvailable) ~= "function"
+        or type(provider.getRecipeAcquisition) ~= "function"
+    then
+        return false, "invalid_provider"
+    end
+
+    for index = 1, table.getn(acquisitionProviders) do
+        if acquisitionProviders[index].name == provider.name then
+            acquisitionProviders[index] = provider
+            return true
+        end
+    end
+
+    table.insert(acquisitionProviders, provider)
+    return true
+end
+
+function addonTable.getRecipeAcquisitionProviderStatus()
+    local status = {}
+    for index = 1, table.getn(acquisitionProviders) do
+        local provider = acquisitionProviders[index]
+        local ok, available = pcall(provider.isAvailable, provider)
+        table.insert(status, {
+            name = provider.name,
+            available = ok and available == true,
+            lastError = provider.lastError,
+        })
+    end
+    return status
+end
+
+local function queryLiveProvider(spellID)
+    local best
+    local bestPriority = -math.huge
+
+    for index = 1, table.getn(acquisitionProviders) do
+        local provider = acquisitionProviders[index]
+        local availableOK, available = pcall(provider.isAvailable, provider)
+        if availableOK and available == true then
+            local queryOK, result = pcall(provider.getRecipeAcquisition, provider, spellID)
+            if queryOK then
+                provider.lastError = nil
+                if type(result) == "table" then
+                    local priority = tonumber(result.providerPriority or provider.priority) or 0
+                    if priority > bestPriority then
+                        best = result
+                        bestPriority = priority
+                    end
+                end
+            else
+                provider.lastError = tostring(result)
+            end
+        elseif not availableOK then
+            provider.lastError = tostring(available)
+        end
+    end
+
+    return best
+end
+
+local function mergeAcquisitionRecords(base, live)
+    if type(live) ~= "table" then
+        return base
+    end
+    if type(base) ~= "table" then
+        return live
+    end
+
+    local merged = {}
+    for key, value in pairs(base) do
+        merged[key] = value
+    end
+    for key, value in pairs(live) do
+        if value ~= nil and key ~= "sourceName" and key ~= "zone" and key ~= "coordinates" then
+            merged[key] = value
+        end
+    end
+
+    -- Public providers may only expose source IDs/types. Keep a richer built-in
+    -- name/location when we already have one.
+    if not merged.sourceName then merged.sourceName = live.sourceName end
+    if not merged.zone then merged.zone = live.zone end
+    if not merged.coordinates then merged.coordinates = live.coordinates end
+    return merged
+end
 
 local ALLOWED_TYPES = {
     learned = true,
@@ -231,6 +323,8 @@ local function resultBase(entry, spellID)
         source = entry.sourceType,
         sourceName = entry.sourceName,
         sourceID = entry.sourceID or entry.trainerID or entry.vendorID,
+        provider = entry.provider,
+        providerSourceIDs = entry.providerSourceIDs,
         zone = entry.zone,
         coordinates = entry.coordinates,
         faction = entry.faction,
@@ -282,6 +376,11 @@ function addonTable.resolveRecipeAcquisition(recipeOrSpellID, state, skillContex
     local entry = spellID and recordsBySpell[spellID] or nil
     if not entry and recipe then
         entry = normalizeInline(recipe)
+    end
+
+    local liveEntry = spellID and queryLiveProvider(spellID) or nil
+    if liveEntry then
+        entry = mergeAcquisitionRecords(entry, liveEntry)
     end
 
     if not entry then
