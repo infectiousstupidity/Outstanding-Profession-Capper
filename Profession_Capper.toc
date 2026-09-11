@@ -1,10 +1,13 @@
 ## Interface: 30300
 ## Title: Profession Capper
 ## Notes: Tells you which recipe you should craft based on your current professions skill level
-## Version: v3.0.0-alpha1
+## Version: v3.0.0-alpha2
+## SavedVariables: ProfessionCapperDB
 
 constants.lua
 Guide.lua
+Settings.lua
+Session.lua
 Professions\Enchanting.lua
 Professions\Tailoring.lua
 Professions\Jewelcrafting.lua
