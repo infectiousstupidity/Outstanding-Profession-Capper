@@ -13,9 +13,13 @@ local materialRows = {}
 local dynamicRecommendation
 
 local MATERIAL_ROW_HEIGHT = 38
-local MATERIALS_TOP = 312
-local FOOTER_SPACE = 78
-local MIN_PANEL_HEIGHT = 413
+local MATERIALS_TOP = 300
+local FOOTER_SPACE = 66
+local REPEAT_FOOTER_SPACE = 94
+local MIN_PANEL_HEIGHT = 390
+local MATERIAL_ROW_WIDTH = 384
+local MATERIAL_NAME_WIDTH = 220
+local MATERIAL_BUY_WIDTH = 272
 
 local tradeSkillStateMutation = false
 local suppressTradeSkillUpdatesUntil = 0
@@ -561,7 +565,7 @@ local function getMaterialRow(index)
     end
 
     local row = CreateFrame("Button", nil, MainFrameCoreMaterials)
-    row:SetWidth(356)
+    row:SetWidth(MATERIAL_ROW_WIDTH)
     row:SetHeight(34)
     row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     row:SetScript("OnEnter", materialRowOnEnter)
@@ -583,25 +587,25 @@ local function getMaterialRow(index)
 
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 8, -1)
-    row.name:SetWidth(180)
+    row.name:SetWidth(MATERIAL_NAME_WIDTH)
     row.name:SetHeight(15)
     row.name:SetJustifyH("LEFT")
 
     row.count = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.count:SetPoint("TOPRIGHT", row, "TOPRIGHT", -2, -1)
-    row.count:SetWidth(74)
+    row.count:SetWidth(80)
     row.count:SetHeight(15)
     row.count:SetJustifyH("RIGHT")
 
     row.buy = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     row.buy:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 8, 1)
-    row.buy:SetWidth(230)
+    row.buy:SetWidth(MATERIAL_BUY_WIDTH)
     row.buy:SetHeight(15)
     row.buy:SetJustifyH("LEFT")
 
     row.price = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.price:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -2, 1)
-    row.price:SetWidth(98)
+    row.price:SetWidth(96)
     row.price:SetHeight(15)
     row.price:SetJustifyH("RIGHT")
 
@@ -618,6 +622,9 @@ local function renderMaterials(reagents, plannedCrafts)
     end
 
     txtMaterialsLabel:Show()
+
+    local purchaseTotal = 0
+    local purchaseComplete = true
 
     for i = 1, count do
         local reagent = reagents[i]
@@ -653,6 +660,8 @@ local function renderMaterials(reagents, plannedCrafts)
                 row.price:SetTextColor(0.78, 0.78, 0.78)
             end
 
+            purchaseTotal = purchaseTotal + (tonumber(priceInfo.estimatedRemainingCost) or 0)
+
             if priceInfo.converted and priceInfo.sourceItemID then
                 local sourceName = GetItemInfo(priceInfo.sourceItemID)
                     or ("item " .. tostring(priceInfo.sourceItemID))
@@ -675,8 +684,14 @@ local function renderMaterials(reagents, plannedCrafts)
                         sourceName
                     ))
                 end
+            else
+                row.buy:SetText(string.format(
+                    addonTable.L["material_buy_quantity"],
+                    needed
+                ))
             end
         else
+            purchaseComplete = false
             row.price:SetText(addonTable.L["material_no_price"])
             row.price:SetTextColor(1, 0.35, 0.35)
         end
@@ -698,11 +713,12 @@ local function renderMaterials(reagents, plannedCrafts)
         row:Show()
     end
 
-    return count
+    return count, purchaseTotal, purchaseComplete
 end
 
-local function updatePanelHeight(materialCount)
-    local requiredHeight = MATERIALS_TOP + (materialCount * MATERIAL_ROW_HEIGHT) + FOOTER_SPACE
+local function updatePanelHeight(materialCount, showRepeatControls)
+    local footerSpace = showRepeatControls and REPEAT_FOOTER_SPACE or FOOTER_SPACE
+    local requiredHeight = MATERIALS_TOP + (materialCount * MATERIAL_ROW_HEIGHT) + footerSpace
     MainFrameCore:SetHeight(math.max(MIN_PANEL_HEIGHT, requiredHeight))
 end
 
@@ -996,6 +1012,29 @@ local function getRecommendationMode()
     return db.recommendationMode == "static" and "static" or "dynamic"
 end
 
+local DIFFICULTY_PRESENTATION = {
+    optimal = { key = "difficulty_orange", color = "ffff7f00" },
+    medium = { key = "difficulty_yellow", color = "ffffff00" },
+    easy = { key = "difficulty_green", color = "ff40c040" },
+    trivial = { key = "difficulty_gray", color = "ff909090" },
+}
+
+local function updateRecommendationMeta(data, skillStart, skillEnd)
+    local difficulty = data and DIFFICULTY_PRESENTATION[data.skillType] or nil
+    if not difficulty then
+        txtTarget:SetText(string.format(addonTable.L["target_line"], skillStart, skillEnd))
+        return
+    end
+
+    txtTarget:SetText(string.format(
+        addonTable.L["recommendation_meta"],
+        difficulty.color,
+        addonTable.L[difficulty.key],
+        skillStart,
+        skillEnd
+    ))
+end
+
 local function humanizeDynamicReason(reason)
     local L = addonTable.L
     local reasons = {
@@ -1010,24 +1049,26 @@ local function humanizeDynamicReason(reason)
     return reasons[reason] or tostring(reason or L["dynamic_reason_unknown"])
 end
 
+local function setModeButtonState(button, selected)
+    if not button then
+        return
+    end
+
+    button:Enable()
+    if selected then
+        button:LockHighlight()
+        button:SetAlpha(1)
+    else
+        button:UnlockHighlight()
+        button:SetAlpha(0.72)
+    end
+end
+
 local function updateModeControls()
     local mode = getRecommendationMode()
 
-    if MainFrameCoreCheapestMode then
-        if mode == "dynamic" then
-            MainFrameCoreCheapestMode:Disable()
-        else
-            MainFrameCoreCheapestMode:Enable()
-        end
-    end
-
-    if MainFrameCoreStaticMode then
-        if mode == "static" then
-            MainFrameCoreStaticMode:Disable()
-        else
-            MainFrameCoreStaticMode:Enable()
-        end
-    end
+    setModeButtonState(MainFrameCoreCheapestMode, mode == "dynamic")
+    setModeButtonState(MainFrameCoreStaticMode, mode == "static")
 
     if MainFrameCoreRoute then
         if mode == "dynamic" and dynamicRecommendation and dynamicRecommendation.available then
@@ -1072,21 +1113,7 @@ local function dynamicPriceLine()
         return ""
     end
 
-    local source
-    local stale
-    local age
-
-    local plan = dynamicRecommendation.plan
-    if plan then
-        source = dynamicRecommendation.providerName or "price provider"
-        if plan.priceSources and table.getn(plan.priceSources) > 0 then
-            source = table.concat(plan.priceSources, ", ")
-        end
-        stale = plan.quality == "stale"
-        age = plan.oldestPriceAgeSeconds
-    else
-        source, stale, age = currentCostPriceSummary()
-    end
+    local source, stale, age = currentCostPriceSummary()
 
     local quality = stale
         and addonTable.L["dynamic_quality_stale"]
@@ -1108,43 +1135,18 @@ local function updateRecommendationSummary()
     local mode = getRecommendationMode()
     if mode == "dynamic" and dynamicRecommendation and dynamicRecommendation.available then
         local cost = dynamicRecommendation.currentCost or {}
-        local segment = dynamicRecommendation.currentSegment or {}
         local perCraft = addonTable.formatCopperShort(
             cost.currentPurchaseCostPerCraft or cost.materialMarketValuePerCraft
         )
         local perSkill = addonTable.formatCopperShort(
             cost.expectedCurrentPurchaseCostPerSkillUp or cost.expectedMarketCostPerSkillUp
         )
-        local firstLine = string.format(
+
+        txtCostSummary:SetText(string.format(
             addonTable.L["dynamic_per_application"],
             perCraft,
             perSkill
-        )
-
-        local plan = dynamicRecommendation.plan
-        local secondLine
-        if plan and plan.complete then
-            local target = dynamicRecommendation.targetSkill or 450
-            local total = addonTable.formatCopperShort(
-                plan.estimatedCurrentPurchaseCost or plan.estimatedMarketValueCost
-            )
-            local goldNow = addonTable.formatCopperShort(plan.estimatedGoldNeededNow)
-            local crafts = math.max(0, math.ceil(tonumber(plan.totalExpectedCrafts) or 0))
-            secondLine = string.format(
-                addonTable.L["dynamic_route_total"],
-                target,
-                total,
-                goldNow,
-                crafts
-            )
-        else
-            secondLine = string.format(
-                addonTable.L["dynamic_current_only"],
-                tonumber(segment.skillEnd) or ((professionContext and professionContext.baseSkill or 0) + 1)
-            )
-        end
-
-        txtCostSummary:SetText(firstLine .. "\n" .. secondLine)
+        ))
         return
     end
 
@@ -1829,29 +1831,33 @@ function displayRecipe()
 
         txtShouldCraft:SetText(data.name)
         imgSkillIcon:SetTexture(icon or UNKNOWN_ICON)
+        updateRecommendationMeta(data, professionContext.effectiveSkill, displayedTarget)
 
         if usingDynamic then
-            local segment = dynamicRecommendation.currentSegment
-            txtCraftStats:SetText(string.format(
-                L["dynamic_stats"],
-                plannedCrafts,
-                data.numAvailable,
-                addonTable.formatCopperShort(segment.expectedMaterialCost)
-            ))
+            txtCraftStats:SetText("")
             txtRecipeStatus:SetText(L["dynamic_preferred"])
         else
             txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))
+            txtRecipeStatus:SetText(L["static_recommendation"])
         end
 
         if data.numAvailable <= 0 and skillUpsNeeded > 0 then
-            local status = L["missing_materials"]
-            if usingDynamic then
-                status = L["dynamic_preferred"] .. " · " .. status
-            end
-            txtRecipeStatus:SetText(status)
+            local reason = usingDynamic and L["dynamic_preferred"] or L["static_recommendation"]
+            txtRecipeStatus:SetText(reason .. " · " .. L["missing_materials"])
         end
 
-        local materialCount = renderMaterials(data.reagents, materialCrafts)
+        local materialCount, immediatePurchaseCost, purchaseCostComplete = renderMaterials(data.reagents, materialCrafts)
+        if usingDynamic then
+            if purchaseCostComplete and immediatePurchaseCost > 0 then
+                txtCraftStats:SetText(string.format(
+                    L["dynamic_availability_purchase"],
+                    data.numAvailable,
+                    addonTable.formatCopperShort(immediatePurchaseCost)
+                ))
+            else
+                txtCraftStats:SetText(string.format(L["dynamic_availability"], data.numAvailable))
+            end
+        end
 
         local craftSeconds = getCraftTimeSeconds(currentID)
         if usingDynamic then
@@ -1925,7 +1931,7 @@ function displayRecipe()
     if data then
         visibleMaterialCount = table.getn(data.reagents or {})
     end
-    updatePanelHeight(visibleMaterialCount)
+    updatePanelHeight(visibleMaterialCount, targetedEnchant)
 
     previousRecipeKey = currentKey
 end

@@ -1,6 +1,6 @@
 # Task 15 — Core UI hierarchy and material redesign
 
-Status: QUEUED  
+Status: IN PROGRESS  
 Phase: 5 — UI/UX polish  
 Depends on: Task 10, Task 14
 
@@ -111,6 +111,22 @@ Do not add a UI framework.
 - No overlap at the minimum supported UI scale used during manual testing.
 - ElvUI skinning does not make text/buttons unreadable.
 - Existing crafting/enchant behavior is unchanged.
+
+## Implementation note
+
+Implemented on master pending manual acceptance. Automated validation must pass before the commit is considered ready for testing.
+
+The code changes:
+
+- reorganize the stable XML hierarchy around profession progress, recommendation, costs, materials, and the primary action;
+- show the live recipe difficulty beside the current skill range;
+- keep current-step price source/freshness visible instead of promoting full-route totals in the default view;
+- show normal-material `Buy N` guidance as well as equivalent-reagent conversion guidance;
+- summarize the immediate missing-material purchase total when all required prices are available;
+- make Cheapest-now / Static-guide selection visually persistent without disabling the selected button;
+- size the footer differently when Enchant repeat controls are actually present.
+
+The required in-game screenshots and ElvUI checks below are still pending, so this task remains `IN PROGRESS`.
 
 ## Manual screenshots to capture
 
