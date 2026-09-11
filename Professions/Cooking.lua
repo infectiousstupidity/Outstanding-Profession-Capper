@@ -1,9 +1,12 @@
-addonName, addonTable = ...;
+local addonName, addonTable = ...;
 
 local shouldCraft, shouldCraftRecipe;
 
 addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
+    shouldCraft, shouldCraftRecipe = nil, nil
+    local targetSkill = nil
     if rank > 0 and rank < 20 then
+        targetSkill = 20
         shouldCraft = {
             37836,
             8604,
@@ -16,6 +19,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             33277,
         };
     elseif rank >= 20 and rank < 40 then
+        targetSkill = 40
         shouldCraft = {
             37836,
             6413,
@@ -29,6 +33,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             33277,
         };
     elseif rank >= 40 and rank < 45 then
+        targetSkill = 45
         shouldCraft = {
             6413,
             8604,
@@ -41,12 +46,14 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             33277,
         };
     elseif rank >= 45 and rank < 50 then
+        targetSkill = 50
         shouldCraft = {
             8607,
             6413,
             2539,
         };
     elseif rank >= 50 and rank < 70 then
+        targetSkill = 70
         shouldCraft = {
             8607,
             33278,
@@ -61,6 +68,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             2539,
         };
     elseif rank >= 70 and rank < 80 then
+        targetSkill = 80
         shouldCraft = {
             8607,
             6413,
@@ -73,6 +81,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             6416,
         };
     elseif rank >= 80 and rank < 110 then
+        targetSkill = 110
         shouldCraft = {
             25704,
             2544,
@@ -85,6 +94,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             6416,
         };
     elseif rank >= 110 and rank < 130 then
+        targetSkill = 130
         shouldCraft = {
             3397,
             3377,
@@ -99,6 +109,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             6416,
         };
     elseif rank >= 130 and rank < 140 then
+        targetSkill = 140
         shouldCraft = {
             3376,
             3398,
@@ -118,6 +129,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             6416,
         };
     elseif rank >= 140 and rank < 175 then
+        targetSkill = 175
         shouldCraft = {
             3376,
             3398,
@@ -128,6 +140,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             3377,
         };
     elseif rank >= 175 and rank < 225 then
+        targetSkill = 225
         shouldCraft = {
             15855,
             4094,
@@ -141,6 +154,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             15865,
         };
     elseif rank >= 225 and rank < 250 then
+        targetSkill = 250
         shouldCraft = {
             64054,
             15933,
@@ -151,12 +165,14 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             18238,
         };
     elseif rank >= 250 and rank < 285 then
+        targetSkill = 285
         shouldCraft = {
             46688,
             46684,
             18244,
         };
     elseif rank >= 285 and rank < 300 then
+        targetSkill = 300
         shouldCraft = {
             24801,
             18247,
@@ -165,6 +181,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             22761,
         };
     elseif rank >= 300 and rank < 325 then
+        targetSkill = 325
         shouldCraft = {
             33284,
             33279,
@@ -174,12 +191,14 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             43772,
         };
     elseif rank >= 325 and rank < 335 then
+        targetSkill = 335
         shouldCraft = {
             33289,
             33287,
             33288,
         };
     elseif rank >= 335 and rank < 350 then
+        targetSkill = 350
         shouldCraft = {
             33289,
             33287,
@@ -188,6 +207,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             38868,
         };
     elseif rank >= 350 and rank < 375 then
+        targetSkill = 375
         shouldCraft = {
             45569,
             45549,
@@ -209,6 +229,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             42305,
         };
     elseif rank >= 375 and rank < 400 then
+        targetSkill = 400
         shouldCraft = {
             53056,
             45569,
@@ -224,6 +245,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             58065,
         };
     elseif rank >= 400 and rank < 425 then
+        targetSkill = 425
         shouldCraft = {
             57441,
             57442,
@@ -240,6 +262,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             57443,
         };
     elseif rank >= 425 and rank < 450 then
+        targetSkill = 450
         shouldCraft = {
             58527,
             58528,
@@ -265,7 +288,7 @@ addonTable.getCookingCurrentSkillLevelRecipeToCraft = function(rank)
             shouldCraftRecipe[i] = addonTable.Cooking[tostring(v)]
         end
     end
-    return shouldCraft, shouldCraftRecipe
+    return shouldCraft, shouldCraftRecipe, targetSkill;
 end
 
 print("|cff" .. addonTable.chat_frame_default_color .. '[Profession Capper] loaded Cooking module|r');

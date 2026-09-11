@@ -1,0 +1,20 @@
+name: Validate addon
+
+on:
+  push:
+    branches: ["master", "v3-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua 5.1
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1
+      - name: Check Lua syntax
+        run: find . -name '*.lua' -print0 | xargs -0 -n1 luac5.1 -p
+      - name: Validate profession guides
+        run: python3 tools/validate_guides.py
