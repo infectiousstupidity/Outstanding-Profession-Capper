@@ -59,6 +59,18 @@ This file governs implementation work. Keep it current as work progresses.
 | [13 Auto-confirm Enchant replacement](docs/tasks/13-auto-confirm-enchant-replacement.md) | IN PROGRESS | Skip the replace-enchant confirmation during Profession Capper repeat clicks without calling the protected API prematurely. |
 | [14 Equivalent reagent purchase guidance](docs/tasks/14-equivalent-reagent-purchase-guidance.md) | IN PROGRESS | Show the exact cheaper Greater/Lesser Essence purchase, quantity, conversion, and savings instead of only using it internally for pricing. |
 
+### Phase 5 — UI/UX polish
+
+Source of truth: [UI polish plan](docs/UI-POLISH-PLAN.md)
+
+| Task | Status | Purpose |
+| --- | --- | --- |
+| [15 Core UI hierarchy and material redesign](docs/tasks/15-ui-polish-core-hierarchy.md) | QUEUED | Make the current recommendation, costs, and purchase actions visually clear at a glance. |
+| [16 Inline recipe comparison](docs/tasks/16-ui-polish-comparison.md) | QUEUED | Show why the selected recipe is cheapest without relying on a tooltip. |
+| [17 Compact and expanded detail modes](docs/tasks/17-ui-polish-detail-modes.md) | QUEUED | Keep the default panel focused while preserving deeper comparison/route detail. |
+| [18 Enchant repeat workflow presentation](docs/tasks/18-ui-polish-enchant-workflow.md) | QUEUED | Make target, repeat mode, and progress obvious during repeated enchants. |
+| [19 Final visual QA and compatibility](docs/tasks/19-ui-polish-qa.md) | QUEUED | Verify layout, ElvUI compatibility, state handling, and remove obsolete presentation code. |
+
 ## Dependency order
 
 `01 -> 02 -> 03`
@@ -71,6 +83,18 @@ This file governs implementation work. Keep it current as work progresses.
 
 Task 06 may be completed before or after Task 07, but Task 08 must not assume acquisition-provider data is always available.
 
+Phase 5 UI order:
+
+`10 + 14 -> 15 -> 16 -> 17`
+
+`12 + 13 + 15 -> 18`
+
+`15 + 16 + 17 + 18 -> 19`
+
+Do not start Task 19 until the preceding UI tasks have had their required in-game checks.
+
 ## Current task
 
 Task 10 remains in manual acceptance. Tasks 12 and 13 are awaiting in-game Enchant repeat testing. Task 14 is implemented in code and awaiting in-game purchase-guidance checks: equivalent Greater/Lesser Essence pricing is quantity-aware, and converted material rows explicitly tell the player what form and quantity to buy, the direct-vs-recommended cost, and the savings.
+
+Phase 5 is planned but not started. The next implementation task after the current Phase 4 acceptance work is Task 15. Implement Tasks 15–19 in order; each remains one implementation commit.
