@@ -1,0 +1,36 @@
+name: Release addon
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate tag build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1
+          find . -name '*.lua' -print0 | xargs -0 -n1 luac5.1 -p
+          python3 tools/validate_addon.py
+          python3 tools/validate_guides.py
+
+      - name: Package addon
+        run: |
+          mkdir -p package/Profession_Capper/Professions
+          cp ./*.lua ./*.xml ./*.toc package/Profession_Capper/
+          cp Professions/*.lua package/Profession_Capper/Professions/
+          cd package
+          zip -r "../Profession_Capper-${GITHUB_REF_NAME}.zip" Profession_Capper
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "Profession_Capper-${GITHUB_REF_NAME}.zip" --generate-notes
