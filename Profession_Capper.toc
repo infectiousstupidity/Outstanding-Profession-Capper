@@ -5,6 +5,7 @@
 ## SavedVariables: ProfessionCapperDB
 
 constants.lua
+Localization.lua
 Guide.lua
 Settings.lua
 Session.lua
