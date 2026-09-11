@@ -7,194 +7,106 @@
       <OnDragStart>self:StartMoving();</OnDragStart>
       <OnDragStop>self:StopMovingOrSizing();</OnDragStop>
     </Scripts>
+
     <Anchors>
-      <Anchor point="bottomleft" relativePoint="bottomleft">
-        <Offset>
-          <!-- <AbsDimension x="200" y="0"/> -->
-          <AbsDimension x="0" y="0"/>
-        </Offset>
+      <Anchor point="BOTTOMLEFT" relativePoint="BOTTOMLEFT">
+        <Offset><AbsDimension x="0" y="0"/></Offset>
       </Anchor>
     </Anchors>
-    <Size>
-      <AbsDimension x="225" y="250"/>
-    </Size>
+
+    <Size><AbsDimension x="280" y="300"/></Size>
 
     <Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background" tile="true" edgeFile="Interface\DialogFrame\UI-DialogBox-Border">
-      <TileSize>
-        <AbsValue val="32"/>
-      </TileSize>
-      <EdgeSize>
-        <AbsValue val="32"/>
-      </EdgeSize>
-      <BackgroundInsets>
-        <AbsInset left="11" right="12" top="12" bottom="11"/>
-        <!-- <AbsInset left="400" right="500" top="400" bottom="500"/> -->
-    </BackgroundInsets>
-
+      <TileSize><AbsValue val="32"/></TileSize>
+      <EdgeSize><AbsValue val="32"/></EdgeSize>
+      <BackgroundInsets><AbsInset left="11" right="12" top="12" bottom="11"/></BackgroundInsets>
     </Backdrop>
 
     <Layers>
-        <Layer level="ARTWORK">
+      <Layer level="ARTWORK">
+        <Texture name="$parentTitle" file="Interface\DialogFrame\UI-DialogBox-Header">
+          <Size><AbsDimension x="300" y="64"/></Size>
+          <Anchors>
+            <Anchor point="TOP"><Offset><AbsDimension x="0" y="0"/></Offset></Anchor>
+          </Anchors>
+        </Texture>
 
-            <!-- Header texture -->
-            <Texture name="$parentTitle" file="Interface\DialogFrame\UI-DialogBox-Header">
-                <Size>
-                    <AbsDimension x="430" y="64"/>
-                </Size>
-                <Anchors>
-                    <Anchor point="TOP">
-                        <Offset>
-                            <AbsDimension x="0" y="0"/>
-                        </Offset>
-                    </Anchor>
-                </Anchors>
-            </Texture>
+        <FontString name="txtHeaderLabel" inherits="GameFontNormal" text="Next recipe you should craft">
+          <Anchors>
+            <Anchor point="TOP" relativeTo="$parentTitle"><Offset><AbsDimension x="0" y="-14"/></Offset></Anchor>
+          </Anchors>
+        </FontString>
 
+        <FontString name="txtShouldCraft" inherits="GameFontNormal">
+          <Size><AbsDimension x="240" y="24"/></Size>
+          <Anchors>
+            <Anchor point="TOP" relativeTo="$parentTitle"><Offset><AbsDimension x="0" y="-50"/></Offset></Anchor>
+          </Anchors>
+        </FontString>
 
-            <!-- Skill icon texture -->
-            <Texture name="imgSkillIcon" file="Interface\InventoryItems\WoWUnknownItem01">
-            <!-- <Texture name="imgSkillIcon" file="Interface\Icons\INV_Misc_Bag_EnchantedMageweave"> -->
-                <Size>
-                    <AbsDimension x="50" y="50"/>
-                </Size>
-                <Anchors>
-                    <Anchor point="top">
-                        <Offset>
-                            <AbsDimension y="-75"/>
-                        </Offset>
-                    </Anchor>
-                </Anchors>
-            </Texture>
+        <Texture name="imgSkillIcon" file="Interface\InventoryItems\WoWUnknownItem01">
+          <Size><AbsDimension x="44" y="44"/></Size>
+          <Anchors>
+            <Anchor point="TOP"><Offset><AbsDimension x="0" y="-78"/></Offset></Anchor>
+          </Anchors>
+        </Texture>
 
+        <FontString name="txtCraftStats" inherits="GameFontHighlightSmall">
+          <Size><AbsDimension x="250" y="34"/></Size>
+          <Anchors>
+            <Anchor point="TOP"><Offset><AbsDimension x="0" y="-128"/></Offset></Anchor>
+          </Anchors>
+        </FontString>
 
-            <FontString name="txtHeaderLabel" inherits="GameFontNormal" text="Next recipe you should craft">
-                <Anchors>
-                    <Anchor point="TOP" relativeTo="$parentTitle">
-                        <Offset>
-                            <AbsDimension x="0" y="-14"/>
-                        </Offset>
-                    </Anchor>
-                </Anchors>
-            </FontString>
+        <FontString name="txtCraftEta" inherits="GameFontNormalSmall">
+          <Size><AbsDimension x="250" y="18"/></Size>
+          <Anchors>
+            <Anchor point="TOP"><Offset><AbsDimension x="0" y="-160"/></Offset></Anchor>
+          </Anchors>
+        </FontString>
 
-            <FontString name="txtShouldCraft" inherits="GameFontNormal">
-                <Size>
-                    <AbsDimension x="200"/>
-                </Size>
-                <Anchors>
-                    <Anchor point="TOP" relativeTo="$parentTitle">
-                        <Offset>
-                            <AbsDimension x="0" y="-50"/>
-                        </Offset>
-                    </Anchor>
-                </Anchors>
-            </FontString>
-
-            <FontString name="txtShouldCraftRecipe" inherits="GameFontNormal">
-                <Size>
-                    <AbsDimension x="200"/>
-                </Size>
-                <Anchors>
-                    <Anchor point="TOP" relativeTo="$parentTitle">
-                        <Offset>
-                            <AbsDimension x="0" y="-165"/>
-                        </Offset>
-                    </Anchor>
-                </Anchors>
-            </FontString>
-
-        </Layer>
+        <FontString name="txtShouldCraftRecipe" inherits="GameFontNormalSmall" justifyH="LEFT">
+          <Size><AbsDimension x="240" y="62"/></Size>
+          <Anchors>
+            <Anchor point="TOP"><Offset><AbsDimension x="0" y="-218"/></Offset></Anchor>
+          </Anchors>
+        </FontString>
+      </Layer>
     </Layers>
 
     <Frames>
-        <Button name="$parentCraft" text="TXT_CRAFT" inherits="UIPanelButtonTemplate">
-            <Size>
-                <AbsDimension x="96" y="32"/>
-            </Size>
-            <Anchors>
-                <Anchor point="top">
-                    <Offset>
-                        <AbsDimension y="-125" />
-                    </Offset>
-                </Anchor>
-            </Anchors>
-            <Scripts>
-                <OnLoad>
-                    self:RegisterForClicks("LeftButtonUp");
-                </OnLoad>
-                <OnClick>
-                    craftRecipe();
-                </OnClick>
-            </Scripts>
-        </Button>
+      <Button name="$parentCraft" text="Craft" inherits="UIPanelButtonTemplate">
+        <Size><AbsDimension x="112" y="28"/></Size>
+        <Anchors>
+          <Anchor point="TOP"><Offset><AbsDimension y="-182"/></Offset></Anchor>
+        </Anchors>
+        <Scripts>
+          <OnLoad>self:RegisterForClicks("LeftButtonUp");</OnLoad>
+          <OnClick>craftRecipe();</OnClick>
+        </Scripts>
+      </Button>
 
-        <Button name="$parentNextRecipe" text="&gt;" inherits="UIPanelButtonTemplate">
-            <Size>
-                <AbsDimension x="32" y="32"/>
-            </Size>
-            <Anchors>
-                <Anchor point="topright">
-                    <Offset>
-                        <AbsDimension y="-125" x="-20" />
-                    </Offset>
-                </Anchor>
-            </Anchors>
-            <Scripts>
-                <OnLoad>
-                    self:RegisterForClicks("LeftButtonUp");
-                </OnLoad>
-                <OnClick>
-                    displayNextRecipe();
-                    <!-- craftRecipe(); -->
-                </OnClick>
-            </Scripts>
-        </Button>
+      <Button name="$parentNextRecipe" text="&gt;" inherits="UIPanelButtonTemplate">
+        <Size><AbsDimension x="30" y="28"/></Size>
+        <Anchors>
+          <Anchor point="TOPRIGHT"><Offset><AbsDimension y="-182" x="-24"/></Offset></Anchor>
+        </Anchors>
+        <Scripts>
+          <OnLoad>self:RegisterForClicks("LeftButtonUp");</OnLoad>
+          <OnClick>displayNextRecipe();</OnClick>
+        </Scripts>
+      </Button>
 
-        <Button name="$parentPreviousRecipe" text="&lt;" inherits="UIPanelButtonTemplate">
-            <Size>
-                <AbsDimension x="32" y="32"/>
-            </Size>
-            <Anchors>
-                <Anchor point="topleft">
-                    <Offset>
-                        <AbsDimension y="-125" x="20" />
-                    </Offset>
-                </Anchor>
-            </Anchors>
-            <Scripts>
-                <OnLoad>
-                    self:RegisterForClicks("LeftButtonUp");
-                </OnLoad>
-                <OnClick>
-                    displayPreviousRecipe();
-                    <!-- craftRecipe(); -->
-                </OnClick>
-            </Scripts>
-        </Button>
+      <Button name="$parentPreviousRecipe" text="&lt;" inherits="UIPanelButtonTemplate">
+        <Size><AbsDimension x="30" y="28"/></Size>
+        <Anchors>
+          <Anchor point="TOPLEFT"><Offset><AbsDimension y="-182" x="24"/></Offset></Anchor>
+        </Anchors>
+        <Scripts>
+          <OnLoad>self:RegisterForClicks("LeftButtonUp");</OnLoad>
+          <OnClick>displayPreviousRecipe();</OnClick>
+        </Scripts>
+      </Button>
     </Frames>
-
-
   </Frame>
-
-
-
-  <!-- Button -->
-  <!-- <Button name="btn_craft" virtual="true">
-      <ButtonText>
-          <Anchors>
-              <Anchor point="CENTER">
-                  <Offset>
-                      <AbsDimension x="0" y="1"/>
-                  </Offset>
-              </Anchor>
-          </Anchors>
-      </ButtonText>
-      <NormalFont style="GameFontNormal"/>
-      <HighlightFont style="GameFontHighlight"/>
-      <DisabledFont style="GameFontDisable"/>
-      <NormalTexture inherits="UIPanelByttonUpTexture"/>
-      <PushedTexture inherits="UIPanelButtonDownTexture"/>
-      <DisabledTexture inherits="UIPanelButtonDisabledTexture"/>
-      <HighlightTexture inherits="UIPanelButtonHighlightTexture"/>
-  </Button> -->
 </Ui>
