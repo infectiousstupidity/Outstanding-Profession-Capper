@@ -1,104 +1,127 @@
-local addonName, addonTable = ...;
+local addonName, addonTable = ...
 
-local shouldCraft, shouldCraftRecipe;
-
-addonTable.getFirstAidCurrentSkillLevelRecipeToCraft = function(rank)
-    shouldCraft, shouldCraftRecipe = nil, nil
-    local targetSkill = nil
-    if rank > 0 and rank < 40 then
-        targetSkill = 40
-        shouldCraft = {3275};
-    elseif rank >= 40 and rank < 80 then
-        targetSkill = 80
-        shouldCraft = {3276};
-    elseif rank >= 80 and rank < 100 then
-        targetSkill = 100
-        shouldCraft = {
+local steps = {
+    {
+        minSkill = 1,
+        targetSkill = 40,
+        recipes = {3275},
+    },
+    {
+        minSkill = 40,
+        targetSkill = 80,
+        recipes = {3276},
+    },
+    {
+        minSkill = 80,
+        targetSkill = 100,
+        recipes = {
             3277,
             3276,
             7934,
-        };
-    elseif rank >= 100 and rank < 115 then
-        targetSkill = 115
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 100,
+        targetSkill = 115,
+        recipes = {
             3277,
             7934,
-        };
-    elseif rank >= 115 and rank < 130 then
-        targetSkill = 130
-        shouldCraft = {3278};
-    elseif rank >= 130 and rank < 150 then
-        targetSkill = 150
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 115,
+        targetSkill = 130,
+        recipes = {3278},
+    },
+    {
+        minSkill = 130,
+        targetSkill = 150,
+        recipes = {
             3278,
             7935,
-        };
-    elseif rank >= 150 and rank < 180 then
-        targetSkill = 180
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 150,
+        targetSkill = 180,
+        recipes = {
             7928,
             3278,
             7935,
-        };
-    elseif rank >= 180 and rank < 210 then
-        targetSkill = 210
-        shouldCraft = {7929};
-    elseif rank >= 210 and rank < 240 then
-        targetSkill = 240
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 180,
+        targetSkill = 210,
+        recipes = {7929},
+    },
+    {
+        minSkill = 210,
+        targetSkill = 240,
+        recipes = {
             10840,
             7929,
-        };
-    elseif rank >= 240 and rank < 260 then
-        targetSkill = 260
-        shouldCraft = {10841};
-    elseif rank >= 260 and rank < 290 then
-        targetSkill = 290
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 240,
+        targetSkill = 260,
+        recipes = {10841},
+    },
+    {
+        minSkill = 260,
+        targetSkill = 290,
+        recipes = {
             18629,
             10841,
-        };
-    elseif rank >= 290 and rank < 300 then
-        targetSkill = 300
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 290,
+        targetSkill = 300,
+        recipes = {
             18630,
             10841,
-        };
-    elseif rank >= 300 and rank < 330 then
-        targetSkill = 330
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 300,
+        targetSkill = 330,
+        recipes = {
             27032,
             18630,
             23787,
-        };
-    elseif rank >= 330 and rank < 350 then
-        targetSkill = 350
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 330,
+        targetSkill = 350,
+        recipes = {
             27033,
             18630,
             23787,
-        };
-    elseif rank >= 350 and rank < 375 then
-        targetSkill = 375
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 350,
+        targetSkill = 375,
+        recipes = {
             45545,
             27033,
-        };
-    elseif rank >= 375 and rank < 400 then
-        targetSkill = 400
-        shouldCraft = {45545};
-    elseif rank >= 400 and rank < 450 then
-        targetSkill = 450
-        shouldCraft = {45546};
-    end
-    if shouldCraft and #shouldCraft > 0 then
-        shouldCraftRecipe = {}
-        addonTable.sortRecipesByNumAvailable(shouldCraft)
-        for i, v in pairs(shouldCraft) do
-            shouldCraftRecipe[i] = addonTable.FirstAid[tostring(v)]
-        end
-    end
-    return shouldCraft, shouldCraftRecipe, targetSkill;
-end
+        },
+    },
+    {
+        minSkill = 375,
+        targetSkill = 400,
+        recipes = {45545},
+    },
+    {
+        minSkill = 400,
+        targetSkill = 450,
+        recipes = {45546},
+    },
+}
 
+addonTable.registerProfessionGuide("FirstAid", steps, addonTable.FirstAid)
 
+print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper] loaded FirstAid module|r")

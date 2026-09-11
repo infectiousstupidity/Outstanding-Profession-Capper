@@ -1,330 +1,419 @@
-local addonName, addonTable = ...;
+local addonName, addonTable = ...
 
-local shouldCraft, shouldCraftRecipe;
-
-addonTable.getEnchantingCurrentSkillLevelRecipeToCraft = function(rank)
-    shouldCraft, shouldCraftRecipe = nil, nil
-    local targetSkill = nil
-    if rank == 1 then
-        targetSkill = 2
-        shouldCraft = {7421};
-    elseif rank >= 2 and rank < 10 then
-        targetSkill = 10
-        shouldCraft = {
+local steps = {
+    {
+        minSkill = 1,
+        targetSkill = 2,
+        recipes = {7421},
+    },
+    {
+        minSkill = 2,
+        targetSkill = 10,
+        recipes = {
             7418,
             7421,
-        };
-    elseif rank >= 10 and rank < 15 then
-        targetSkill = 15
-        shouldCraft = {7418};
-    elseif rank >= 15 and rank < 20 then
-        targetSkill = 20
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 10,
+        targetSkill = 15,
+        recipes = {7418},
+    },
+    {
+        minSkill = 15,
+        targetSkill = 20,
+        recipes = {
             7418,
             7420,
-        };
-    elseif rank >= 20 and rank < 50 then
-        targetSkill = 50
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 20,
+        targetSkill = 50,
+        recipes = {
             7418,
             7420,
             7443,
-        };
-    elseif rank >= 50 and rank < 60 then
-        targetSkill = 60
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 50,
+        targetSkill = 60,
+        recipes = {
             7418,
             7420,
             7443,
             7457,
-        };
-    elseif rank >= 60 and rank < 90 then
-        targetSkill = 90
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 60,
+        targetSkill = 90,
+        recipes = {
             7418,
             7420,
             7443,
             7457,
             7766,
-        };
-    elseif rank >= 90 and rank < 100 then
-        targetSkill = 100
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 90,
+        targetSkill = 100,
+        recipes = {
             7443,
             7766,
             7457,
-        };
-    elseif rank == 100 then
-        targetSkill = 101
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 100,
+        targetSkill = 101,
+        recipes = {
             7795,
             7766,
             14807,
-        };
-    elseif rank >= 101 and rank < 110 then
-        targetSkill = 110
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 101,
+        targetSkill = 110,
+        recipes = {
             7766,
             14807,
             7795,
-        };
-    elseif rank >= 110 and rank < 135 then
-        targetSkill = 135
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 110,
+        targetSkill = 135,
+        recipes = {
             13419,
             13378,
             7766,
             7782,
             7795,
-        };
-    elseif rank >= 135 and rank < 140 then
-        targetSkill = 140
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 135,
+        targetSkill = 140,
+        recipes = {
             13419,
             13501,
             7863,
             7795,
-        };
-    elseif rank >= 140 and rank < 150 then
-        targetSkill = 150
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 140,
+        targetSkill = 150,
+        recipes = {
             13419,
             13536,
             13501,
             7863,
             7795,
-        };
-    elseif rank >= 150 and rank < 155 then
-        targetSkill = 155
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 150,
+        targetSkill = 155,
+        recipes = {
             13419,
             13536,
             13501,
             7863,
-        };
-    elseif rank == 155 then
-        targetSkill = 156
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 155,
+        targetSkill = 156,
+        recipes = {
             13628,
             13536,
             13501,
             7863,
-        };
-    elseif rank >= 156 and rank < 165 then
-        targetSkill = 165
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 156,
+        targetSkill = 165,
+        recipes = {
             13536,
             7863,
             13628,
-        };
-    elseif rank >= 165 and rank < 180 then
-        targetSkill = 180
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 165,
+        targetSkill = 180,
+        recipes = {
             13642,
             13536,
             7863,
             13628,
-        };
-    elseif rank >= 180 and rank < 185 then
-        targetSkill = 185
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 180,
+        targetSkill = 185,
+        recipes = {
             13661,
             13642,
             13536,
             7863,
             13628,
-        };
-    elseif rank >= 185 and rank < 200 then
-        targetSkill = 200
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 185,
+        targetSkill = 200,
+        recipes = {
             13661,
             13642,
             13640,
-        };
-    elseif rank == 200 then
-        targetSkill = 201
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 200,
+        targetSkill = 201,
+        recipes = {
             13702,
             13661,
             13536,
-        };
-    elseif rank >= 201 and rank < 205 then
-        targetSkill = 205
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 201,
+        targetSkill = 205,
+        recipes = {
             13661,
             13642,
             13536,
             13702,
-        };
-    elseif rank >= 205 and rank < 220 then
-        targetSkill = 220
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 205,
+        targetSkill = 220,
+        recipes = {
             13794,
             13661,
             13642,
-        };
-    elseif rank >= 220 and rank < 225 then
-        targetSkill = 225
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 220,
+        targetSkill = 225,
+        recipes = {
             13794,
             13746,
             13642,
             13644,
-        };
-    elseif rank >= 225 and rank < 235 then
-        targetSkill = 235
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 225,
+        targetSkill = 235,
+        recipes = {
             13815,
             13794,
             13746,
-        };
-    elseif rank >= 235 and rank < 240 then
-        targetSkill = 240
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 235,
+        targetSkill = 240,
+        recipes = {
             13882,
             13858,
-        };
-    elseif rank >= 240 and rank < 250 then
-        targetSkill = 250
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 240,
+        targetSkill = 250,
+        recipes = {
             13882,
             63746,
             13858,
-        };
-    elseif rank >= 250 and rank < 260 then
-        targetSkill = 260
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 250,
+        targetSkill = 260,
+        recipes = {
             13945,
             13939,
             25127,
-        };
-    elseif rank >= 260 and rank < 265 then
-        targetSkill = 265
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 260,
+        targetSkill = 265,
+        recipes = {
             20008,
             13945,
             13939,
-        };
-    elseif rank >= 265 and rank < 299 then
-        targetSkill = 299
-        shouldCraft = {20017};
-    elseif rank >= 299 and rank < 301 then
-        targetSkill = 301
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 265,
+        targetSkill = 299,
+        recipes = {20017},
+    },
+    {
+        minSkill = 299,
+        targetSkill = 301,
+        recipes = {
             20051,
             32664,
             34002,
             20020,
-        };
-    elseif rank >= 301 and rank < 310 then
-        targetSkill = 310
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 301,
+        targetSkill = 310,
+        recipes = {
             34002,
             20028,
             32664,
             20051,
-        };
-    elseif rank >= 310 and rank < 320 then
-        targetSkill = 320
-        shouldCraft = {27899};
-    elseif rank >= 320 and rank < 330 then
-        targetSkill = 330
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 310,
+        targetSkill = 320,
+        recipes = {27899},
+    },
+    {
+        minSkill = 320,
+        targetSkill = 330,
+        recipes = {
             33996,
             27961,
-        };
-    elseif rank >= 330 and rank < 335 then
-        targetSkill = 335
-        shouldCraft = {34009};
-    elseif rank >= 335 and rank < 340 then
-        targetSkill = 340
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 330,
+        targetSkill = 335,
+        recipes = {34009},
+    },
+    {
+        minSkill = 335,
+        targetSkill = 340,
+        recipes = {
             44383,
             34009,
-        };
-    elseif rank >= 340 and rank < 350 then
-        targetSkill = 350
-        shouldCraft = {28019};
-    elseif rank == 350 then
-        targetSkill = 351
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 340,
+        targetSkill = 350,
+        recipes = {28019},
+    },
+    {
+        minSkill = 350,
+        targetSkill = 351,
+        recipes = {
             32665,
             60609,
             27958,
-        };
-    elseif rank >= 351 and rank < 360 then
-        targetSkill = 360
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 351,
+        targetSkill = 360,
+        recipes = {
             60609,
             27958,
             32665,
-        };
-    elseif rank >= 360 and rank < 375 then
-        targetSkill = 375
-        shouldCraft = {60616};
-    elseif rank == 375 then
-        targetSkill = 376
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 360,
+        targetSkill = 375,
+        recipes = {60616},
+    },
+    {
+        minSkill = 375,
+        targetSkill = 376,
+        recipes = {
             32667,
             60616,
-        };
-    elseif rank >= 376 and rank < 380 then
-        targetSkill = 380
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 376,
+        targetSkill = 380,
+        recipes = {
             60616,
             32667,
-        };
-    elseif rank >= 380 and rank < 385 then
-        targetSkill = 385
-        shouldCraft = {44555};
-    elseif rank >= 385 and rank < 395 then
-        targetSkill = 395
-        shouldCraft = {60623};
-    elseif rank >= 395 and rank < 410 then
-        targetSkill = 410
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 380,
+        targetSkill = 385,
+        recipes = {44555},
+    },
+    {
+        minSkill = 385,
+        targetSkill = 395,
+        recipes = {60623},
+    },
+    {
+        minSkill = 395,
+        targetSkill = 410,
+        recipes = {
             44500,
             44492,
-        };
-    elseif rank >= 410 and rank < 415 then
-        targetSkill = 415
-        shouldCraft = {44484};
-    elseif rank >= 415 and rank < 420 then
-        targetSkill = 420
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 410,
+        targetSkill = 415,
+        recipes = {44484},
+    },
+    {
+        minSkill = 415,
+        targetSkill = 420,
+        recipes = {
             44508,
             44488,
-        };
-    elseif rank >= 420 and rank < 425 then
-        targetSkill = 425
-        shouldCraft = {44509};
-    elseif rank == 425 then
-        targetSkill = 426
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 420,
+        targetSkill = 425,
+        recipes = {44509},
+    },
+    {
+        minSkill = 425,
+        targetSkill = 426,
+        recipes = {
             60619,
             47898,
-        };
-    elseif rank >= 426 and rank < 440 then
-        targetSkill = 440
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 426,
+        targetSkill = 440,
+        recipes = {
             47898,
             60619,
-        };
-    elseif rank >= 440 and rank < 450 then
-        targetSkill = 450
-        shouldCraft = {
+        },
+    },
+    {
+        minSkill = 440,
+        targetSkill = 450,
+        recipes = {
             60763,
             47672,
-        };
-    end
-    if shouldCraft and #shouldCraft > 0 then
-        shouldCraftRecipe = {}
-        addonTable.sortRecipesByNumAvailable(shouldCraft)
-        for i, v in pairs(shouldCraft) do
-            shouldCraftRecipe[i] = addonTable.Enchanting[tostring(v)]
-        end
-    end
-    return shouldCraft, shouldCraftRecipe, targetSkill;
-end
+        },
+    },
+}
 
-print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper] loaded Enchanting module|r");
+addonTable.registerProfessionGuide("Enchanting", steps, addonTable.Enchanting)
+
+print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper] loaded Enchanting module|r")

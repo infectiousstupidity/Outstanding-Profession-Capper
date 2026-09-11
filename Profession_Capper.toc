@@ -4,6 +4,7 @@
 ## Version: v3.0.0-alpha1
 
 constants.lua
+Guide.lua
 Professions\Enchanting.lua
 Professions\Tailoring.lua
 Professions\Jewelcrafting.lua
