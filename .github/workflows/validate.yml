@@ -20,6 +20,8 @@ jobs:
         run: lua5.1 tools/test_character_skill.lua
       - name: Test price provider abstraction
         run: lua5.1 tools/test_price_provider.lua
+      - name: Test Enchanting rod ownership
+        run: lua5.1 tools/test_enchanting_rods.lua
       - name: Validate addon structure
         run: python3 tools/validate_addon.py
       - name: Validate profession guides
