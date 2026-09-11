@@ -4,6 +4,7 @@ local defaults = {
     enabled = true,
     attached = true,
     locked = false,
+    recommendationMode = "dynamic",
     point = "TOPLEFT",
     relativePoint = "BOTTOMLEFT",
     x = 40,
@@ -83,6 +84,15 @@ end
 
 function addonTable.setEnabled(enabled)
     getDB().enabled = enabled and true or false
+end
+
+function addonTable.setRecommendationMode(mode)
+    if mode ~= "dynamic" and mode ~= "static" then
+        return false
+    end
+
+    getDB().recommendationMode = mode
+    return true
 end
 
 function addonTable.resetSettings(frame)

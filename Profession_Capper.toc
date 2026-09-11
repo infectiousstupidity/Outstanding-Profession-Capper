@@ -19,6 +19,7 @@ TSMPriceProvider.lua
 RecipeCost.lua
 RouteSolver.lua
 ShoppingPlan.lua
+DynamicRecommendations.lua
 Settings.lua
 Session.lua
 Professions\Enchanting.lua

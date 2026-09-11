@@ -1,6 +1,6 @@
 # Task 10 — Dynamic recommendation UI
 
-Status: QUEUED  
+Status: IN PROGRESS  
 Phase: 4 — User-facing integration  
 Depends on: Tasks 03, 06, 08, 09
 
@@ -78,6 +78,30 @@ The default panel should still answer "what should I do next?" first.
 - Recipe acquisition guidance is actionable.
 - ElvUI does not break layout or interaction.
 - Manual tests cover at least Enchanting with an active skill modifier and one other profession.
+
+## Implementation
+
+Implemented on `master`:
+
+- `Cheapest now` and `Static guide` modes with the selected mode persisted.
+- Live optimization from learned recipes that have safe difficulty metadata and usable price data.
+- Automatic fallback to the static guide when no complete priced route can be produced.
+- Compact current-segment cost/craft information plus estimated total-to-rank-cap/cap cost, gold needed now, total crafts, price source, scan age, and stale/missing indicators.
+- Per-material remaining purchase estimates and price-source tooltips.
+- Actionable trainer/vendor/AH/reputation/drop acquisition text for unlearned static-guide recipes when metadata is available.
+- Hoverable route inspection without expanding the default panel into a dashboard.
+- Active +profession modifiers remain visible in the profession header and are passed into the optimizer.
+- A focused automated integration test covers the live snapshot, reusable Enchanting rods, dynamic route exposure, fallback behavior, and material price estimates.
+
+## Manual acceptance checks still required
+
+The repository rules require these in-game checks before this task can be marked `DONE`:
+
+- Enchanting with an active +profession modifier: confirm displayed skill/target, route choice, pricing, materials, and fallback behavior.
+- One other profession: confirm dynamic/static switching, route/material layout, and crafting interaction.
+- ElvUI enabled: confirm the panel, mode buttons, route tooltip, material rows, and click/hover behavior remain usable.
+- TSM data states: confirm current, stale, missing, and no-provider states are visibly distinct.
+- Unlearned recipe: confirm available acquisition metadata produces useful trainer/vendor/AH/reputation/drop guidance.
 
 ## Commit
 

@@ -54,7 +54,7 @@ This file governs implementation work. Keep it current as work progresses.
 
 | Task | Status | Purpose |
 | --- | --- | --- |
-| [10 Dynamic recommendation UI](docs/tasks/10-dynamic-recommendation-ui.md) | QUEUED | Present cheapest-route recommendations, acquisition guidance, costs, and confidence. |
+| [10 Dynamic recommendation UI](docs/tasks/10-dynamic-recommendation-ui.md) | IN PROGRESS | Present cheapest-route recommendations, acquisition guidance, costs, and confidence. |
 
 ## Dependency order
 
@@ -70,4 +70,4 @@ Task 06 may be completed before or after Task 07, but Task 08 must not assume ac
 
 ## Current task
 
-Phase 2 is complete. Recipe difficulty, conservative acquisition modeling, and optional Ackis Recipe List runtime enrichment are implemented and validated. The deterministic static guide remains the fallback; Task 10 is the next integration step for exposing dynamic recommendations.
+Task 10 is implemented in code and awaiting the required in-game acceptance checks before it can be marked DONE. The panel now supports Cheapest now and Static guide modes, live per-material pricing, estimated route totals, acquisition guidance, route inspection, and automatic fallback when optimizer data is incomplete.
