@@ -1,10 +1,68 @@
 local addonName, addonTable = ...
 
+local enchantingRods = {
+    { recipeID = 7421, itemID = 6218 },   -- Runed Copper Rod
+    { recipeID = 7795, itemID = 6339 },   -- Runed Silver Rod
+    { recipeID = 13628, itemID = 11130 }, -- Runed Golden Rod
+    { recipeID = 13702, itemID = 11145 }, -- Runed Truesilver Rod
+    { recipeID = 20051, itemID = 16207 }, -- Runed Arcanite Rod
+    { recipeID = 32664, itemID = 22461 }, -- Runed Fel Iron Rod
+    { recipeID = 32665, itemID = 22462 }, -- Runed Adamantite Rod
+    { recipeID = 32667, itemID = 22463 }, -- Runed Eternium Rod
+    { recipeID = nil, itemID = 44451 },   -- Runed Cobalt Rod (legacy/removed, but valid if present)
+    { recipeID = 60619, itemID = 44452 }, -- Runed Titanium Rod
+}
+
+local rodTierByRecipe = {}
+for tier = 1, table.getn(enchantingRods) do
+    local recipeID = enchantingRods[tier].recipeID
+    if recipeID then
+        rodTierByRecipe[recipeID] = tier
+    end
+end
+
+local function getOwnedItemCount(itemID)
+    if type(GetItemCount) ~= "function" then
+        return 0
+    end
+
+    local ok, count = pcall(GetItemCount, itemID, true)
+    if not ok then
+        ok, count = pcall(GetItemCount, itemID)
+    end
+
+    if not ok then
+        return 0
+    end
+
+    return tonumber(count) or 0
+end
+
+function addonTable.getHighestOwnedEnchantingRodTier()
+    for tier = table.getn(enchantingRods), 1, -1 do
+        if getOwnedItemCount(enchantingRods[tier].itemID) > 0 then
+            return tier
+        end
+    end
+
+    return 0
+end
+
+local function enchantingRecipeIsRelevant(spellID)
+    local requiredTier = rodTierByRecipe[spellID]
+    if not requiredTier then
+        return true
+    end
+
+    return addonTable.getHighestOwnedEnchantingRodTier() < requiredTier
+end
+
 local steps = {
     {
         minSkill = 1,
         targetSkill = 2,
         recipes = {7421},
+        fallbackRecipes = {7418},
     },
     {
         minSkill = 2,
@@ -414,6 +472,8 @@ local steps = {
     },
 }
 
-addonTable.registerProfessionGuide("Enchanting", steps, addonTable.Enchanting)
+addonTable.registerProfessionGuide("Enchanting", steps, addonTable.Enchanting, {
+    recipeIsRelevant = enchantingRecipeIsRelevant,
+})
 
 print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper] loaded Enchanting module|r")

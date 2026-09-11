@@ -32,6 +32,7 @@ This file governs implementation work. Keep it current as work progresses.
 | [01 Character profession skill context](docs/tasks/01-character-skill-context.md) | IN PROGRESS | Correctly model base skill, active +profession modifiers, and effective skill. |
 | [02 Price provider abstraction](docs/tasks/02-price-provider-abstraction.md) | DONE | Define one internal API for external price sources. |
 | [03 TSM AuctionDB integration](docs/tasks/03-tsm-auctiondb-integration.md) | QUEUED | Read local TSM/AuctionDB prices and freshness safely. |
+| [11 Enchanting rod ownership-aware recommendations](docs/tasks/11-enchanting-rod-ownership.md) | DONE | Do not recommend crafting a runed rod already superseded by one the character owns. |
 
 ### Phase 2 — Recipe knowledge and acquisition
 
@@ -69,4 +70,4 @@ Task 06 may be completed before or after Task 07, but Task 08 must not assume ac
 
 ## Current task
 
-Task 01 still awaits the unavailable live +profession equipment check. Task 02 is complete and Task 03 is queued next.
+Task 01 still awaits the unavailable live +profession equipment check. Task 02 and the rod-ownership correctness fix (Task 11) are complete. Task 03 is queued next.
