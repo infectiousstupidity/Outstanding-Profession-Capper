@@ -125,5 +125,6 @@ The v3 work is focused on making the addon safer and more useful while leveling:
 - Material requirements are calculated for the planned amount and compared with the amount currently owned.
 - Profession training caps are respected; the addon tells you to train instead of recommending unreachable skill levels.
 - CI validates Lua 5.1 syntax and checks that every supported profession covers skills 1-449 exactly once.
+- Recipe discovery is independent of the Blizzard profession window's search, level, subclass, slot, makeable-only, skill-up-only, and collapsed-category state. Profession Capper temporarily scans the full list and restores the player's view afterwards.
 
 The existing profession data is being migrated incrementally so recommendations remain easy to compare with the proven upstream guide data.
