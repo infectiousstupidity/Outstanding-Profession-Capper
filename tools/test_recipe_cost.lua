@@ -109,8 +109,8 @@ assertEqual(gray.unavailableReason, "gray_recipe", "gray reason")
 
 local racial = addonTable.calculateRecipeCost(recipe, 95, { activeSkillModifier = 10 }, {}, {})
 assertEqual(racial.effectiveSkill, 105, "modifier effective skill")
-assertEqual(racial.difficulty, "yellow", "modifier changes color")
-assertNear(racial.skillUpChance, 0.75, 0.0001, "modifier changes chance")
+assertEqual(racial.difficulty, "orange", "modifier preserves base-skill color")
+assertNear(racial.skillUpChance, 1, 0.0001, "modifier preserves base-skill chance")
 
 local owned = addonTable.calculateRecipeCost(recipe, 90, nil, {
     inventory = { [1001] = 1 },

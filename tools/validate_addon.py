@@ -12,6 +12,8 @@ REQUIRED_ORDER = [
     "Localization.lua",
     "Guide.lua",
     "CharacterSkill.lua",
+    "RecipeDifficulty.lua",
+    "RecipeDifficultyData.lua",
     "PriceProvider.lua",
     "TSMPriceProvider.lua",
     "RecipeCost.lua",
