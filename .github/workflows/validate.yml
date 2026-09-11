@@ -22,6 +22,8 @@ jobs:
         run: lua5.1 tools/test_recipe_difficulty.lua
       - name: Test recipe acquisition model
         run: lua5.1 tools/test_recipe_acquisition.lua
+      - name: Test Ackis Recipe List acquisition provider
+        run: lua5.1 tools/test_ackis_acquisition_provider.lua
       - name: Test price provider abstraction
         run: lua5.1 tools/test_price_provider.lua
       - name: Test TSM AuctionDB provider

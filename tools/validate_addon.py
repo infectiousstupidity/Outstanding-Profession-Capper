@@ -16,6 +16,7 @@ REQUIRED_ORDER = [
     "RecipeDifficultyData.lua",
     "RecipeAcquisition.lua",
     "RecipeAcquisitionData.lua",
+    "AckisAcquisitionProvider.lua",
     "PriceProvider.lua",
     "TSMPriceProvider.lua",
     "RecipeCost.lua",

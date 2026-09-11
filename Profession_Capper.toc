@@ -3,7 +3,7 @@
 ## Notes: Tells you which recipe you should craft based on your current professions skill level
 ## Version: v3.0.0-alpha4
 ## SavedVariables: ProfessionCapperDB
-## OptionalDeps: TradeSkillMaster, TradeSkillMaster_AuctionDB
+## OptionalDeps: TradeSkillMaster, TradeSkillMaster_AuctionDB, AckisRecipeList
 
 constants.lua
 Localization.lua
@@ -13,6 +13,7 @@ RecipeDifficulty.lua
 RecipeDifficultyData.lua
 RecipeAcquisition.lua
 RecipeAcquisitionData.lua
+AckisAcquisitionProvider.lua
 PriceProvider.lua
 TSMPriceProvider.lua
 RecipeCost.lua
