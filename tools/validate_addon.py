@@ -22,6 +22,7 @@ REQUIRED_ORDER = [
     "RecipeCost.lua",
     "RouteSolver.lua",
     "ShoppingPlan.lua",
+    "DynamicRecommendations.lua",
     "Settings.lua",
     "Session.lua",
 ]

@@ -10,11 +10,12 @@ local previousRecipeKey = ""
 local recipeCache = {}
 local transientSpellIndexMap = {}
 local materialRows = {}
+local dynamicRecommendation
 
 local MATERIAL_ROW_HEIGHT = 28
-local MATERIALS_TOP = 236
+local MATERIALS_TOP = 312
 local FOOTER_SPACE = 78
-local MIN_PANEL_HEIGHT = 340
+local MIN_PANEL_HEIGHT = 413
 
 local tradeSkillStateMutation = false
 local suppressTradeSkillUpdatesUntil = 0
@@ -314,11 +315,22 @@ local function buildRecipeCache()
             local skillName, skillType, numAvailable = GetTradeSkillInfo(i)
 
             transientSpellIndexMap[spellID] = i
+            local outputItemLink = GetTradeSkillItemLink and GetTradeSkillItemLink(i) or nil
+            local outputCount
+            if GetTradeSkillNumMade then
+                local minMade, maxMade = GetTradeSkillNumMade(i)
+                if minMade and minMade > 0 and (not maxMade or minMade == maxMade) then
+                    outputCount = minMade
+                end
+            end
+
             recipeCache[spellID] = {
                 name = skillName,
                 skillType = skillType,
                 numAvailable = numAvailable or 0,
                 icon = GetTradeSkillIcon(i),
+                outputItemLink = outputItemLink,
+                outputCount = outputCount,
             }
         end
     end
@@ -347,10 +359,17 @@ local function cacheRecipeReagents(spellID)
                 name = reagentName,
                 texture = reagentTexture,
                 itemLink = itemLink,
+                itemID = addonTable.getItemIDFromLink and addonTable.getItemIDFromLink(itemLink) or nil,
                 count = reagentCount or 0,
                 owned = reagentOwned or 0,
             })
         end
+    end
+end
+
+local function cacheAllRecipeReagents()
+    for spellID in pairs(recipeCache) do
+        cacheRecipeReagents(spellID)
     end
 end
 
@@ -412,6 +431,7 @@ local function clearMaterialRows()
         materialRows[i]:Hide()
         materialRows[i].itemLink = nil
         materialRows[i].reagentName = nil
+        materialRows[i].priceInfo = nil
     end
 
     if txtMaterialsLabel then
@@ -450,6 +470,31 @@ local function materialRowOnEnter(self)
     else
         GameTooltip:SetText(self.reagentName or "")
     end
+    if self.priceInfo and self.priceInfo.neededQuantity and self.priceInfo.neededQuantity > 0 then
+        GameTooltip:AddLine(" ")
+        if self.priceInfo.available then
+            GameTooltip:AddLine(string.format(
+                addonTable.L["material_price_unit"],
+                addonTable.formatCopperShort(self.priceInfo.unitPrice)
+            ), 0.82, 0.82, 0.82, true)
+            GameTooltip:AddLine(string.format(
+                addonTable.L["material_price_remaining"],
+                addonTable.formatCopperShort(self.priceInfo.estimatedRemainingCost)
+            ), 0.82, 0.82, 0.82, true)
+            GameTooltip:AddLine(string.format(
+                addonTable.L["material_price_source"],
+                tostring(self.priceInfo.source or "unknown"),
+                tostring(self.priceInfo.freshness or "unknown"),
+                addonTable.formatPriceAge(self.priceInfo.ageSeconds)
+            ), 0.65, 0.65, 0.65, true)
+        else
+            GameTooltip:AddLine(string.format(
+                addonTable.L["material_price_missing"],
+                tostring(self.priceInfo.reason or "unavailable")
+            ), 1, 0.35, 0.35, true)
+        end
+    end
+
     GameTooltip:AddLine(addonTable.L["material_tooltip_hint"], 0.7, 0.7, 0.7, true)
     GameTooltip:Show()
 end
@@ -498,13 +543,19 @@ local function getMaterialRow(index)
 
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.name:SetPoint("LEFT", row.icon, "RIGHT", 8, 0)
-    row.name:SetWidth(250)
+    row.name:SetWidth(160)
     row.name:SetHeight(20)
     row.name:SetJustifyH("LEFT")
 
+    row.price = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.price:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+    row.price:SetWidth(88)
+    row.price:SetHeight(20)
+    row.price:SetJustifyH("RIGHT")
+
     row.count = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.count:SetPoint("RIGHT", row, "RIGHT", -2, 0)
-    row.count:SetWidth(68)
+    row.count:SetPoint("RIGHT", row.price, "LEFT", -6, 0)
+    row.count:SetWidth(70)
     row.count:SetHeight(20)
     row.count:SetJustifyH("RIGHT")
 
@@ -530,11 +581,32 @@ local function renderMaterials(reagents, plannedCrafts)
 
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", MainFrameCoreMaterials, "TOPLEFT", 0, -((i - 1) * MATERIAL_ROW_HEIGHT))
+        local needed = math.max(0, totalRequired - owned)
+        local priceItem = reagent.itemID or reagent.itemLink or reagent.name
+        local priceInfo = addonTable.getMaterialPriceInfo
+            and addonTable.getMaterialPriceInfo(priceItem, needed)
+            or nil
+
         row.itemLink = reagent.itemLink
         row.reagentName = reagent.name
+        row.priceInfo = priceInfo
         row.icon:SetTexture(reagent.texture or UNKNOWN_ICON)
         row.name:SetText(reagent.name)
         row.count:SetText(owned .. " / " .. totalRequired)
+
+        if needed <= 0 then
+            row.price:SetText("")
+        elseif priceInfo and priceInfo.available then
+            row.price:SetText("~" .. addonTable.formatCopperShort(priceInfo.estimatedRemainingCost))
+            if priceInfo.isStale then
+                row.price:SetTextColor(1, 0.72, 0.22)
+            else
+                row.price:SetTextColor(0.78, 0.78, 0.78)
+            end
+        else
+            row.price:SetText(addonTable.L["material_no_price"])
+            row.price:SetTextColor(1, 0.35, 0.35)
+        end
 
         local _, _, quality = GetItemInfo(reagent.itemLink or reagent.name)
         if quality then
@@ -656,6 +728,238 @@ local function updateProfessionHeader()
     end
 end
 
+local function getRecommendationMode()
+    local db = addonTable.getSettings()
+    return db.recommendationMode == "static" and "static" or "dynamic"
+end
+
+local function humanizeDynamicReason(reason)
+    local L = addonTable.L
+    local reasons = {
+        no_price_provider = L["dynamic_reason_no_prices"],
+        no_eligible_recipes = L["dynamic_reason_no_recipes"],
+        no_complete_route = L["dynamic_reason_no_route"],
+        state_limit_exceeded = L["dynamic_reason_no_route"],
+        incomplete_price_data = L["dynamic_reason_missing_prices"],
+        shopping_plan_incomplete = L["dynamic_reason_missing_prices"],
+        price_provider_unavailable = L["dynamic_reason_no_prices"],
+    }
+    return reasons[reason] or tostring(reason or L["dynamic_reason_unknown"])
+end
+
+local function updateModeControls()
+    local mode = getRecommendationMode()
+
+    if MainFrameCoreCheapestMode then
+        if mode == "dynamic" then
+            MainFrameCoreCheapestMode:Disable()
+        else
+            MainFrameCoreCheapestMode:Enable()
+        end
+    end
+
+    if MainFrameCoreStaticMode then
+        if mode == "static" then
+            MainFrameCoreStaticMode:Disable()
+        else
+            MainFrameCoreStaticMode:Enable()
+        end
+    end
+
+    if MainFrameCoreRoute then
+        if mode == "dynamic" and dynamicRecommendation and dynamicRecommendation.available then
+            MainFrameCoreRoute:Show()
+        else
+            MainFrameCoreRoute:Hide()
+        end
+    end
+end
+
+local function dynamicPriceLine()
+    if not dynamicRecommendation or not dynamicRecommendation.plan then
+        return ""
+    end
+
+    local plan = dynamicRecommendation.plan
+    local source = dynamicRecommendation.providerName or "price provider"
+    if plan.priceSources and table.getn(plan.priceSources) > 0 then
+        source = table.concat(plan.priceSources, ", ")
+    end
+
+    local quality = plan.quality == "stale"
+        and addonTable.L["dynamic_quality_stale"]
+        or addonTable.L["dynamic_quality_current"]
+    local age = addonTable.formatPriceAge(plan.oldestPriceAgeSeconds)
+
+    return string.format(addonTable.L["dynamic_price_line"], source, quality, age)
+end
+
+local function updateRecommendationSummary()
+    if not txtCostSummary then
+        return
+    end
+
+    local mode = getRecommendationMode()
+    if mode == "dynamic" and dynamicRecommendation and dynamicRecommendation.available then
+        local plan = dynamicRecommendation.plan
+        local target = dynamicRecommendation.targetSkill or 450
+        local total = addonTable.formatCopperShort(plan.estimatedMarketValueCost)
+        local goldNow = addonTable.formatCopperShort(plan.estimatedGoldNeededNow)
+        local crafts = math.max(0, math.ceil(tonumber(plan.totalExpectedCrafts) or 0))
+
+        local firstLine
+        if target >= 450 then
+            firstLine = string.format(addonTable.L["dynamic_total_cap"], total, goldNow, crafts)
+        else
+            firstLine = string.format(addonTable.L["dynamic_total_rank"], target, total, goldNow, crafts)
+        end
+
+        local warnings = {}
+        if (plan.stalePriceCount or 0) > 0 then
+            table.insert(warnings, string.format(addonTable.L["dynamic_stale_count"], plan.stalePriceCount))
+        end
+        if (plan.missingPriceCount or 0) > 0 then
+            table.insert(warnings, string.format(addonTable.L["dynamic_missing_count"], plan.missingPriceCount))
+        end
+
+        local secondLine = dynamicPriceLine()
+        if table.getn(warnings) > 0 then
+            secondLine = secondLine .. "  |  " .. table.concat(warnings, ", ")
+        end
+        txtCostSummary:SetText(firstLine .. "\n" .. secondLine)
+        return
+    end
+
+    if mode == "dynamic" then
+        local reason = dynamicRecommendation and dynamicRecommendation.reason or "unknown"
+        local line = string.format(addonTable.L["dynamic_fallback"], humanizeDynamicReason(reason))
+        local plan = dynamicRecommendation and dynamicRecommendation.plan
+        if plan and (plan.missingPriceCount or 0) > 0 then
+            line = line .. "\n" .. string.format(addonTable.L["dynamic_missing_count"], plan.missingPriceCount)
+        end
+        txtCostSummary:SetText(line)
+        return
+    end
+
+    txtCostSummary:SetText(addonTable.L["static_summary"])
+end
+
+local function getAcquisitionGuidance(spellID)
+    if type(addonTable.explainRecipeAcquisition) ~= "function" then
+        return addonTable.L["acquisition_unknown"]
+    end
+
+    local state = { learnedRecipes = {} }
+    if type(UnitFactionGroup) == "function" then
+        state.faction = UnitFactionGroup("player")
+    end
+
+    local info = addonTable.explainRecipeAcquisition(spellID, state, professionContext, {})
+    if not info or info.sourceType == "unknown" then
+        return addonTable.L["acquisition_unknown"]
+    end
+
+    local labels = {
+        trainer = addonTable.L["acquisition_trainer"],
+        vendor = addonTable.L["acquisition_vendor"],
+        limited_vendor = addonTable.L["acquisition_limited_vendor"],
+        auction = addonTable.L["acquisition_auction"],
+        reputation = addonTable.L["acquisition_reputation"],
+        quest = addonTable.L["acquisition_quest"],
+        drop = addonTable.L["acquisition_drop"],
+        manual = addonTable.L["acquisition_manual"],
+    }
+
+    local parts = {
+        addonTable.L["acquisition_prefix"] .. (labels[info.sourceType] or tostring(info.sourceType)),
+    }
+
+    if info.sourceName and info.sourceName ~= "" then
+        table.insert(parts, info.sourceName)
+    end
+
+    if info.zone and info.zone ~= "" then
+        local location = info.zone
+        if type(info.coordinates) == "table" then
+            local x = tonumber(info.coordinates.x or info.coordinates[1])
+            local y = tonumber(info.coordinates.y or info.coordinates[2])
+            if x and y then
+                location = location .. string.format(" %.1f, %.1f", x, y)
+            end
+        end
+        table.insert(parts, location)
+    end
+
+    if info.purchasePrice then
+        table.insert(parts, addonTable.formatCopperShort(info.purchasePrice))
+    end
+
+    if info.limitedStock then
+        table.insert(parts, addonTable.L["acquisition_limited_stock"])
+    end
+
+    if type(info.reputation) == "table" and info.reputation.faction and info.reputation.standing then
+        table.insert(parts, tostring(info.reputation.faction) .. " " .. tostring(info.reputation.standing))
+    end
+
+    return table.concat(parts, " · ")
+end
+
+function setRecommendationMode(mode)
+    if not addonTable.setRecommendationMode(mode) then
+        return
+    end
+
+    if professionContext then
+        resetValues()
+        GetCraftingToDo()
+    else
+        updateModeControls()
+    end
+end
+
+function showDynamicRouteTooltip(owner)
+    if not dynamicRecommendation or not dynamicRecommendation.available or not dynamicRecommendation.plan then
+        return
+    end
+
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    GameTooltip:SetText(addonTable.L["route_tooltip_title"])
+
+    local segments = dynamicRecommendation.plan.segments or {}
+    local limit = math.min(table.getn(segments), 12)
+    for i = 1, limit do
+        local segment = segments[i]
+        if segment.type == "training" then
+            GameTooltip:AddLine(string.format(
+                addonTable.L["route_tooltip_training"],
+                tonumber(segment.oldCap) or 0,
+                tonumber(segment.newCap) or 0,
+                addonTable.formatCopperShort(segment.marketCost)
+            ), 0.9, 0.82, 0.45, true)
+        else
+            local name = segment.recipe and segment.recipe.name or tostring(segment.recipeID or "?")
+            GameTooltip:AddLine(string.format(
+                addonTable.L["route_tooltip_craft"],
+                tonumber(segment.skillStart) or 0,
+                tonumber(segment.skillEnd) or 0,
+                name,
+                math.ceil(tonumber(segment.expectedCrafts) or 0),
+                addonTable.formatCopperShort(segment.marketCost)
+            ), 0.82, 0.82, 0.82, true)
+        end
+    end
+
+    if table.getn(segments) > limit then
+        GameTooltip:AddLine(string.format(
+            addonTable.L["route_tooltip_more"],
+            table.getn(segments) - limit
+        ), 0.65, 0.65, 0.65, true)
+    end
+
+    GameTooltip:Show()
+end
+
 local function getDisplayedTarget(baseTarget)
     if not baseTarget then
         return nil
@@ -702,15 +1006,22 @@ end
 local function showStatus(message)
     updateProfessionHeader()
     txtShouldCraft:SetText(message)
-    imgSkillIcon:SetTexture(GetSpellTexture(professionContext.professionName) or UNKNOWN_ICON)
+    imgSkillIcon:SetTexture(
+        professionContext and (GetSpellTexture(professionContext.professionName) or UNKNOWN_ICON)
+        or UNKNOWN_ICON
+    )
     txtTarget:SetText("")
     txtRecipeStatus:SetText("")
     txtCraftStats:SetText("")
     txtCraftProgress:SetText("")
     txtCraftEta:SetText("")
     txtRecipePosition:SetText("")
+    if txtCostSummary then
+        txtCostSummary:SetText("")
+    end
     clearMaterialRows()
     hideCraftControls()
+    updateModeControls()
     MainFrameCore:SetHeight(MIN_PANEL_HEIGHT)
 end
 
@@ -741,9 +1052,33 @@ function GetCraftingToDo()
         return
     end
 
+    dynamicRecommendation = nil
     local scanned = withUnfilteredTradeSkill(function()
         buildRecipeCache()
-        shouldCraft, shouldCraftRecipe, targetSkill = handler(baseSkill)
+        cacheAllRecipeReagents()
+
+        if getRecommendationMode() == "dynamic"
+            and type(addonTable.computeDynamicProfessionRecommendation) == "function"
+        then
+            dynamicRecommendation = addonTable.computeDynamicProfessionRecommendation(
+                recipeCache,
+                professionContext
+            )
+        end
+
+        if dynamicRecommendation and dynamicRecommendation.available then
+            local segment = dynamicRecommendation.currentSegment
+            shouldCraft = { segment.recipeID }
+            shouldCraftRecipe = {
+                segment.recipe and segment.recipe.name
+                    or (recipeCache[segment.recipeID] and recipeCache[segment.recipeID].name)
+                    or tostring(segment.recipeID)
+            }
+            targetSkill = segment.skillEnd
+        else
+            shouldCraft, shouldCraftRecipe, targetSkill = handler(baseSkill)
+        end
+
         cacheRecommendedRecipeDetails()
     end)
 
@@ -961,6 +1296,16 @@ function fnOnLoad()
 
     txtHeaderLabel:SetText(L["header_label"])
     txtMaterialsLabel:SetText(L["materials_label"])
+    if MainFrameCoreCheapestMode then
+        MainFrameCoreCheapestMode:SetText(L["mode_cheapest"])
+    end
+    if MainFrameCoreStaticMode then
+        MainFrameCoreStaticMode:SetText(L["mode_static"])
+    end
+    if MainFrameCoreRoute then
+        MainFrameCoreRoute:SetText(L["route_button"])
+    end
+    updateModeControls()
     print("|cff" .. addonTable.chat_frame_default_color .. L["loaded_for"] .. "|r |cff" .. addonTable.chat_frame_player_name_color .. "[" .. UnitLevel("player") .. "]" .. UnitName("player") .. "|r")
 
     addonTable.getSettings()
@@ -1021,6 +1366,9 @@ end
 
 function displayRecipe()
     local L = addonTable.L
+    local usingDynamic = getRecommendationMode() == "dynamic"
+        and dynamicRecommendation
+        and dynamicRecommendation.available
     local currentKey = recipeKey(shouldCraft)
 
     if currentKey ~= previousRecipeKey then
@@ -1033,20 +1381,25 @@ function displayRecipe()
         craftRecipeOptionsIndex = table.getn(shouldCraft)
     end
 
-    if craftRecipeOptionsIndex <= 1 then
-        MainFrameCorePreviousRecipe:Disable()
+    if usingDynamic then
+        MainFrameCorePreviousRecipe:Hide()
+        MainFrameCoreNextRecipe:Hide()
     else
-        MainFrameCorePreviousRecipe:Enable()
-    end
+        if craftRecipeOptionsIndex <= 1 then
+            MainFrameCorePreviousRecipe:Disable()
+        else
+            MainFrameCorePreviousRecipe:Enable()
+        end
 
-    if craftRecipeOptionsIndex >= table.getn(shouldCraft) then
-        MainFrameCoreNextRecipe:Disable()
-    else
-        MainFrameCoreNextRecipe:Enable()
-    end
+        if craftRecipeOptionsIndex >= table.getn(shouldCraft) then
+            MainFrameCoreNextRecipe:Disable()
+        else
+            MainFrameCoreNextRecipe:Enable()
+        end
 
-    MainFrameCoreNextRecipe:Show()
-    MainFrameCorePreviousRecipe:Show()
+        MainFrameCoreNextRecipe:Show()
+        MainFrameCorePreviousRecipe:Show()
+    end
 
     local currentID = shouldCraft[craftRecipeOptionsIndex]
     local data = recipeCache[currentID]
@@ -1054,11 +1407,23 @@ function displayRecipe()
     local displayedTarget = getDisplayedTarget(effectiveTarget)
     local skillUpsNeeded = math.max(0, effectiveTarget - professionContext.baseSkill)
     local plannedCrafts = math.max(1, skillUpsNeeded)
+    if usingDynamic and dynamicRecommendation.currentSegment then
+        plannedCrafts = math.max(
+            1,
+            math.ceil(tonumber(dynamicRecommendation.currentSegment.expectedCrafts) or plannedCrafts)
+        )
+    end
 
     updateProfessionHeader()
     txtTarget:SetText(string.format(L["target_line"], professionContext.effectiveSkill, displayedTarget))
-    txtRecipePosition:SetText(string.format(L["recipe_position"], craftRecipeOptionsIndex, table.getn(shouldCraft)))
+    if usingDynamic then
+        txtRecipePosition:SetText("")
+    else
+        txtRecipePosition:SetText(string.format(L["recipe_position"], craftRecipeOptionsIndex, table.getn(shouldCraft)))
+    end
     txtRecipeStatus:SetText("")
+    updateModeControls()
+    updateRecommendationSummary()
 
     if data then
         local exactCraftCount = data.skillType == "optimal"
@@ -1072,16 +1437,34 @@ function displayRecipe()
 
         txtShouldCraft:SetText(data.name)
         imgSkillIcon:SetTexture(icon or UNKNOWN_ICON)
-        txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))
+
+        if usingDynamic then
+            local segment = dynamicRecommendation.currentSegment
+            txtCraftStats:SetText(string.format(
+                L["dynamic_stats"],
+                plannedCrafts,
+                data.numAvailable,
+                addonTable.formatCopperShort(segment.expectedMaterialCost)
+            ))
+            txtRecipeStatus:SetText(L["dynamic_preferred"])
+        else
+            txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))
+        end
 
         if data.numAvailable <= 0 and skillUpsNeeded > 0 then
-            txtRecipeStatus:SetText(L["missing_materials"])
+            local status = L["missing_materials"]
+            if usingDynamic then
+                status = L["dynamic_preferred"] .. " · " .. status
+            end
+            txtRecipeStatus:SetText(status)
         end
 
         local materialCount = renderMaterials(data.reagents, plannedCrafts)
 
         local craftSeconds = getCraftTimeSeconds(currentID)
-        if craftSeconds then
+        if usingDynamic then
+            txtCraftEta:SetText(dynamicPriceLine())
+        elseif craftSeconds then
             txtCraftEta:SetText(string.format(L[etaKey], formatDuration(craftSeconds * plannedCrafts)))
         else
             txtCraftEta:SetText(L["eta_unavailable"])
@@ -1098,6 +1481,8 @@ function displayRecipe()
             MainFrameCoreCraft:Enable()
             if session and session.spellID == currentID and session.needsContinue then
                 MainFrameCoreCraft:SetText(string.format(L["continue_to"], displayedTarget))
+            elseif usingDynamic and plannedCrafts > skillUpsNeeded then
+                MainFrameCoreCraft:SetText(string.format(L["craft_toward"], displayedTarget))
             else
                 MainFrameCoreCraft:SetText(string.format(L["craft_to"], displayedTarget))
             end
@@ -1108,7 +1493,7 @@ function displayRecipe()
     else
         imgSkillIcon:SetTexture(GetSpellTexture(currentID) or UNKNOWN_ICON)
         txtShouldCraft:SetText(shouldCraftRecipe[craftRecipeOptionsIndex] or tostring(currentID))
-        txtRecipeStatus:SetText(L["recipe_not_learned"])
+        txtRecipeStatus:SetText(getAcquisitionGuidance(currentID) or L["recipe_not_learned"])
         txtCraftStats:SetText(string.format(L["stats_unlearned"], formatSkillUps(skillUpsNeeded)))
         txtCraftProgress:SetText("")
         txtCraftEta:SetText("")
@@ -1196,6 +1581,7 @@ function resetValues()
     previousRecipeKey = ""
     recipeCache = {}
     transientSpellIndexMap = {}
+    dynamicRecommendation = nil
 
     txtProfessionProgress:SetText("")
     txtShouldCraft:SetText("")
@@ -1206,7 +1592,11 @@ function resetValues()
     txtCraftProgress:SetText("")
     txtCraftEta:SetText("")
     txtRecipePosition:SetText("")
+    if txtCostSummary then
+        txtCostSummary:SetText("")
+    end
     clearMaterialRows()
+    updateModeControls()
 
     local L = addonTable.L
     MainFrameCoreCraft:SetText(L and L["craft_button_unavail"] or "Craft")
