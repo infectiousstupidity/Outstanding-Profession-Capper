@@ -462,14 +462,73 @@ local function hideCraftControls()
     MainFrameCorePreviousRecipe:Hide()
 end
 
+local function getEffectiveTarget()
+    if not targetSkill then
+        return nil
+    end
+
+    if maxLevel and maxLevel > 0 and targetSkill > maxLevel then
+        return maxLevel
+    end
+
+    return targetSkill
+end
+
+local function updateProfessionHeader()
+    if tradeSkillName and rank and maxLevel then
+        txtProfessionProgress:SetText(string.format(addonTable.L["profession_progress"], tradeSkillName, rank, maxLevel))
+    else
+        txtProfessionProgress:SetText("")
+    end
+end
+
+local function updateCraftProgress(currentID, effectiveTarget, craftSeconds)
+    local session = addonTable.getCraftSession()
+    txtCraftProgress:SetText("")
+
+    if not session or session.spellID ~= currentID then
+        return
+    end
+
+    if session.reachedTarget then
+        txtCraftProgress:SetText(addonTable.L["target_reached"])
+        return
+    end
+
+    local remainingSkillUps = math.max(0, effectiveTarget - rank)
+    if session.active then
+        local remainingSeconds = addonTable.getCraftSessionRemainingSeconds(craftSeconds)
+        if remainingSeconds then
+            txtCraftProgress:SetText(string.format(
+                addonTable.L["craft_progress"],
+                session.completed,
+                session.queued,
+                formatDuration(remainingSeconds)
+            ))
+        else
+            txtCraftProgress:SetText(string.format(
+                addonTable.L["craft_progress_no_eta"],
+                session.completed,
+                session.queued
+            ))
+        end
+    elseif session.needsContinue and remainingSkillUps > 0 then
+        txtCraftProgress:SetText(string.format(addonTable.L["craft_batch_done"], remainingSkillUps))
+    end
+end
+
 local function showStatus(message)
+    updateProfessionHeader()
     txtShouldCraft:SetText(message)
     imgSkillIcon:SetTexture(GetSpellTexture(tradeSkillName) or UNKNOWN_ICON)
+    txtTarget:SetText("")
     txtCraftStats:SetText("")
+    txtCraftProgress:SetText("")
     txtCraftEta:SetText("")
     txtShouldCraftRecipe:SetText("")
+    txtRecipePosition:SetText("")
     hideCraftControls()
-    MainFrameCore:SetHeight(190)
+    MainFrameCore:SetHeight(255)
 end
 
 function GetCraftingToDo()
@@ -512,18 +571,63 @@ function GetCraftingToDo()
     displayRecipe()
 end
 
-function TogglePcapperFrame(toggle)
-    toggle = string.lower(toggle or "")
+local function printCommandHelp()
+    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper]|r /pcapper show, hide, attach, detach, lock, unlock, reset, help")
+end
 
-    if toggle == "show" then
+function TogglePcapperFrame(command)
+    command = string.lower(command or "")
+    local db = addonTable.getSettings()
+
+    if command == "" then
+        if db.enabled then
+            addonTable.setEnabled(false)
+            MainFrameCore:Hide()
+        else
+            addonTable.setEnabled(true)
+            addonTable.applyFramePosition(MainFrameCore)
+            MainFrameCore:Show()
+        end
+    elseif command == "show" then
+        addonTable.setEnabled(true)
+        addonTable.applyFramePosition(MainFrameCore)
         MainFrameCore:Show()
-    elseif toggle == "hide" then
+    elseif command == "hide" then
+        addonTable.setEnabled(false)
         MainFrameCore:Hide()
-    elseif MainFrameCore:IsShown() then
-        MainFrameCore:Hide()
+    elseif command == "attach" then
+        addonTable.setFrameAttached(MainFrameCore, true)
+    elseif command == "detach" then
+        addonTable.detachFrame(MainFrameCore)
+        addonTable.saveFramePosition(MainFrameCore)
+    elseif command == "lock" then
+        addonTable.setFrameLocked(true)
+    elseif command == "unlock" then
+        addonTable.setFrameLocked(false)
+    elseif command == "reset" then
+        addonTable.resetSettings(MainFrameCore)
+        addonTable.setEnabled(true)
+        MainFrameCore:Show()
+    elseif command == "help" then
+        printCommandHelp()
     else
-        MainFrameCore:Show()
+        printCommandHelp()
     end
+end
+
+function ProfessionCapper_OnDragStart()
+    local db = addonTable.getSettings()
+    if db.locked then
+        return
+    end
+
+    addonTable.detachFrame(MainFrameCore)
+    MainFrameCore:StartMoving()
+end
+
+function ProfessionCapper_OnDragStop()
+    MainFrameCore:StopMovingOrSizing()
+    addonTable.saveFramePosition(MainFrameCore)
 end
 
 function fnOnLoad()
@@ -533,8 +637,14 @@ function fnOnLoad()
     txtHeaderLabel:SetText(L["header_label"])
     print("|cff" .. addonTable.chat_frame_default_color .. L["loaded_for"] .. "|r |cff" .. addonTable.chat_frame_player_name_color .. "[" .. UnitLevel("player") .. "]" .. UnitName("player") .. "|r")
 
+    addonTable.getSettings()
+    addonTable.applyFramePosition(MainFrameCore)
+
     this:RegisterEvent("TRADE_SKILL_UPDATE")
     this:RegisterEvent("TRADE_SKILL_CLOSE")
+    this:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+    this:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+    this:RegisterEvent("UNIT_SPELLCAST_FAILED")
     this:RegisterForDrag("LeftButton")
 
     SlashCmdList["TOGGLE_PCAPPER_FRAME"] = TogglePcapperFrame
@@ -542,7 +652,22 @@ function fnOnLoad()
 end
 
 function fnOnEvent()
+    if event == "UNIT_SPELLCAST_SUCCEEDED" then
+        if addonTable.handleCraftSucceeded(arg1, arg2) and MainFrameCore:IsShown() and targetSkill then
+            displayRecipe()
+        end
+        return
+    end
+
+    if event == "UNIT_SPELLCAST_INTERRUPTED" or event == "UNIT_SPELLCAST_FAILED" then
+        if addonTable.handleCraftInterrupted(arg1, arg2) and MainFrameCore:IsShown() and targetSkill then
+            displayRecipe()
+        end
+        return
+    end
+
     if event == "TRADE_SKILL_CLOSE" then
+        addonTable.clearCraftSession()
         MainFrameCore:Hide()
         return
     end
@@ -562,6 +687,8 @@ function fnOnEvent()
     end
 
     tradeSkillName, rank, maxLevel = GetTradeSkillLine()
+    addonTable.handleCraftRankUpdate(rank)
+
     if not professionHandlers[tradeSkillName] then
         MainFrameCore:Hide()
         return
@@ -569,7 +696,13 @@ function fnOnEvent()
 
     resetValues()
     GetCraftingToDo()
-    MainFrameCore:Show()
+    addonTable.applyFramePosition(MainFrameCore)
+
+    if addonTable.getSettings().enabled then
+        MainFrameCore:Show()
+    else
+        MainFrameCore:Hide()
+    end
 end
 
 function displayRecipe()
@@ -603,14 +736,13 @@ function displayRecipe()
 
     local currentID = shouldCraft[craftRecipeOptionsIndex]
     local data = recipeCache[currentID]
-    local effectiveTarget = targetSkill
-
-    if maxLevel and maxLevel > 0 and effectiveTarget > maxLevel then
-        effectiveTarget = maxLevel
-    end
-
+    local effectiveTarget = getEffectiveTarget()
     local skillUpsNeeded = math.max(0, effectiveTarget - rank)
     local plannedCrafts = math.max(1, skillUpsNeeded)
+
+    updateProfessionHeader()
+    txtTarget:SetText(string.format(L["target_line"], rank, effectiveTarget))
+    txtRecipePosition:SetText(string.format(L["recipe_position"], craftRecipeOptionsIndex, table.getn(shouldCraft)))
 
     if data then
         local exactCraftCount = data.skillType == "optimal"
@@ -624,7 +756,7 @@ function displayRecipe()
 
         txtShouldCraft:SetText(data.name)
         imgSkillIcon:SetTexture(icon or UNKNOWN_ICON)
-        txtCraftStats:SetText(string.format(L[statsKey], effectiveTarget, skillUpsNeeded, data.numAvailable, plannedCrafts))
+        txtCraftStats:SetText(string.format(L[statsKey], skillUpsNeeded, data.numAvailable, plannedCrafts))
         txtShouldCraftRecipe:SetText(L["recipe_prefix"] .. getRecipeIngredients(data.reagents, plannedCrafts))
 
         local craftSeconds = getCraftTimeSeconds(currentID)
@@ -634,10 +766,20 @@ function displayRecipe()
             txtCraftEta:SetText(L["eta_unavailable"])
         end
 
+        updateCraftProgress(currentID, effectiveTarget, craftSeconds)
+
+        local session = addonTable.getCraftSession()
         local batchCount = math.min(data.numAvailable, plannedCrafts)
-        if batchCount > 0 and skillUpsNeeded > 0 then
+        if session and session.spellID == currentID and session.active then
+            MainFrameCoreCraft:Disable()
+            MainFrameCoreCraft:SetText(L["crafting_button"])
+        elseif batchCount > 0 and skillUpsNeeded > 0 then
             MainFrameCoreCraft:Enable()
-            MainFrameCoreCraft:SetText(string.format(L["craft_batch"], batchCount))
+            if session and session.spellID == currentID and session.needsContinue then
+                MainFrameCoreCraft:SetText(string.format(L["continue_to"], effectiveTarget))
+            else
+                MainFrameCoreCraft:SetText(string.format(L["craft_to"], effectiveTarget))
+            end
         else
             MainFrameCoreCraft:Disable()
             MainFrameCoreCraft:SetText(L["craft_button_unavail"])
@@ -645,7 +787,8 @@ function displayRecipe()
     else
         imgSkillIcon:SetTexture(UNKNOWN_ICON)
         txtShouldCraft:SetText(L["not_learned"])
-        txtCraftStats:SetText(string.format("Target: %d | Need: %d skill-ups", effectiveTarget, skillUpsNeeded))
+        txtCraftStats:SetText(string.format(L["stats_unlearned"], skillUpsNeeded))
+        txtCraftProgress:SetText("")
         txtCraftEta:SetText(L["eta_unavailable"])
         txtShouldCraftRecipe:SetText(L["unknown_recipe_prefix"] .. (shouldCraftRecipe[craftRecipeOptionsIndex] or tostring(currentID)))
         MainFrameCoreCraft:Disable()
@@ -653,7 +796,7 @@ function displayRecipe()
     end
 
     MainFrameCoreCraft:Show()
-    MainFrameCore:SetHeight(300)
+    MainFrameCore:SetHeight(330)
     previousRecipeKey = currentKey
 end
 
@@ -673,11 +816,12 @@ function craftRecipe()
         return
     end
 
-    local effectiveTarget = targetSkill
-    if maxLevel and maxLevel > 0 and effectiveTarget > maxLevel then
-        effectiveTarget = maxLevel
+    local existingSession = addonTable.getCraftSession()
+    if existingSession and existingSession.active then
+        return
     end
 
+    local effectiveTarget = getEffectiveTarget()
     local skillUpsNeeded = math.max(0, effectiveTarget - rank)
     if skillUpsNeeded <= 0 then
         return
@@ -686,6 +830,7 @@ function craftRecipe()
     local crafted = false
     local craftedName
     local craftedCount = 0
+    local craftSeconds = getCraftTimeSeconds(currentID)
 
     withUnfilteredTradeSkill(function()
         local recipeIndex = findVisibleRecipeIndex(currentID)
@@ -701,6 +846,7 @@ function craftRecipe()
             return
         end
 
+        addonTable.startCraftSession(currentID, skillName, effectiveTarget, batchCount, craftSeconds, rank)
         DoTradeSkill(recipeIndex, batchCount)
         crafted = true
         craftedName = skillName
@@ -710,6 +856,7 @@ function craftRecipe()
     if crafted then
         local L = addonTable.L
         print("|cff" .. addonTable.chat_frame_default_color .. L["crafting"] .. "|r |cff" .. addonTable.chat_frame_player_name_color .. craftedCount .. "x |r|cff" .. addonTable.chat_frame_default_color .. craftedName .. "|r")
+        displayRecipe()
     end
 end
 
@@ -722,11 +869,15 @@ function resetValues()
     recipeCache = {}
     transientSpellIndexMap = {}
 
+    txtProfessionProgress:SetText("")
     txtShouldCraft:SetText("")
     imgSkillIcon:SetTexture(UNKNOWN_ICON)
+    txtTarget:SetText("")
     txtCraftStats:SetText("")
+    txtCraftProgress:SetText("")
     txtCraftEta:SetText("")
     txtShouldCraftRecipe:SetText("")
+    txtRecipePosition:SetText("")
 
     local L = addonTable.L
     MainFrameCoreCraft:SetText(L and L["craft_button_unavail"] or "Craft")
