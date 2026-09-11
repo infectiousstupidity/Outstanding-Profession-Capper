@@ -176,14 +176,14 @@ assertEqual(trainable.oneTimeCosts[1].kind, "recipe_acquisition", "acquisition e
 
 prices[16202] = {
     available = true,
-    marketValue = 300,
-    minBuyout = 300,
+    marketValue = 400,
+    minBuyout = 400,
     freshness = "fresh",
 }
 prices[16203] = {
     available = true,
-    marketValue = 600,
-    minBuyout = 600,
+    marketValue = 900,
+    minBuyout = 900,
     freshness = "fresh",
 }
 
@@ -197,10 +197,36 @@ local essenceRecipe = {
 }
 local essence = addonTable.calculateRecipeCost(essenceRecipe, 90, nil, {}, {})
 assertEqual(essence.available, true, "essence recipe available")
-assertEqual(essence.currentPurchaseCostPerCraft, 600, "greater essence conversion lowers application cost")
-assertEqual(essence.expectedCurrentPurchaseCostPerSkillUp, 600, "converted price feeds skill-up cost")
+assertEqual(essence.currentPurchaseCostPerCraft, 900, "greater essence conversion lowers application cost")
+assertEqual(essence.expectedCurrentPurchaseCostPerSkillUp, 900, "converted price feeds skill-up cost")
 assertEqual(essence.reagentCosts[1].sourceItemID, 16203, "greater eternal essence selected as source")
+assertEqual(essence.reagentCosts[1].sourceQuantity, 1, "one greater essence is enough for three lesser")
+assertEqual(essence.reagentCosts[1].directTotalCost, 1200, "direct lesser purchase total exposed")
+assertEqual(essence.reagentCosts[1].purchaseTotalCost, 900, "recommended purchase total exposed")
+assertEqual(essence.reagentCosts[1].savings, 300, "conversion savings exposed")
 assertEqual(essence.reagentCosts[1].converted, true, "essence conversion is explicit")
 assertEqual(essence.reagentCosts[1].conversionDirection, "greater_to_lesser", "conversion direction recorded")
+
+local twoLesserRecipe = {
+    spellID = 7,
+    acquisition = { status = "learned" },
+    difficulty = { yellow = 100, green = 110, gray = 120 },
+    reagents = {
+        { itemID = 16202, quantity = 2 },
+    },
+}
+local twoLesser = addonTable.calculateRecipeCost(twoLesserRecipe, 90, nil, {}, {})
+assertEqual(twoLesser.currentPurchaseCostPerCraft, 800, "whole-item rounding keeps two lesser cheaper than one greater")
+assertEqual(twoLesser.reagentCosts[1].sourceItemID, 16202, "direct lesser purchase wins for quantity two")
+assertEqual(twoLesser.reagentCosts[1].sourceQuantity, 2, "buy exactly two lesser")
+assertEqual(twoLesser.reagentCosts[1].converted, false, "no conversion when whole greater costs more")
+
+local purchasePlan = addonTable.chooseCheapestEquivalentPurchase(16202, 3, "purchase", {})
+assertEqual(purchasePlan.sourceItemID, 16203, "purchase plan recommends greater essence")
+assertEqual(purchasePlan.sourceQuantity, 1, "purchase plan gives exact greater quantity")
+assertEqual(purchasePlan.producedQuantity, 3, "purchase plan exposes converted yield")
+assertEqual(purchasePlan.directTotalCost, 1200, "purchase plan exposes direct comparison")
+assertEqual(purchasePlan.totalCost, 900, "purchase plan exposes recommended total")
+assertEqual(purchasePlan.savings, 300, "purchase plan exposes savings")
 
 print("Recipe cost engine tests passed.")

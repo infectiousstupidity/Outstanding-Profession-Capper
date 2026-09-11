@@ -85,9 +85,9 @@ local function choosePurchase(priceResult, chooser)
     return chooser(priceResult, "spend")
 end
 
-local function chooseMaterialPrice(item, purpose, options, priceLookup, priceChooser)
-    if type(addonTable.chooseCheapestEquivalentUnitPrice) == "function" then
-        return addonTable.chooseCheapestEquivalentUnitPrice(item, purpose, {
+local function chooseMaterialPrice(item, quantity, purpose, options, priceLookup, priceChooser)
+    if type(addonTable.chooseCheapestEquivalentPurchase) == "function" then
+        return addonTable.chooseCheapestEquivalentPurchase(item, quantity, purpose, {
             priceLookup = priceLookup,
             unitPriceChooser = priceChooser,
             now = options and options.now,
@@ -95,10 +95,35 @@ local function chooseMaterialPrice(item, purpose, options, priceLookup, priceCho
     end
 
     local result = priceLookup(item, options and options.now)
+    local choice
+    local reason
     if purpose == "purchase" then
-        return choosePurchase(result, priceChooser)
+        choice, reason = choosePurchase(result, priceChooser)
+    else
+        choice, reason = priceChooser(result, purpose)
     end
-    return priceChooser(result, purpose)
+
+    if not choice then
+        return nil, reason
+    end
+
+    local requested = math.max(0, tonumber(quantity) or 0)
+    local sourceQuantity = math.ceil(requested - 0.0000001)
+    local copy = {}
+    for key, value in pairs(choice) do
+        copy[key] = value
+    end
+    copy.requestedQuantity = requested
+    copy.sourceQuantity = sourceQuantity
+    copy.sourceItemID = item
+    copy.sourceUnitPrice = choice.unitPrice
+    copy.totalCost = sourceQuantity * choice.unitPrice
+    copy.effectiveUnitPrice = requested > 0 and (copy.totalCost / requested) or 0
+    copy.unitPrice = copy.effectiveUnitPrice
+    copy.producedQuantity = requested
+    copy.excessQuantity = 0
+    copy.converted = false
+    return copy
 end
 
 local function ensureMaterial(materials, reagent)
@@ -124,6 +149,13 @@ local function ensureMaterial(materials, reagent)
             chosenPriceType = nil,
             chosenPriceSource = nil,
             sourceItemID = nil,
+            sourceQuantity = nil,
+            sourceUnitPrice = nil,
+            producedQuantity = nil,
+            excessQuantity = nil,
+            directTotalCost = nil,
+            alternateTotalCost = nil,
+            savings = nil,
             converted = false,
             conversionRatio = nil,
             conversionDirection = nil,
@@ -393,6 +425,7 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
             local lookupItem = entry.itemID or entry.item
             local marketChoice, marketReason = chooseMaterialPrice(
                 lookupItem,
+                entry.externallyRequiredQuantity,
                 "market",
                 options,
                 priceLookup,
@@ -400,6 +433,15 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
             )
             local purchaseChoice, purchaseReason = chooseMaterialPrice(
                 lookupItem,
+                entry.quantityStillNeeded,
+                "purchase",
+                options,
+                priceLookup,
+                priceChooser
+            )
+            local fullPurchaseChoice = chooseMaterialPrice(
+                lookupItem,
+                entry.externallyRequiredQuantity,
                 "purchase",
                 options,
                 priceLookup,
@@ -407,8 +449,8 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
             )
 
             if marketChoice then
-                entry.marketUnitValue = marketChoice.unitPrice
-                entry.estimatedMarketValue = entry.externallyRequiredQuantity * marketChoice.unitPrice
+                entry.marketUnitValue = marketChoice.effectiveUnitPrice or marketChoice.unitPrice
+                entry.estimatedMarketValue = marketChoice.totalCost
             end
 
             if not purchaseChoice then
@@ -421,17 +463,26 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
                         + (entry.quantityStillNeeded * marketChoice.unitPrice)
                 end
             else
-                entry.chosenUnitPrice = purchaseChoice.unitPrice
+                entry.chosenUnitPrice = purchaseChoice.effectiveUnitPrice or purchaseChoice.unitPrice
+                entry.sourceUnitPrice = purchaseChoice.sourceUnitPrice
                 entry.chosenPriceType = purchaseChoice.priceType
                 entry.chosenPriceSource = purchaseChoice.source
                 entry.sourceItemID = purchaseChoice.sourceItemID
+                entry.sourceQuantity = purchaseChoice.sourceQuantity
+                entry.producedQuantity = purchaseChoice.producedQuantity
+                entry.excessQuantity = purchaseChoice.excessQuantity
+                entry.directTotalCost = purchaseChoice.directTotalCost
+                entry.alternateTotalCost = purchaseChoice.alternateTotalCost
+                entry.savings = purchaseChoice.savings
                 entry.converted = purchaseChoice.converted and true or false
                 entry.conversionRatio = purchaseChoice.conversionRatio
                 entry.conversionDirection = purchaseChoice.conversionDirection
                 entry.freshness = purchaseChoice.freshness
                 entry.ageSeconds = purchaseChoice.ageSeconds
-                entry.estimatedPurchaseCost = entry.quantityStillNeeded * purchaseChoice.unitPrice
-                entry.estimatedFullPurchaseCost = entry.externallyRequiredQuantity * purchaseChoice.unitPrice
+                entry.estimatedPurchaseCost = purchaseChoice.totalCost
+                entry.estimatedFullPurchaseCost = fullPurchaseChoice
+                    and fullPurchaseChoice.totalCost
+                    or purchaseChoice.totalCost
                 purchaseTotal = purchaseTotal + entry.estimatedPurchaseCost
                 fullPurchaseTotal = fullPurchaseTotal + entry.estimatedFullPurchaseCost
                 addSource(sourceSet, purchaseChoice.source)

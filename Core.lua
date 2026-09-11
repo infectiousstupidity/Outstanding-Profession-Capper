@@ -12,7 +12,7 @@ local transientSpellIndexMap = {}
 local materialRows = {}
 local dynamicRecommendation
 
-local MATERIAL_ROW_HEIGHT = 28
+local MATERIAL_ROW_HEIGHT = 38
 local MATERIALS_TOP = 312
 local FOOTER_SPACE = 78
 local MIN_PANEL_HEIGHT = 413
@@ -431,7 +431,12 @@ local function clearMaterialRows()
         materialRows[i]:Hide()
         materialRows[i].itemLink = nil
         materialRows[i].reagentName = nil
+        materialRows[i].searchName = nil
+        materialRows[i].purchaseName = nil
         materialRows[i].priceInfo = nil
+        if materialRows[i].buy then
+            materialRows[i].buy:SetText("")
+        end
     end
 
     if txtMaterialsLabel then
@@ -488,20 +493,39 @@ local function materialRowOnEnter(self)
                 addonTable.formatPriceAge(self.priceInfo.ageSeconds)
             ), 0.65, 0.65, 0.65, true)
             if self.priceInfo.converted and self.priceInfo.sourceItemID then
-                local sourceName = GetItemInfo(self.priceInfo.sourceItemID)
+                local sourceName = self.purchaseName
+                    or GetItemInfo(self.priceInfo.sourceItemID)
                     or ("item " .. tostring(self.priceInfo.sourceItemID))
-                local conversion
-                if self.priceInfo.conversionDirection == "greater_to_lesser" then
-                    conversion = "1 " .. sourceName .. " -> "
-                        .. tostring(self.priceInfo.conversionRatio or 3) .. " requested"
-                else
-                    conversion = tostring(self.priceInfo.conversionRatio or 3) .. " "
-                        .. sourceName .. " -> 1 requested"
-                end
+                local sourceQuantity = math.max(1, math.ceil(tonumber(self.priceInfo.sourceQuantity) or 1))
+                local producedQuantity = math.max(
+                    tonumber(self.priceInfo.requestedQuantity) or 0,
+                    tonumber(self.priceInfo.producedQuantity) or 0
+                )
+
+                GameTooltip:AddLine(" ")
+                GameTooltip:AddLine(addonTable.L["material_buy_better_title"], 0.35, 1, 0.35, true)
                 GameTooltip:AddLine(string.format(
-                    addonTable.L["material_price_conversion"],
-                    conversion
-                ), 0.65, 0.82, 1, true)
+                    addonTable.L["material_buy_conversion"],
+                    sourceQuantity,
+                    sourceName,
+                    producedQuantity,
+                    self.reagentName or "requested material"
+                ), 0.82, 0.82, 0.82, true)
+
+                if self.priceInfo.directTotalCost and self.priceInfo.estimatedRemainingCost then
+                    GameTooltip:AddLine(string.format(
+                        addonTable.L["material_buy_compare"],
+                        addonTable.formatCopperShort(self.priceInfo.directTotalCost),
+                        addonTable.formatCopperShort(self.priceInfo.estimatedRemainingCost)
+                    ), 0.82, 0.82, 0.82, true)
+                end
+
+                if self.priceInfo.savings and self.priceInfo.savings > 0 then
+                    GameTooltip:AddLine(string.format(
+                        addonTable.L["material_buy_savings"],
+                        addonTable.formatCopperShort(self.priceInfo.savings)
+                    ), 0.35, 1, 0.35, true)
+                end
             end
         else
             GameTooltip:AddLine(string.format(
@@ -522,7 +546,7 @@ end
 
 local function materialRowOnClick(self, button)
     if button == "RightButton" and IsShiftKeyDown() then
-        setAuctionSearchText(self.reagentName)
+        setAuctionSearchText(self.searchName or self.reagentName)
         return
     end
 
@@ -538,7 +562,7 @@ local function getMaterialRow(index)
 
     local row = CreateFrame("Button", nil, MainFrameCoreMaterials)
     row:SetWidth(356)
-    row:SetHeight(24)
+    row:SetHeight(34)
     row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     row:SetScript("OnEnter", materialRowOnEnter)
     row:SetScript("OnLeave", materialRowOnLeave)
@@ -558,22 +582,28 @@ local function getMaterialRow(index)
     row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.name:SetPoint("LEFT", row.icon, "RIGHT", 8, 0)
-    row.name:SetWidth(160)
-    row.name:SetHeight(20)
+    row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 8, -1)
+    row.name:SetWidth(180)
+    row.name:SetHeight(15)
     row.name:SetJustifyH("LEFT")
 
-    row.price = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.price:SetPoint("RIGHT", row, "RIGHT", -2, 0)
-    row.price:SetWidth(88)
-    row.price:SetHeight(20)
-    row.price:SetJustifyH("RIGHT")
-
     row.count = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.count:SetPoint("RIGHT", row.price, "LEFT", -6, 0)
-    row.count:SetWidth(70)
-    row.count:SetHeight(20)
+    row.count:SetPoint("TOPRIGHT", row, "TOPRIGHT", -2, -1)
+    row.count:SetWidth(74)
+    row.count:SetHeight(15)
     row.count:SetJustifyH("RIGHT")
+
+    row.buy = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.buy:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 8, 1)
+    row.buy:SetWidth(230)
+    row.buy:SetHeight(15)
+    row.buy:SetJustifyH("LEFT")
+
+    row.price = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.price:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -2, 1)
+    row.price:SetWidth(98)
+    row.price:SetHeight(15)
+    row.price:SetJustifyH("RIGHT")
 
     materialRows[index] = row
     return row
@@ -605,10 +635,13 @@ local function renderMaterials(reagents, plannedCrafts)
 
         row.itemLink = reagent.itemLink
         row.reagentName = reagent.name
+        row.searchName = reagent.name
+        row.purchaseName = nil
         row.priceInfo = priceInfo
         row.icon:SetTexture(reagent.texture or UNKNOWN_ICON)
         row.name:SetText(reagent.name)
         row.count:SetText(owned .. " / " .. totalRequired)
+        row.buy:SetText("")
 
         if needed <= 0 then
             row.price:SetText("")
@@ -618,6 +651,30 @@ local function renderMaterials(reagents, plannedCrafts)
                 row.price:SetTextColor(1, 0.72, 0.22)
             else
                 row.price:SetTextColor(0.78, 0.78, 0.78)
+            end
+
+            if priceInfo.converted and priceInfo.sourceItemID then
+                local sourceName = GetItemInfo(priceInfo.sourceItemID)
+                    or ("item " .. tostring(priceInfo.sourceItemID))
+                local sourceQuantity = math.max(1, math.ceil(tonumber(priceInfo.sourceQuantity) or 1))
+                row.purchaseName = sourceName
+                row.searchName = sourceName
+
+                local savings = tonumber(priceInfo.savings) or 0
+                if savings > 0 then
+                    row.buy:SetText(string.format(
+                        addonTable.L["material_buy_instead_savings"],
+                        sourceQuantity,
+                        sourceName,
+                        addonTable.formatCopperShort(savings)
+                    ))
+                else
+                    row.buy:SetText(string.format(
+                        addonTable.L["material_buy_instead"],
+                        sourceQuantity,
+                        sourceName
+                    ))
+                end
             end
         else
             row.price:SetText(addonTable.L["material_no_price"])

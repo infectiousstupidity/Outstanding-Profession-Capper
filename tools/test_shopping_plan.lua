@@ -28,6 +28,7 @@ addonTable.chooseUsableUnitPrice = function(result, purpose)
 end
 addonTable.getActivePriceProviderName = function() return "fixture" end
 
+assert(loadfile("RecipeCost.lua"))("Profession_Capper", addonTable)
 assert(loadfile("ShoppingPlan.lua"))("Profession_Capper", addonTable)
 
 local function assertEqual(actual, expected, label)
@@ -150,6 +151,43 @@ assertEqual(missing.complete, false, "missing price makes plan incomplete")
 assertEqual(missing.missingPriceCount, 1, "missing price count")
 assertEqual(missing.missingPriceQuantity, 1, "missing price quantity")
 assertEqual(missing.estimatedGoldNeededNow, nil, "missing price does not become zero")
+
+prices[16202] = {
+    available = true, marketValue = 400, minBuyout = 400,
+    source = "fixture", freshness = "fresh", ageSeconds = 100,
+}
+prices[16203] = {
+    available = true, marketValue = 900, minBuyout = 900,
+    source = "fixture", freshness = "fresh", ageSeconds = 100,
+}
+
+local essenceRoute = {
+    complete = true,
+    actions = {
+        {
+            type = "craft",
+            recipe = {
+                reagents = {
+                    { itemID = 16202, quantity = 3 },
+                },
+            },
+            expectedCrafts = 1,
+            marketCost = 900,
+            goldCost = 900,
+            acquisitionGoldCost = 0,
+        },
+    },
+    segments = {},
+}
+local essencePlan = addonTable.buildProfessionShoppingPlan(essenceRoute, {}, {})
+local essenceMaterial = findMaterial(essencePlan, 16202)
+assertEqual(essencePlan.complete, true, "essence shopping plan complete")
+assertEqual(essenceMaterial.sourceItemID, 16203, "shopping list recommends greater eternal essence")
+assertEqual(essenceMaterial.sourceQuantity, 1, "shopping list gives exact greater quantity")
+assertEqual(essenceMaterial.estimatedPurchaseCost, 900, "shopping list uses whole greater price")
+assertEqual(essenceMaterial.directTotalCost, 1200, "shopping list exposes direct lesser total")
+assertEqual(essenceMaterial.savings, 300, "shopping list exposes conversion savings")
+assertEqual(essenceMaterial.converted, true, "shopping list marks conversion")
 
 local context = {
     professionName = "Enchanting",

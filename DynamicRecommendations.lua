@@ -153,14 +153,35 @@ function addonTable.getMaterialPriceInfo(item, neededQuantity, now)
 
     local choice
     local reason
-    if type(addonTable.chooseCheapestEquivalentUnitPrice) == "function" then
+    if type(addonTable.chooseCheapestEquivalentPurchase) == "function" then
+        choice, reason = addonTable.chooseCheapestEquivalentPurchase(item, quantity, "purchase", {
+            now = now,
+        })
+    elseif type(addonTable.chooseCheapestEquivalentUnitPrice) == "function" then
         choice, reason = addonTable.chooseCheapestEquivalentUnitPrice(item, "purchase", {
             now = now,
         })
+        if choice then
+            choice.requestedQuantity = quantity
+            choice.sourceQuantity = quantity
+            choice.sourceUnitPrice = choice.unitPrice
+            choice.totalCost = quantity * choice.unitPrice
+            choice.effectiveUnitPrice = choice.unitPrice
+            choice.producedQuantity = quantity
+            choice.excessQuantity = 0
+        end
     else
         local result = addonTable.lookupItemPrice(item, now)
         choice, reason = addonTable.chooseUsableUnitPrice(result, "spend")
-        if not choice then
+        if choice then
+            choice.requestedQuantity = quantity
+            choice.sourceQuantity = quantity
+            choice.sourceUnitPrice = choice.unitPrice
+            choice.totalCost = quantity * choice.unitPrice
+            choice.effectiveUnitPrice = choice.unitPrice
+            choice.producedQuantity = quantity
+            choice.excessQuantity = 0
+        else
             return {
                 available = false,
                 neededQuantity = quantity,
@@ -183,8 +204,16 @@ function addonTable.getMaterialPriceInfo(item, neededQuantity, now)
     return {
         available = true,
         neededQuantity = quantity,
-        unitPrice = choice.unitPrice,
-        estimatedRemainingCost = quantity * choice.unitPrice,
+        unitPrice = choice.effectiveUnitPrice or choice.unitPrice,
+        sourceUnitPrice = choice.sourceUnitPrice or choice.unitPrice,
+        sourceQuantity = choice.sourceQuantity or quantity,
+        requestedQuantity = choice.requestedQuantity or quantity,
+        producedQuantity = choice.producedQuantity or quantity,
+        excessQuantity = choice.excessQuantity or 0,
+        estimatedRemainingCost = choice.totalCost or (quantity * choice.unitPrice),
+        directTotalCost = choice.directTotalCost,
+        alternateTotalCost = choice.alternateTotalCost,
+        savings = choice.savings,
         priceType = choice.priceType,
         source = choice.source,
         freshness = choice.freshness,

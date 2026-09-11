@@ -182,6 +182,41 @@ end
 local price = addonTable.getMaterialPriceInfo(1001, 3)
 assert(price.available == true, "material price should resolve")
 assert(price.estimatedRemainingCost == 300, "material purchase estimate")
+
+addonTable.chooseCheapestEquivalentPurchase = function(item, quantity, purpose)
+    assert(item == 16202, "converted material item")
+    assert(quantity == 3, "converted material quantity")
+    assert(purpose == "purchase", "converted material uses purchase price")
+    return {
+        effectiveUnitPrice = 300,
+        sourceUnitPrice = 900,
+        sourceQuantity = 1,
+        requestedQuantity = 3,
+        producedQuantity = 3,
+        excessQuantity = 0,
+        totalCost = 900,
+        directTotalCost = 1200,
+        alternateTotalCost = 900,
+        savings = 300,
+        priceType = "auction",
+        source = "fixture",
+        freshness = "fresh",
+        ageSeconds = 60,
+        sourceItemID = 16203,
+        converted = true,
+        conversionRatio = 3,
+        conversionDirection = "greater_to_lesser",
+    }
+end
+
+local converted = addonTable.getMaterialPriceInfo(16202, 3)
+assert(converted.available == true, "converted material price available")
+assert(converted.sourceItemID == 16203, "converted source item exposed")
+assert(converted.sourceQuantity == 1, "converted source quantity exposed")
+assert(converted.estimatedRemainingCost == 900, "converted whole-item total exposed")
+assert(converted.directTotalCost == 1200, "direct comparison total exposed")
+assert(converted.savings == 300, "converted savings exposed")
+
 assert(addonTable.formatCopperShort(123456) == "12g 34s", "compact money formatting")
 assert(addonTable.formatPriceAge(7200) == "2h old", "scan age formatting")
 
