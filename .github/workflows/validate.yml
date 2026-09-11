@@ -38,6 +38,8 @@ jobs:
         run: lua5.1 tools/test_dynamic_recommendations.lua
       - name: Test craft sessions
         run: lua5.1 tools/test_session.lua
+      - name: Test enchant replacement confirmation
+        run: lua5.1 tools/test_enchant_confirmation.lua
       - name: Test Enchanting rod ownership
         run: lua5.1 tools/test_enchanting_rods.lua
       - name: Validate addon structure

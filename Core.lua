@@ -780,6 +780,10 @@ local function captureEnchantTarget(kind, bag, slot)
 
     local itemID = addonTable.getItemIDFromLink and addonTable.getItemIDFromLink(itemLink) or nil
     addonTable.setCraftSessionTarget(kind, bag, slot, itemID)
+
+    if type(addonTable.confirmReplaceEnchantIfVisible) == "function" then
+        addonTable.confirmReplaceEnchantIfVisible()
+    end
 end
 
 local function installEnchantTargetHooks()
@@ -837,9 +841,15 @@ local function reuseRememberedEnchantTarget()
 
     if target.kind == "bag" and UseContainerItem then
         UseContainerItem(target.bag, target.slot)
+        if type(addonTable.confirmReplaceEnchantIfVisible) == "function" then
+            addonTable.confirmReplaceEnchantIfVisible()
+        end
         return true
     elseif target.kind == "inventory" and PickupInventoryItem then
         PickupInventoryItem(target.slot)
+        if type(addonTable.confirmReplaceEnchantIfVisible) == "function" then
+            addonTable.confirmReplaceEnchantIfVisible()
+        end
         return true
     end
 

@@ -56,6 +56,7 @@ This file governs implementation work. Keep it current as work progresses.
 | --- | --- | --- |
 | [10 Dynamic recommendation UI](docs/tasks/10-dynamic-recommendation-ui.md) | IN PROGRESS | Present cheapest-route recommendations, acquisition guidance, costs, and confidence. |
 | [12 Targeted Enchant repeat workflow](docs/tasks/12-targeted-enchant-repeat.md) | IN PROGRESS | Repeat item-targeted enchants without fake batch state; remember the target and support until-change/fixed counts. |
+| [13 Auto-confirm Enchant replacement](docs/tasks/13-auto-confirm-enchant-replacement.md) | IN PROGRESS | Skip the replace-enchant confirmation during Profession Capper repeat clicks without calling the protected API prematurely. |
 
 ## Dependency order
 
@@ -71,4 +72,4 @@ Task 06 may be completed before or after Task 07, but Task 08 must not assume ac
 
 ## Current task
 
-Task 10 remains in manual acceptance. Task 12 is now implemented in code and awaiting in-game acceptance: targeted Enchanting no longer pretends one click can queue multiple item-target enchants, repeat mode supports Until change or a fixed count, and the first manually selected target is remembered so later hardware clicks can reapply to the same bag/equipment slot.
+Task 10 remains in manual acceptance. Task 12 is awaiting in-game repeat testing. Task 13 is implemented in code: while a Profession Capper targeted-enchant session is active, the addon confirms only a currently visible REPLACE_ENCHANT dialog inside the user's hardware click path; it never calls ReplaceEnchant before that dialog exists.
