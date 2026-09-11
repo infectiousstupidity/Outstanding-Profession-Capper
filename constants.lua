@@ -118,6 +118,7 @@ Blacksmithing["55835"] = "Cobalt Gauntlets"
 Blacksmithing["55839"] = "Titanium Weapon Chain"
 Blacksmithing["59436"] = "Brilliant Saronite Belt"
 
+Cooking["64054"] = "Clamlette Magnifique"
 Cooking["2538"] = "Charred Wolf Meat"
 Cooking["2539"] = "Spiced Wolf Meat"
 Cooking["2540"] = "Roasted Boar Meat"
