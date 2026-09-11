@@ -14,7 +14,7 @@ function UnitFactionGroup()
 end
 
 addonTable.isRecipeEligibleForDynamicOptimization = function(spellID)
-    return spellID == 10
+    return spellID == 10 or spellID == 11 or spellID == 12
 end
 
 local providerName = "fixture"
@@ -22,66 +22,111 @@ addonTable.getActivePriceProviderName = function()
     return providerName
 end
 
+addonTable.calculateRecipeCost = function(recipe, skill)
+    local id = recipe.spellID
+    if id == 10 then
+        return {
+            available = true,
+            useful = true,
+            difficulty = "green",
+            skillUpChance = 0.4,
+            expectedCraftsPerSkillUp = 2.5,
+            currentPurchaseCostPerCraft = 300,
+            expectedCurrentPurchaseCostPerSkillUp = 750,
+            materialMarketValuePerCraft = 300,
+            expectedMarketCostPerSkillUp = 750,
+            quality = "complete",
+            reagentCosts = {},
+        }
+    elseif id == 11 then
+        return {
+            available = true,
+            useful = true,
+            difficulty = "orange",
+            skillUpChance = 1,
+            expectedCraftsPerSkillUp = 1,
+            currentPurchaseCostPerCraft = 200,
+            expectedCurrentPurchaseCostPerSkillUp = 200,
+            materialMarketValuePerCraft = 200,
+            expectedMarketCostPerSkillUp = 200,
+            quality = "complete",
+            reagentCosts = {},
+        }
+    elseif id == 12 then
+        return {
+            available = true,
+            useful = true,
+            difficulty = "green",
+            skillUpChance = 0.5,
+            expectedCraftsPerSkillUp = 2,
+            currentPurchaseCostPerCraft = 20,
+            expectedCurrentPurchaseCostPerSkillUp = 40,
+            materialMarketValuePerCraft = 20,
+            expectedMarketCostPerSkillUp = 40,
+            quality = "complete",
+            reagentCosts = {},
+        }
+    end
+    return { available = false }
+end
+
 local solverCalls = 0
 addonTable.solveCheapestProfessionRoute = function(recipes, context, state, options)
     solverCalls = solverCalls + 1
-    assert(table.getn(recipes) == 1, "only eligible learned recipes should be optimized")
-    assert(options.targetSkill == 225, "optimizer should target the current trained rank cap")
+    assert(table.getn(recipes) == 3, "eligible learned recipes should be passed to optimizer")
+    assert(options.targetSkill == 225, "optimizer should target current trained cap")
+    assert(options.optimizeFor == "current", "route should optimize current purchase cost")
+    assert(type(options.costRecipe) == "function", "full route should enforce orange/yellow-only costs")
+    local greenRouteCost = options.costRecipe(recipes[3], context.baseSkill, context, state, {})
+    assert(greenRouteCost.available == false, "green recipe must not be usable in full dynamic route")
+    assert(greenRouteCost.unavailableReason == "not_orange_or_yellow", "green route exclusion reason")
     assert(state.learnedRecipes[10] == true, "learned recipe state should be populated")
     assert(state.inventory[1001] == 4, "live inventory should be populated")
     assert(state.acquiredOneTime["item:6218"] == true, "owned enchanting rod should be reusable")
     return {
-        complete = true,
-        segments = {
-            {
-                recipeID = 10,
-                recipe = recipes[1],
-                skillStart = 200,
-                skillEnd = 210,
-                expectedCrafts = 12.5,
-                expectedMaterialCost = 5000,
-            },
-        },
+        complete = false,
+        reason = "no_complete_route",
+        segments = {},
         actions = {},
     }
 end
 
-addonTable.buildProfessionShoppingPlan = function(route)
-    return {
-        complete = true,
-        estimatedMarketValueCost = 5000,
-        estimatedGoldNeededNow = 3000,
-        totalExpectedCrafts = 12.5,
-        stalePriceCount = 0,
-        missingPriceCount = 0,
-        priceSources = { "fixture" },
-        quality = "complete",
-    }
+addonTable.buildProfessionShoppingPlan = function()
+    error("shopping plan should not run for incomplete route")
 end
 
 assert(loadfile("DynamicRecommendations.lua"))("Profession_Capper", addonTable)
 
+local commonReagents = {
+    {
+        name = "Dust",
+        itemLink = "|cffffffff|Hitem:1001:0:0:0:0:0:0:0|h[Dust]|h|r",
+        count = 1,
+        owned = 4,
+    },
+    {
+        name = "Runed Copper Rod",
+        itemLink = "|cffffffff|Hitem:6218:0:0:0:0:0:0:0|h[Runed Copper Rod]|h|r",
+        count = 1,
+        owned = 1,
+    },
+}
+
 local cache = {
     [10] = {
-        name = "Useful recipe",
-        reagents = {
-            {
-                name = "Dust",
-                itemLink = "|cffffffff|Hitem:1001:0:0:0:0:0:0:0|h[Dust]|h|r",
-                count = 2,
-                owned = 4,
-            },
-            {
-                name = "Runed Copper Rod",
-                itemLink = "|cffffffff|Hitem:6218:0:0:0:0:0:0:0|h[Runed Copper Rod]|h|r",
-                count = 1,
-                owned = 1,
-            },
-        },
+        name = "Yellow recipe",
+        skillType = "medium",
+        reagents = commonReagents,
     },
-    [20] = {
-        name = "Unknown difficulty",
-        reagents = {},
+    [11] = {
+        name = "Orange recipe",
+        skillType = "optimal",
+        reagents = commonReagents,
+    },
+    [12] = {
+        name = "Green recipe",
+        skillType = "easy",
+        reagents = commonReagents,
     },
 }
 
@@ -93,10 +138,17 @@ local recommendation = addonTable.computeDynamicProfessionRecommendation(cache, 
     currentCap = 225,
 })
 
-assert(recommendation.available == true, "complete live route should be available")
-assert(recommendation.fallbackToStaticGuide == false, "complete route should not fall back")
-assert(recommendation.currentSegment.recipeID == 10, "first route segment should be exposed")
-assert(solverCalls == 1, "solver should run once")
+assert(recommendation.available == true, "current recommendation should survive incomplete full route")
+assert(recommendation.fallbackToStaticGuide == false, "priced current step should not fall back")
+assert(recommendation.currentSegment.recipeID == 11, "cheapest orange/yellow recipe should win")
+assert(table.getn(recommendation.candidates) == 2, "green recipe must not compete")
+assert(recommendation.candidates[1].recipeID == 11, "candidates should be sorted by expected cost per skill-up")
+assert(recommendation.candidates[2].recipeID == 10, "second priced orange/yellow recipe")
+assert(recommendation.candidates[2].difficulty == "yellow", "live game difficulty must override stale static color")
+assert(math.abs(recommendation.candidates[2].skillUpChance - 0.75) < 0.0001, "mismatched live yellow uses safe current estimate")
+assert(recommendation.routeComplete == false, "full route should remain explicitly incomplete")
+assert(recommendation.routeReason == "no_complete_route", "full-route failure reason should be preserved")
+assert(solverCalls == 1, "solver should still attempt full route")
 
 providerName = "null"
 local noProvider = addonTable.computeDynamicProfessionRecommendation(cache, {

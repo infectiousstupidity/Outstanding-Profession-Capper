@@ -84,14 +84,15 @@ The default panel should still answer "what should I do next?" first.
 Implemented on `master`:
 
 - `Cheapest now` and `Static guide` modes with the selected mode persisted.
-- Live optimization from learned recipes that have safe difficulty metadata and usable price data.
-- Automatic fallback to the static guide when no complete priced route can be produced.
+- Current-step comparison uses WoW's live recipe difficulty and only lets game-reported orange/yellow recipes compete for `Cheapest now`.
+- Candidates are ranked by current purchasable material cost per expected skill-up, with per-application cost shown separately.
+- A current cheapest recommendation remains available even when missing future data prevents a complete priced route; static fallback is reserved for cases where the current step itself cannot be priced safely.
 - Compact current-segment cost/craft information plus estimated total-to-rank-cap/cap cost, gold needed now, total crafts, price source, scan age, and stale/missing indicators.
-- Per-material remaining purchase estimates and price-source tooltips.
+- Per-material remaining purchase estimates and price-source tooltips, including Greater/Lesser enchanting essence equivalence when one form is cheaper after conversion.
 - Actionable trainer/vendor/AH/reputation/drop acquisition text for unlearned static-guide recipes when metadata is available.
 - Hoverable route inspection without expanding the default panel into a dashboard.
 - Active +profession modifiers remain visible in the profession header and are passed into the optimizer.
-- A focused automated integration test covers the live snapshot, reusable Enchanting rods, dynamic route exposure, fallback behavior, and material price estimates.
+- Focused automated tests cover live difficulty overriding stale static color, orange/yellow-only candidate comparison, incomplete full-route handling, reusable Enchanting rods, current-price route optimization, Greater/Lesser essence conversion, and per-application material cost.
 
 ## Manual acceptance checks still required
 

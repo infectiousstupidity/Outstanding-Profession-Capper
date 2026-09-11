@@ -147,6 +147,129 @@ local function selectPurchaseChoice(priceResult, chooser)
     return nil, "no_current_purchase_price"
 end
 
+local ESSENCE_EQUIVALENTS = {
+    [10938] = { alternateItemID = 10939, multiplier = 1 / 3, ratio = 3, direction = "greater_to_lesser" },
+    [10939] = { alternateItemID = 10938, multiplier = 3, ratio = 3, direction = "lesser_to_greater" },
+    [10998] = { alternateItemID = 11082, multiplier = 1 / 3, ratio = 3, direction = "greater_to_lesser" },
+    [11082] = { alternateItemID = 10998, multiplier = 3, ratio = 3, direction = "lesser_to_greater" },
+    [11134] = { alternateItemID = 11135, multiplier = 1 / 3, ratio = 3, direction = "greater_to_lesser" },
+    [11135] = { alternateItemID = 11134, multiplier = 3, ratio = 3, direction = "lesser_to_greater" },
+    [11174] = { alternateItemID = 11175, multiplier = 1 / 3, ratio = 3, direction = "greater_to_lesser" },
+    [11175] = { alternateItemID = 11174, multiplier = 3, ratio = 3, direction = "lesser_to_greater" },
+    [16202] = { alternateItemID = 16203, multiplier = 1 / 3, ratio = 3, direction = "greater_to_lesser" },
+    [16203] = { alternateItemID = 16202, multiplier = 3, ratio = 3, direction = "lesser_to_greater" },
+    [22447] = { alternateItemID = 22446, multiplier = 1 / 3, ratio = 3, direction = "greater_to_lesser" },
+    [22446] = { alternateItemID = 22447, multiplier = 3, ratio = 3, direction = "lesser_to_greater" },
+    [34056] = { alternateItemID = 34055, multiplier = 1 / 3, ratio = 3, direction = "greater_to_lesser" },
+    [34055] = { alternateItemID = 34056, multiplier = 3, ratio = 3, direction = "lesser_to_greater" },
+}
+
+local function parseItemID(item)
+    if type(item) == "number" then
+        return item
+    end
+    if type(item) ~= "string" then
+        return nil
+    end
+
+    local numeric = tonumber(item)
+    if numeric then
+        return numeric
+    end
+
+    local itemID = string.match(item, "[Ii][Tt][Ee][Mm]:(%d+)")
+    return itemID and tonumber(itemID) or nil
+end
+
+local function copyChoice(choice)
+    local result = {}
+    if type(choice) == "table" then
+        for key, value in pairs(choice) do
+            result[key] = value
+        end
+    end
+    return result
+end
+
+local function chooseItemPrice(item, purpose, lookup, chooser, now)
+    local priceResult = lookup(item, now)
+    local choice
+    local reason
+
+    if purpose == "purchase" then
+        choice, reason = selectPurchaseChoice(priceResult, chooser)
+    else
+        choice, reason = chooser(priceResult, purpose)
+    end
+
+    if not choice then
+        return nil, reason or (priceResult and priceResult.unavailableReason) or "price_unavailable"
+    end
+
+    local result = copyChoice(choice)
+    result.requestedItemID = parseItemID(item)
+    result.sourceItemID = parseItemID(item)
+    result.converted = false
+    result.isSuspicious = priceResult and priceResult.isSuspicious or false
+    return result
+end
+
+function addonTable.getEquivalentReagent(item)
+    local itemID = parseItemID(item)
+    if not itemID then
+        return nil
+    end
+    return ESSENCE_EQUIVALENTS[itemID]
+end
+
+function addonTable.chooseCheapestEquivalentUnitPrice(item, purpose, options)
+    options = options or {}
+    local lookup = getPriceLookup(options)
+    local chooser = getPriceChooser(options)
+    if type(lookup) ~= "function" or type(chooser) ~= "function" then
+        return nil, "price_provider_unavailable"
+    end
+
+    local direct, directReason = chooseItemPrice(item, purpose, lookup, chooser, options.now)
+    local itemID = parseItemID(item)
+    local equivalent = itemID and ESSENCE_EQUIVALENTS[itemID] or nil
+    if not equivalent then
+        return direct, directReason
+    end
+
+    local alternate, alternateReason = chooseItemPrice(
+        equivalent.alternateItemID,
+        purpose,
+        lookup,
+        chooser,
+        options.now
+    )
+
+    if alternate then
+        alternate.unitPrice = alternate.unitPrice * equivalent.multiplier
+        alternate.requestedItemID = itemID
+        alternate.sourceItemID = equivalent.alternateItemID
+        alternate.converted = true
+        alternate.conversionRatio = equivalent.ratio
+        alternate.conversionDirection = equivalent.direction
+    end
+
+    if direct and alternate then
+        if alternate.unitPrice < direct.unitPrice then
+            return alternate
+        end
+        return direct
+    end
+    if alternate then
+        return alternate
+    end
+    if direct then
+        return direct
+    end
+
+    return nil, directReason or alternateReason or "price_unavailable"
+end
+
 local function resolveAcquisition(recipe, state, skillContext, options)
     if type(addonTable.resolveRecipeAcquisition) == "function" then
         local modeled = addonTable.resolveRecipeAcquisition(recipe, state, skillContext, options)
@@ -296,8 +419,10 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
         expectedCraftsPerSkillUp = nil,
         materialMarketValuePerCraft = nil,
         goldNeededNowPerCraft = nil,
+        currentPurchaseCostPerCraft = nil,
         expectedMarketCostPerSkillUp = nil,
         expectedGoldNeededNowPerSkillUp = nil,
+        expectedCurrentPurchaseCostPerSkillUp = nil,
         acquisitionCost = nil,
         acquisitionMarketCost = nil,
         reagentCosts = {},
@@ -362,6 +487,8 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
     local goldPerCraft = 0
     local expectedMarket = 0
     local expectedGold = 0
+    local currentPurchasePerCraft = 0
+    local expectedCurrentPurchase = 0
     local hasStale = false
     local inventoryRemaining = copyMap(state.inventory)
     local acquiredOneTime = state.acquiredOneTime or state.acquiredReusable or {}
@@ -379,9 +506,21 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
             local reusable = reagent.reusable and true or false
             local reusableKey = reusable and getReagentKey(reagent) or nil
             local alreadyAcquired = reusableKey and acquiredOneTime[reusableKey]
-            local priceResult = priceLookup(item, options.now)
-            local marketChoice, marketReason = priceChooser(priceResult, "market")
-            local purchaseChoice, purchaseReason = selectPurchaseChoice(priceResult, priceChooser)
+            local equivalentOptions = {
+                priceLookup = priceLookup,
+                unitPriceChooser = priceChooser,
+                now = options.now,
+            }
+            local marketChoice, marketReason = addonTable.chooseCheapestEquivalentUnitPrice(
+                item,
+                "market",
+                equivalentOptions
+            )
+            local purchaseChoice, purchaseReason = addonTable.chooseCheapestEquivalentUnitPrice(
+                item,
+                "purchase",
+                equivalentOptions
+            )
 
             if not marketChoice or not purchaseChoice then
                 result.incomplete = true
@@ -404,18 +543,22 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
 
                 local craftMarket = quantity * marketChoice.unitPrice
                 local craftGold = purchaseQuantity * purchaseChoice.unitPrice
+                local craftCurrentPurchase = quantity * purchaseChoice.unitPrice
                 local multiplier = reusable and 1 or expectedCrafts
 
                 if alreadyAcquired then
                     craftMarket = 0
                     craftGold = 0
+                    craftCurrentPurchase = 0
                     multiplier = 0
                 end
 
                 marketPerCraft = marketPerCraft + craftMarket
                 goldPerCraft = goldPerCraft + craftGold
+                currentPurchasePerCraft = currentPurchasePerCraft + craftCurrentPurchase
                 expectedMarket = expectedMarket + (craftMarket * multiplier)
                 expectedGold = expectedGold + (craftGold * multiplier)
+                expectedCurrentPurchase = expectedCurrentPurchase + (craftCurrentPurchase * multiplier)
 
                 if reusable and not alreadyAcquired and reusableKey then
                     table.insert(result.oneTimeCosts, {
@@ -429,7 +572,7 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
 
                 if marketChoice.isStale or purchaseChoice.isStale
                     or marketChoice.isTooOld or purchaseChoice.isTooOld
-                    or (priceResult and priceResult.isSuspicious)
+                    or marketChoice.isSuspicious or purchaseChoice.isSuspicious
                 then
                     hasStale = true
                     table.insert(result.stalePrices, {
@@ -437,7 +580,7 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                         source = purchaseChoice.source or marketChoice.source,
                         freshness = purchaseChoice.freshness or marketChoice.freshness,
                         ageSeconds = purchaseChoice.ageSeconds or marketChoice.ageSeconds,
-                        suspicious = priceResult and priceResult.isSuspicious or false,
+                        suspicious = marketChoice.isSuspicious or purchaseChoice.isSuspicious or false,
                     })
                 end
 
@@ -455,6 +598,11 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                     purchasePriceType = purchaseChoice.priceType,
                     source = purchaseChoice.source or marketChoice.source,
                     freshness = purchaseChoice.freshness or marketChoice.freshness,
+                    ageSeconds = purchaseChoice.ageSeconds or marketChoice.ageSeconds,
+                    sourceItemID = purchaseChoice.sourceItemID,
+                    converted = purchaseChoice.converted and true or false,
+                    conversionRatio = purchaseChoice.conversionRatio,
+                    conversionDirection = purchaseChoice.conversionDirection,
                 })
             end
         end
@@ -469,8 +617,10 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
     result.expectedCraftsPerSkillUp = expectedCrafts
     result.materialMarketValuePerCraft = marketPerCraft
     result.goldNeededNowPerCraft = goldPerCraft
+    result.currentPurchaseCostPerCraft = currentPurchasePerCraft
     result.expectedMarketCostPerSkillUp = expectedMarket
     result.expectedGoldNeededNowPerSkillUp = expectedGold
+    result.expectedCurrentPurchaseCostPerSkillUp = expectedCurrentPurchase
     result.available = true
     result.useful = true
     result.quality = hasStale and "stale" or "complete"
