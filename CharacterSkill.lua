@@ -103,6 +103,15 @@ function addonTable.buildProfessionSkillContext(professionName, tradeSkillRank, 
     }
 end
 
+function addonTable.getEffectiveSkillForBase(baseSkill, context)
+    context = context or currentContext
+    if not context then
+        return toNumber(baseSkill)
+    end
+
+    return toNumber(baseSkill) + toNumber(context.activeSkillModifier)
+end
+
 function addonTable.readProfessionSkillContext()
     local professionName, tradeSkillRank, tradeSkillCap, tradeSkillModifier = GetTradeSkillLine()
     local legacySkillLine = getLegacySkillLine(professionName)
