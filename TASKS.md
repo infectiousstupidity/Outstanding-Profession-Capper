@@ -69,4 +69,4 @@ Task 06 may be completed before or after Task 07, but Task 08 must not assume ac
 
 ## Current task
 
-Task 01 — implementation complete; awaiting the required live in-game checks before it can be marked DONE.
+Task 01 — revised after live 3.3.5 testing showed racial skill is embedded in reported rank/cap; awaiting post-fix verification and the unavailable +profession equipment check.

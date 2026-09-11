@@ -53,18 +53,20 @@ Implemented:
 - Added a single profession-skill context with trained/base skill, active modifier, effective skill, trained cap, effective cap, and modifier state.
 - Reads the fourth return from `GetTradeSkillLine()` when present.
 - Falls back to the Wrath-era `GetSkillLineInfo()` modifier fields when the fourth return is unavailable.
-- Keeps the existing static guide/crafting route keyed to trained/base skill so Task 01 does not change recommendations.
+- Live testing showed this 3.3.5 client folds the Blood Elf +10 directly into both reported skill and cap: `302 / 385`, while the explicit modifier fields remain `nil` / `0`.
+- Infers such embedded profession bonuses from the deviation above standard Wrath profession caps (75/150/225/300/375/450), so `302 / 385` is modeled as trained `292 / 375` plus an embedded `+10` modifier without race-specific logic.
+- Keeps the existing static guide/crafting route keyed to trained/base skill so Task 01 does not change recommendations, while the UI continues showing effective values such as `302 / 385` and `302 -> 310`.
 - Refreshes the context when player equipment or player auras change.
 - Added Lua 5.1 coverage for no modifier, a +10 skill-line modifier, temporary +skill, direct trade-skill modifier, and context change detection.
 
 ## Manual checks
 
 Required before marking this task DONE:
-- PENDING — Enchanting with no +skill item.
-- PENDING — Blood Elf Enchanting racial active.
-- PENDING — Equip/unequip any available +Enchanting item and verify values refresh.
+- OBSERVED — Blood Elf Enchanting with no +skill item reports `TRADE: Enchanting 302 385 nil` and `SKILL: Enchanting rank 302 temp 0 mod 0 max 385`.
+- RECHECK AFTER FIX — Confirm Profession Capper still displays `302 / 385` while calculations behave as trained `292 / 375` plus `+10`.
+- PENDING — Equip/unequip any available +Enchanting item and verify values refresh; no such item is currently available for live testing.
 
-These checks require a live 3.3.5 client and are intentionally not claimed as passed by CI.
+The live API observation above is recorded evidence. The equipment case remains intentionally unclaimed until it can be tested in-game.
 
 ## Commit
 

@@ -638,12 +638,20 @@ local function updateProfessionHeader()
         txtProfessionProgress:SetText(string.format(
             addonTable.L["profession_progress"],
             professionContext.professionName,
-            professionContext.baseSkill,
-            professionContext.currentCap
+            professionContext.effectiveSkill,
+            professionContext.effectiveCap
         ))
     else
         txtProfessionProgress:SetText("")
     end
+end
+
+local function getDisplayedTarget(baseTarget)
+    if not baseTarget or not professionContext then
+        return baseTarget
+    end
+
+    return baseTarget + professionContext.activeSkillModifier
 end
 
 local function updateCraftProgress(currentID, effectiveTarget, craftSeconds)
@@ -941,11 +949,12 @@ function displayRecipe()
     local currentID = shouldCraft[craftRecipeOptionsIndex]
     local data = recipeCache[currentID]
     local effectiveTarget = getEffectiveTarget()
+    local displayedTarget = getDisplayedTarget(effectiveTarget)
     local skillUpsNeeded = math.max(0, effectiveTarget - professionContext.baseSkill)
     local plannedCrafts = math.max(1, skillUpsNeeded)
 
     updateProfessionHeader()
-    txtTarget:SetText(string.format(L["target_line"], professionContext.baseSkill, effectiveTarget))
+    txtTarget:SetText(string.format(L["target_line"], professionContext.effectiveSkill, displayedTarget))
     txtRecipePosition:SetText(string.format(L["recipe_position"], craftRecipeOptionsIndex, table.getn(shouldCraft)))
     txtRecipeStatus:SetText("")
 
@@ -986,9 +995,9 @@ function displayRecipe()
         elseif batchCount > 0 and skillUpsNeeded > 0 then
             MainFrameCoreCraft:Enable()
             if session and session.spellID == currentID and session.needsContinue then
-                MainFrameCoreCraft:SetText(string.format(L["continue_to"], effectiveTarget))
+                MainFrameCoreCraft:SetText(string.format(L["continue_to"], displayedTarget))
             else
-                MainFrameCoreCraft:SetText(string.format(L["craft_to"], effectiveTarget))
+                MainFrameCoreCraft:SetText(string.format(L["craft_to"], displayedTarget))
             end
         else
             MainFrameCoreCraft:Disable()
