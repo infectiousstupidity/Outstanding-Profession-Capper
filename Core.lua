@@ -801,15 +801,64 @@ local function printProfessionDebug()
         .. " | recipe " .. tostring(firstRecipe) .. " " .. tostring(firstName or ""))
 end
 
+local function formatCopper(value)
+    value = tonumber(value)
+    if not value then
+        return "n/a"
+    end
+
+    value = math.floor(value)
+    local gold = math.floor(value / 10000)
+    local silver = math.floor((value % 10000) / 100)
+    local copper = value % 100
+    return string.format("%dg %02ds %02dc", gold, silver, copper)
+end
+
+local function printPriceDebug(item)
+    if not item or item == "" then
+        print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper price]|r usage: /pcapper price <itemID or item link>")
+        return
+    end
+
+    local result = addonTable.lookupItemPrice(item)
+    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper price]|r provider="
+        .. tostring(addonTable.getActivePriceProviderName())
+        .. " source=" .. tostring(result.source)
+        .. " version=" .. tostring(result.providerVersion or "unknown")
+        .. " backend=" .. tostring(result.providerBackend or "unknown"))
+
+    if not result.available then
+        print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper price]|r unavailable: "
+            .. tostring(result.unavailableReason or "unknown"))
+        return
+    end
+
+    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper price]|r item="
+        .. tostring(result.itemID or item)
+        .. " min=" .. formatCopper(result.minBuyout)
+        .. " market=" .. formatCopper(result.marketValue)
+        .. " historical=" .. formatCopper(result.historicalValue)
+        .. " recent=" .. formatCopper(result.recentValue))
+
+    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper price]|r freshness="
+        .. tostring(result.freshness)
+        .. " age=" .. tostring(result.ageSeconds or "unknown") .. "s"
+        .. " auctions=" .. tostring(result.numAuctions or "unknown")
+        .. " suspicious=" .. tostring(result.isSuspicious)
+        .. (result.suspiciousReason and (" (" .. result.suspiciousReason .. ")") or ""))
+end
+
 local function printCommandHelp()
-    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper]|r /pcapper show, hide, attach, detach, lock, unlock, reset, debug, help")
+    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper]|r /pcapper show, hide, attach, detach, lock, unlock, reset, debug, price <itemID>, help")
 end
 
 function TogglePcapperFrame(command)
-    command = string.lower(command or "")
+    local rawCommand = command or ""
+    local action, argument = string.match(rawCommand, "^%s*(%S*)%s*(.-)%s*$")
+    action = string.lower(action or "")
     local db = addonTable.getSettings()
 
-    if command == "" then
+    if action == "" then
         if db.enabled then
             addonTable.setEnabled(false)
             MainFrameCore:Hide()
@@ -818,29 +867,31 @@ function TogglePcapperFrame(command)
             addonTable.applyFramePosition(MainFrameCore)
             MainFrameCore:Show()
         end
-    elseif command == "show" then
+    elseif action == "show" then
         addonTable.setEnabled(true)
         addonTable.applyFramePosition(MainFrameCore)
         MainFrameCore:Show()
-    elseif command == "hide" then
+    elseif action == "hide" then
         addonTable.setEnabled(false)
         MainFrameCore:Hide()
-    elseif command == "attach" then
+    elseif action == "attach" then
         addonTable.setFrameAttached(MainFrameCore, true)
-    elseif command == "detach" then
+    elseif action == "detach" then
         addonTable.detachFrame(MainFrameCore)
         addonTable.saveFramePosition(MainFrameCore)
-    elseif command == "lock" then
+    elseif action == "lock" then
         addonTable.setFrameLocked(true)
-    elseif command == "unlock" then
+    elseif action == "unlock" then
         addonTable.setFrameLocked(false)
-    elseif command == "reset" then
+    elseif action == "reset" then
         addonTable.resetSettings(MainFrameCore)
         addonTable.setEnabled(true)
         MainFrameCore:Show()
-    elseif command == "debug" then
+    elseif action == "debug" then
         printProfessionDebug()
-    elseif command == "help" then
+    elseif action == "price" then
+        printPriceDebug(argument)
+    elseif action == "help" then
         printCommandHelp()
     else
         printCommandHelp()

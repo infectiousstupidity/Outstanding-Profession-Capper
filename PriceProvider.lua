@@ -77,9 +77,17 @@ local function unavailableResult(item, source, reason, detail)
         isTooOld = false,
         minBuyout = nil,
         marketValue = nil,
+        historicalValue = nil,
+        recentValue = nil,
         vendorBuyPrice = nil,
+        numAuctions = nil,
         updatedAt = nil,
         ageSeconds = nil,
+        isSuspicious = false,
+        suspiciousReason = nil,
+        marketRatio = nil,
+        providerVersion = nil,
+        providerBackend = nil,
     }
 end
 
@@ -131,14 +139,19 @@ function addonTable.normalizePriceResult(item, raw, providerName, nowOverride)
         result.itemID = raw.itemID or result.itemID
         result.itemLink = raw.itemLink or result.itemLink
         result.updatedAt = positiveTimestamp(raw.updatedAt)
+        result.providerVersion = raw.providerVersion
+        result.providerBackend = raw.providerBackend
         return result
     end
 
     local minBuyout = positiveNumber(raw.minBuyout)
     local marketValue = positiveNumber(raw.marketValue)
+    local historicalValue = positiveNumber(raw.historicalValue)
+    local recentValue = positiveNumber(raw.recentValue)
     local vendorBuyPrice = positiveNumber(raw.vendorBuyPrice)
+    local numAuctions = positiveNumber(raw.numAuctions)
 
-    if not minBuyout and not marketValue and not vendorBuyPrice then
+    if not minBuyout and not marketValue and not historicalValue and not recentValue and not vendorBuyPrice then
         local result = unavailableResult(
             raw.item or item,
             source,
@@ -168,13 +181,21 @@ function addonTable.normalizePriceResult(item, raw, providerName, nowOverride)
         unavailableDetail = nil,
         minBuyout = minBuyout,
         marketValue = marketValue,
+        historicalValue = historicalValue,
+        recentValue = recentValue,
         vendorBuyPrice = vendorBuyPrice,
+        numAuctions = numAuctions,
         updatedAt = updatedAt,
         freshness = freshness,
         ageSeconds = ageSeconds,
         isFresh = freshness == "fresh",
         isStale = freshness == "stale",
         isTooOld = isTooOld,
+        isSuspicious = raw.isSuspicious and true or false,
+        suspiciousReason = raw.suspiciousReason,
+        marketRatio = tonumber(raw.marketRatio),
+        providerVersion = raw.providerVersion,
+        providerBackend = raw.providerBackend,
     }
 end
 
@@ -345,6 +366,8 @@ function addonTable.chooseUsableUnitPrice(result, purpose)
 
     if purpose == "market" then
         local choice = buildChoice(result, result.marketValue, "market")
+            or buildChoice(result, result.historicalValue, "historical")
+            or buildChoice(result, result.recentValue, "recent")
             or buildChoice(result, result.minBuyout, "auction")
             or buildChoice(result, result.vendorBuyPrice, "vendor")
         if choice then
