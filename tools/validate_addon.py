@@ -11,6 +11,7 @@ REQUIRED_ORDER = [
     "constants.lua",
     "Localization.lua",
     "Guide.lua",
+    "CharacterSkill.lua",
     "Settings.lua",
     "Session.lua",
 ]

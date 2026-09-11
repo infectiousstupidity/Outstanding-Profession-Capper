@@ -29,7 +29,7 @@ This file governs implementation work. Keep it current as work progresses.
 
 | Task | Status | Purpose |
 | --- | --- | --- |
-| [01 Character profession skill context](docs/tasks/01-character-skill-context.md) | QUEUED | Correctly model base skill, active +profession modifiers, and effective skill. |
+| [01 Character profession skill context](docs/tasks/01-character-skill-context.md) | IN PROGRESS | Correctly model base skill, active +profession modifiers, and effective skill. |
 | [02 Price provider abstraction](docs/tasks/02-price-provider-abstraction.md) | QUEUED | Define one internal API for external price sources. |
 | [03 TSM AuctionDB integration](docs/tasks/03-tsm-auctiondb-integration.md) | QUEUED | Read local TSM/AuctionDB prices and freshness safely. |
 
@@ -69,4 +69,4 @@ Task 06 may be completed before or after Task 07, but Task 08 must not assume ac
 
 ## Current task
 
-None. Start with Task 01.
+Task 01 — implementation complete; awaiting the required live in-game checks before it can be marked DONE.

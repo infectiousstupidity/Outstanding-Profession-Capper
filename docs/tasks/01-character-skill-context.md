@@ -1,6 +1,6 @@
 # Task 01 — Character profession skill context
 
-Status: QUEUED  
+Status: IN PROGRESS  
 Phase: 1 — Character and price foundations  
 Depends on: none
 
@@ -47,12 +47,24 @@ The rest of the addon must stop assuming that one `rank` integer fully describes
 - Existing guide, crafting, and training-cap behavior still works.
 - Lua 5.1 and repository validation pass.
 
+## Implementation notes
+
+Implemented:
+- Added a single profession-skill context with trained/base skill, active modifier, effective skill, trained cap, effective cap, and modifier state.
+- Reads the fourth return from `GetTradeSkillLine()` when present.
+- Falls back to the Wrath-era `GetSkillLineInfo()` modifier fields when the fourth return is unavailable.
+- Keeps the existing static guide/crafting route keyed to trained/base skill so Task 01 does not change recommendations.
+- Refreshes the context when player equipment or player auras change.
+- Added Lua 5.1 coverage for no modifier, a +10 skill-line modifier, temporary +skill, direct trade-skill modifier, and context change detection.
+
 ## Manual checks
 
-Record results for:
-- Enchanting with no +skill item.
-- Blood Elf Enchanting racial active.
-- Equip/unequip any available +Enchanting item and verify values refresh.
+Required before marking this task DONE:
+- PENDING — Enchanting with no +skill item.
+- PENDING — Blood Elf Enchanting racial active.
+- PENDING — Equip/unequip any available +Enchanting item and verify values refresh.
+
+These checks require a live 3.3.5 client and are intentionally not claimed as passed by CI.
 
 ## Commit
 

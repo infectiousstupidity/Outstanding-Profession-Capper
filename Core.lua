@@ -1,7 +1,7 @@
 -- Profession Capper v3
 local addonName, addonTable = ...
 
-local tradeSkillName, rank, maxLevel
+local professionContext
 local shouldCraft = {}
 local shouldCraftRecipe = {}
 local targetSkill
@@ -625,16 +625,22 @@ local function getEffectiveTarget()
         return nil
     end
 
-    if maxLevel and maxLevel > 0 and targetSkill > maxLevel then
-        return maxLevel
+    local currentCap = professionContext and professionContext.currentCap or 0
+    if currentCap > 0 and targetSkill > currentCap then
+        return currentCap
     end
 
     return targetSkill
 end
 
 local function updateProfessionHeader()
-    if tradeSkillName and rank and maxLevel then
-        txtProfessionProgress:SetText(string.format(addonTable.L["profession_progress"], tradeSkillName, rank, maxLevel))
+    if professionContext then
+        txtProfessionProgress:SetText(string.format(
+            addonTable.L["profession_progress"],
+            professionContext.professionName,
+            professionContext.baseSkill,
+            professionContext.currentCap
+        ))
     else
         txtProfessionProgress:SetText("")
     end
@@ -653,7 +659,7 @@ local function updateCraftProgress(currentID, effectiveTarget, craftSeconds)
         return
     end
 
-    local remainingSkillUps = math.max(0, effectiveTarget - rank)
+    local remainingSkillUps = math.max(0, effectiveTarget - professionContext.baseSkill)
     if session.active then
         local remainingSeconds = addonTable.getCraftSessionRemainingSeconds(craftSeconds)
         if remainingSeconds then
@@ -678,7 +684,7 @@ end
 local function showStatus(message)
     updateProfessionHeader()
     txtShouldCraft:SetText(message)
-    imgSkillIcon:SetTexture(GetSpellTexture(tradeSkillName) or UNKNOWN_ICON)
+    imgSkillIcon:SetTexture(GetSpellTexture(professionContext.professionName) or UNKNOWN_ICON)
     txtTarget:SetText("")
     txtRecipeStatus:SetText("")
     txtCraftStats:SetText("")
@@ -693,17 +699,25 @@ end
 function GetCraftingToDo()
     local L = addonTable.L
 
-    if rank >= 450 then
+    if not professionContext then
+        showStatus(L["no_guide_step"])
+        return
+    end
+
+    local baseSkill = professionContext.baseSkill
+    local currentCap = professionContext.currentCap
+
+    if baseSkill >= 450 then
         showStatus(L["profession_cap"])
         return
     end
 
-    if maxLevel and maxLevel > 0 and rank >= maxLevel and maxLevel < 450 then
+    if currentCap > 0 and baseSkill >= currentCap and currentCap < 450 then
         showStatus(L["train_profession"])
         return
     end
 
-    local handler = professionHandlers[tradeSkillName]
+    local handler = professionHandlers[professionContext.professionName]
     if not handler then
         MainFrameCore:Hide()
         return
@@ -711,7 +725,7 @@ function GetCraftingToDo()
 
     local scanned = withUnfilteredTradeSkill(function()
         buildRecipeCache()
-        shouldCraft, shouldCraftRecipe, targetSkill = handler(rank)
+        shouldCraft, shouldCraftRecipe, targetSkill = handler(baseSkill)
         cacheRecommendedRecipeDetails()
     end)
 
@@ -789,6 +803,48 @@ function ProfessionCapper_OnDragStop()
     addonTable.saveFramePosition(MainFrameCore)
 end
 
+local function refreshProfessionState(forceRefresh)
+    if tradeSkillStateMutation or GetTime() < suppressTradeSkillUpdatesUntil then
+        return
+    end
+
+    if IsTradeSkillLinked() then
+        professionContext = nil
+        addonTable.clearProfessionSkillContext()
+        MainFrameCore:Hide()
+        return
+    end
+
+    local nextContext, changed = addonTable.refreshProfessionSkillContext()
+    if not nextContext then
+        professionContext = nil
+        MainFrameCore:Hide()
+        return
+    end
+
+    if not forceRefresh and not changed then
+        return
+    end
+
+    professionContext = nextContext
+    addonTable.handleCraftRankUpdate(professionContext.baseSkill)
+
+    if not professionHandlers[professionContext.professionName] then
+        MainFrameCore:Hide()
+        return
+    end
+
+    resetValues()
+    GetCraftingToDo()
+    addonTable.applyFramePosition(MainFrameCore)
+
+    if addonTable.getSettings().enabled then
+        MainFrameCore:Show()
+    else
+        MainFrameCore:Hide()
+    end
+end
+
 function fnOnLoad()
     addonTable.applyLocale()
     local L = addonTable.L
@@ -802,6 +858,8 @@ function fnOnLoad()
 
     this:RegisterEvent("TRADE_SKILL_UPDATE")
     this:RegisterEvent("TRADE_SKILL_CLOSE")
+    this:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+    this:RegisterEvent("UNIT_AURA")
     this:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     this:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
     this:RegisterEvent("UNIT_SPELLCAST_FAILED")
@@ -828,40 +886,26 @@ function fnOnEvent()
 
     if event == "TRADE_SKILL_CLOSE" then
         addonTable.clearCraftSession()
+        addonTable.clearProfessionSkillContext()
+        professionContext = nil
         MainFrameCore:Hide()
         return
     end
 
-    if event ~= "TRADE_SKILL_UPDATE" then
+    if event == "PLAYER_EQUIPMENT_CHANGED" then
+        refreshProfessionState(false)
         return
     end
 
-    if tradeSkillStateMutation or GetTime() < suppressTradeSkillUpdatesUntil then
+    if event == "UNIT_AURA" then
+        if arg1 == "player" then
+            refreshProfessionState(false)
+        end
         return
     end
 
-    local isLinked = IsTradeSkillLinked()
-    if isLinked then
-        MainFrameCore:Hide()
-        return
-    end
-
-    tradeSkillName, rank, maxLevel = GetTradeSkillLine()
-    addonTable.handleCraftRankUpdate(rank)
-
-    if not professionHandlers[tradeSkillName] then
-        MainFrameCore:Hide()
-        return
-    end
-
-    resetValues()
-    GetCraftingToDo()
-    addonTable.applyFramePosition(MainFrameCore)
-
-    if addonTable.getSettings().enabled then
-        MainFrameCore:Show()
-    else
-        MainFrameCore:Hide()
+    if event == "TRADE_SKILL_UPDATE" then
+        refreshProfessionState(true)
     end
 end
 
@@ -897,11 +941,11 @@ function displayRecipe()
     local currentID = shouldCraft[craftRecipeOptionsIndex]
     local data = recipeCache[currentID]
     local effectiveTarget = getEffectiveTarget()
-    local skillUpsNeeded = math.max(0, effectiveTarget - rank)
+    local skillUpsNeeded = math.max(0, effectiveTarget - professionContext.baseSkill)
     local plannedCrafts = math.max(1, skillUpsNeeded)
 
     updateProfessionHeader()
-    txtTarget:SetText(string.format(L["target_line"], rank, effectiveTarget))
+    txtTarget:SetText(string.format(L["target_line"], professionContext.baseSkill, effectiveTarget))
     txtRecipePosition:SetText(string.format(L["recipe_position"], craftRecipeOptionsIndex, table.getn(shouldCraft)))
     txtRecipeStatus:SetText("")
 
@@ -995,7 +1039,7 @@ function craftRecipe()
     end
 
     local effectiveTarget = getEffectiveTarget()
-    local skillUpsNeeded = math.max(0, effectiveTarget - rank)
+    local skillUpsNeeded = math.max(0, effectiveTarget - professionContext.baseSkill)
     if skillUpsNeeded <= 0 then
         return
     end
@@ -1019,7 +1063,7 @@ function craftRecipe()
             return
         end
 
-        addonTable.startCraftSession(currentID, skillName, effectiveTarget, batchCount, craftSeconds, rank)
+        addonTable.startCraftSession(currentID, skillName, effectiveTarget, batchCount, craftSeconds, professionContext.baseSkill)
         DoTradeSkill(recipeIndex, batchCount)
         crafted = true
         craftedName = skillName
