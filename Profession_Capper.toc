@@ -8,6 +8,7 @@ constants.lua
 Localization.lua
 Guide.lua
 CharacterSkill.lua
+PriceProvider.lua
 Settings.lua
 Session.lua
 Professions\Enchanting.lua

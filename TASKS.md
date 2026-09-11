@@ -30,7 +30,7 @@ This file governs implementation work. Keep it current as work progresses.
 | Task | Status | Purpose |
 | --- | --- | --- |
 | [01 Character profession skill context](docs/tasks/01-character-skill-context.md) | IN PROGRESS | Correctly model base skill, active +profession modifiers, and effective skill. |
-| [02 Price provider abstraction](docs/tasks/02-price-provider-abstraction.md) | QUEUED | Define one internal API for external price sources. |
+| [02 Price provider abstraction](docs/tasks/02-price-provider-abstraction.md) | DONE | Define one internal API for external price sources. |
 | [03 TSM AuctionDB integration](docs/tasks/03-tsm-auctiondb-integration.md) | QUEUED | Read local TSM/AuctionDB prices and freshness safely. |
 
 ### Phase 2 — Recipe knowledge and acquisition
@@ -69,4 +69,4 @@ Task 06 may be completed before or after Task 07, but Task 08 must not assume ac
 
 ## Current task
 
-Task 01 — racial-aware route selection is now covered end-to-end by CI; awaiting live verification via /pcapper debug and the unavailable +profession equipment check.
+Task 01 still awaits the unavailable live +profession equipment check. Task 02 is complete and Task 03 is queued next.
