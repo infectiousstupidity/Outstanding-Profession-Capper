@@ -46,7 +46,7 @@ This file governs implementation work. Keep it current as work progresses.
 
 | Task | Status | Purpose |
 | --- | --- | --- |
-| [07 Recipe cost engine](docs/tasks/07-recipe-cost-engine.md) | QUEUED | Estimate cost per craft and per expected skill-up. |
+| [07 Recipe cost engine](docs/tasks/07-recipe-cost-engine.md) | DONE | Estimate cost per craft and per expected skill-up. |
 | [08 Cheapest route solver](docs/tasks/08-cheapest-route-solver.md) | QUEUED | Find the cheapest viable path from current skill to cap. |
 | [09 Total cost and shopping plan](docs/tasks/09-total-cost-shopping-plan.md) | QUEUED | Aggregate total route cost, gold needed now, and material requirements. |
 
@@ -70,4 +70,4 @@ Task 06 may be completed before or after Task 07, but Task 08 must not assume ac
 
 ## Current task
 
-Task 03 is complete. Task 01 still awaits the unavailable live +profession equipment check; the remaining planned tasks stay queued behind their documented dependencies.
+Phase 3 implementation has started. Task 07 is complete and Task 08 is next. Live optimized routes remain intentionally unavailable until Tasks 04/05 provide verified difficulty and acquisition metadata; the static guide remains the fallback.
