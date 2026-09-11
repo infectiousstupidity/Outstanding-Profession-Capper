@@ -2,6 +2,9 @@ local addonName, addonTable = ...
 
 local currentContext
 
+local STANDARD_PROFESSION_CAPS = { 75, 150, 225, 300, 375, 450 }
+local MAX_INFERRED_EMBEDDED_MODIFIER = 20
+
 local function toNumber(value)
     if type(value) == "number" then
         return value
@@ -19,10 +22,10 @@ local function getLegacySkillLine(professionName)
         local skillName, isHeader, _, skillRank, numTempPoints, skillModifier, skillMaxRank = GetSkillLineInfo(i)
         if not isHeader and skillName == professionName then
             return {
-                baseSkill = toNumber(skillRank),
+                skillRank = toNumber(skillRank),
                 temporaryModifier = toNumber(numTempPoints),
                 skillModifier = toNumber(skillModifier),
-                currentCap = toNumber(skillMaxRank),
+                skillMaxRank = toNumber(skillMaxRank),
             }
         end
     end
@@ -30,44 +33,72 @@ local function getLegacySkillLine(professionName)
     return nil
 end
 
+local function inferBaseCap(reportedCap)
+    reportedCap = toNumber(reportedCap)
+    if reportedCap <= 0 then
+        return 0, 0
+    end
+
+    for i = table.getn(STANDARD_PROFESSION_CAPS), 1, -1 do
+        local standardCap = STANDARD_PROFESSION_CAPS[i]
+        local difference = reportedCap - standardCap
+
+        if difference >= 0 and difference <= MAX_INFERRED_EMBEDDED_MODIFIER then
+            return standardCap, difference
+        end
+    end
+
+    return reportedCap, 0
+end
+
 function addonTable.buildProfessionSkillContext(professionName, tradeSkillRank, tradeSkillCap, tradeSkillModifier, legacySkillLine)
     if not professionName or professionName == "" or professionName == "UNKNOWN" then
         return nil
     end
 
-    local baseSkill = toNumber(tradeSkillRank)
-    local currentCap = toNumber(tradeSkillCap)
+    local reportedSkill = toNumber(tradeSkillRank)
+    local reportedCap = toNumber(tradeSkillCap)
     local temporaryModifier = 0
     local skillLineModifier = 0
 
     if legacySkillLine then
-        baseSkill = toNumber(legacySkillLine.baseSkill)
+        reportedSkill = toNumber(legacySkillLine.skillRank or legacySkillLine.baseSkill)
         temporaryModifier = toNumber(legacySkillLine.temporaryModifier)
         skillLineModifier = toNumber(legacySkillLine.skillModifier)
 
-        if currentCap <= 0 then
-            currentCap = toNumber(legacySkillLine.currentCap)
+        if reportedCap <= 0 then
+            reportedCap = toNumber(legacySkillLine.skillMaxRank or legacySkillLine.currentCap)
         end
     end
 
-    local activeModifier
+    local currentCap, embeddedModifier = inferBaseCap(reportedCap)
+
+    local explicitModifier
     if tradeSkillModifier ~= nil then
-        activeModifier = toNumber(tradeSkillModifier)
+        explicitModifier = toNumber(tradeSkillModifier)
     else
-        activeModifier = temporaryModifier + skillLineModifier
+        explicitModifier = temporaryModifier + skillLineModifier
     end
+
+    local activeModifier = embeddedModifier + explicitModifier
+    local baseSkill = math.max(0, reportedSkill - embeddedModifier)
+    local effectiveSkill = reportedSkill + explicitModifier
 
     return {
         professionName = professionName,
+        reportedSkill = reportedSkill,
+        reportedCap = reportedCap,
         baseSkill = baseSkill,
         trainedSkill = baseSkill,
-        currentSkill = baseSkill + activeModifier,
-        effectiveSkill = baseSkill + activeModifier,
+        currentSkill = effectiveSkill,
+        effectiveSkill = effectiveSkill,
         activeSkillModifier = activeModifier,
+        embeddedSkillModifier = embeddedModifier,
+        explicitSkillModifier = explicitModifier,
         temporarySkillModifier = temporaryModifier,
         skillLineModifier = skillLineModifier,
         currentCap = currentCap,
-        effectiveCap = currentCap + activeModifier,
+        effectiveCap = reportedCap,
         hasModifier = activeModifier ~= 0,
     }
 end
