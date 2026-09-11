@@ -35,7 +35,7 @@ local function getEffectiveSkill(baseSkill, skillContext)
     return (tonumber(baseSkill) or 0) + (modifier or 0)
 end
 
-local function classifyDifficulty(difficulty, effectiveSkill)
+local function classifyDifficulty(difficulty, baseSkill)
     if type(difficulty) ~= "table" then
         return nil, nil, "missing_difficulty_metadata"
     end
@@ -48,11 +48,11 @@ local function classifyDifficulty(difficulty, effectiveSkill)
         return nil, nil, "invalid_difficulty_metadata"
     end
 
-    if effectiveSkill >= gray then
+    if baseSkill >= gray then
         return "gray", 0, nil
     end
 
-    if effectiveSkill < yellow then
+    if baseSkill < yellow then
         return "orange", 1, nil
     end
 
@@ -61,16 +61,14 @@ local function classifyDifficulty(difficulty, effectiveSkill)
         return nil, nil, "invalid_difficulty_metadata"
     end
 
-    -- Historical profession guidance models the expected skill-up chance as:
-    -- (gray threshold - effective skill) / (gray threshold - yellow threshold).
-    local chance = (gray - effectiveSkill) / denominator
+    local chance = (gray - baseSkill) / denominator
     if chance < 0 then
         chance = 0
     elseif chance > 1 then
         chance = 1
     end
 
-    if effectiveSkill < green then
+    if baseSkill < green then
         return "yellow", chance, nil
     end
 
@@ -82,13 +80,27 @@ function addonTable.getRecipeSkillUpChance(recipe, baseSkill, skillContext)
         return nil, nil, "invalid_recipe"
     end
 
-    local effectiveSkill = getEffectiveSkill(baseSkill, skillContext)
-    local requiredSkill = tonumber(recipe.requiredSkill or recipe.learnSkill)
-    if requiredSkill and effectiveSkill < requiredSkill then
-        return 0, "unavailable", "required_skill_not_met"
+    local base = tonumber(baseSkill) or 0
+    local effectiveSkill = getEffectiveSkill(base, skillContext)
+
+    if type(addonTable.evaluateRecipeDifficulty) == "function" then
+        local evaluated = addonTable.evaluateRecipeDifficulty(recipe, base, skillContext)
+        if evaluated and evaluated.metadataKnown then
+            if evaluated.reason == "required_skill_not_met" then
+                return 0, "unavailable", evaluated.reason, effectiveSkill
+            end
+            return evaluated.skillUpChance, evaluated.color, evaluated.reason == "gray_recipe" and nil or evaluated.reason, effectiveSkill
+        end
     end
 
-    local difficulty, chance, reason = classifyDifficulty(recipe.difficulty, effectiveSkill)
+    local requiredSkill = tonumber(recipe.requiredSkill or recipe.learnSkill)
+    if requiredSkill and effectiveSkill < requiredSkill then
+        return 0, "unavailable", "required_skill_not_met", effectiveSkill
+    end
+
+    -- Skill modifiers can satisfy recipe requirements, but recipe color and
+    -- skill-up chance are based on trained/base skill.
+    local difficulty, chance, reason = classifyDifficulty(recipe.difficulty, base)
     return chance, difficulty, reason, effectiveSkill
 end
 
