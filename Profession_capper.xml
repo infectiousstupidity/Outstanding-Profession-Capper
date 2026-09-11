@@ -95,10 +95,17 @@
           </Anchors>
         </FontString>
 
-        <FontString name="txtRecipePosition" inherits="GameFontDisableSmall">
+        <FontString name="txtRepeatLabel" inherits="GameFontHighlightSmall" justifyH="LEFT" hidden="true">
+          <Size><AbsDimension x="42" y="18"/></Size>
+          <Anchors>
+            <Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="18" y="53"/></Offset></Anchor>
+          </Anchors>
+        </FontString>
+
+        <FontString name="txtRecipePosition" inherits="GameFontDisableSmall" justifyH="RIGHT">
           <Size><AbsDimension x="70" y="18"/></Size>
           <Anchors>
-            <Anchor point="BOTTOM"><Offset><AbsDimension x="0" y="52"/></Offset></Anchor>
+            <Anchor point="BOTTOMRIGHT"><Offset><AbsDimension x="-18" y="52"/></Offset></Anchor>
           </Anchors>
         </FontString>
       </Layer>
@@ -151,6 +158,30 @@
           <OnClick>TogglePcapperFrame("hide");</OnClick>
         </Scripts>
       </Button>
+
+      <Button name="$parentRepeatMode" text="Until change" inherits="UIPanelButtonTemplate" hidden="true">
+        <Size><AbsDimension x="108" y="22"/></Size>
+        <Anchors>
+          <Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="60" y="49"/></Offset></Anchor>
+        </Anchors>
+        <Scripts>
+          <OnClick>toggleEnchantRepeatMode();</OnClick>
+        </Scripts>
+      </Button>
+
+      <EditBox name="$parentRepeatCount" inherits="InputBoxTemplate" autoFocus="false" hidden="true">
+        <Size><AbsDimension x="42" y="20"/></Size>
+        <Anchors>
+          <Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="180" y="50"/></Offset></Anchor>
+        </Anchors>
+        <Scripts>
+          <OnLoad>self:SetNumeric(true); self:SetMaxLetters(3); self:SetJustifyH("CENTER");</OnLoad>
+          <OnTextChanged>enchantRepeatCountChanged(self);</OnTextChanged>
+          <OnEnterPressed>enchantRepeatCountCommit(self);</OnEnterPressed>
+          <OnEscapePressed>self:ClearFocus();</OnEscapePressed>
+          <OnEditFocusLost>enchantRepeatCountCommit(self);</OnEditFocusLost>
+        </Scripts>
+      </EditBox>
 
       <Button name="$parentPreviousRecipe" text="&lt;" inherits="UIPanelButtonTemplate">
         <Size><AbsDimension x="36" y="28"/></Size>

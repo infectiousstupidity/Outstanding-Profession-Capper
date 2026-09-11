@@ -5,6 +5,8 @@ local defaults = {
     attached = true,
     locked = false,
     recommendationMode = "dynamic",
+    enchantRepeatMode = "until_change",
+    enchantRepeatCount = 5,
     point = "TOPLEFT",
     relativePoint = "BOTTOMLEFT",
     x = 40,
@@ -92,6 +94,29 @@ function addonTable.setRecommendationMode(mode)
     end
 
     getDB().recommendationMode = mode
+    return true
+end
+
+function addonTable.setEnchantRepeatMode(mode)
+    if mode ~= "until_change" and mode ~= "fixed" then
+        return false
+    end
+
+    getDB().enchantRepeatMode = mode
+    return true
+end
+
+function addonTable.setEnchantRepeatCount(count)
+    count = math.floor(tonumber(count) or 0)
+    if count < 1 then
+        return false
+    end
+
+    if count > 999 then
+        count = 999
+    end
+
+    getDB().enchantRepeatCount = count
     return true
 end
 
