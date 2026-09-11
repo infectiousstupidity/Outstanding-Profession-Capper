@@ -12,6 +12,7 @@ CharacterSkill.lua
 PriceProvider.lua
 TSMPriceProvider.lua
 RecipeCost.lua
+RouteSolver.lua
 Settings.lua
 Session.lua
 Professions\Enchanting.lua

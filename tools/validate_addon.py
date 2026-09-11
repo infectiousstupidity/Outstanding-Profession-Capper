@@ -15,6 +15,7 @@ REQUIRED_ORDER = [
     "PriceProvider.lua",
     "TSMPriceProvider.lua",
     "RecipeCost.lua",
+    "RouteSolver.lua",
     "Settings.lua",
     "Session.lua",
 ]
