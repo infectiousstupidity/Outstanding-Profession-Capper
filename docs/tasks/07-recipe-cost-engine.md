@@ -1,6 +1,6 @@
 # Task 07 — Recipe cost engine
 
-Status: QUEUED  
+Status: DONE  
 Phase: 3 — Cost engine and optimizer  
 Depends on: Tasks 02, 03, 04, 05
 
@@ -47,13 +47,48 @@ Do not repeatedly charge reusable tools/rods or prerequisite items that persist 
 
 The cost API must be capable of receiving route inventory/state so later solver work can account for this.
 
+## Implementation notes
+
+Implemented on 2026-09-11:
+
+- Added `RecipeCost.lua` as a pure cost/skill-up engine. It does not alter the current static guide.
+- Accepts explicit recipe difficulty, reagents, acquisition state, character skill context, inventory, reusable state, and the neutral price-provider API.
+- Uses effective profession skill, including active +profession modifiers, when calculating recipe usefulness.
+- Models expected crafts as `1 / skill-up chance`; gray recipes are rejected.
+- Preserves both market-value cost and gold-needed-now cost. Owned materials reduce only gold-needed-now.
+- Compares current vendor and Auction House purchase prices and chooses the cheaper usable source explicitly.
+- Missing price/acquisition metadata yields an incomplete/unavailable estimate instead of silently becoming zero.
+- Reusable reagents/tools are surfaced as one-time costs and are not multiplied by expected retry crafts.
+- Acquisition costs are exposed separately as one-time route costs so the solver can charge them once.
+
+This task implements the Phase 3 engine contract before Tasks 04/05 populate production recipe metadata. Until those dependencies are complete, no live dynamic route is activated and the deterministic guide remains authoritative.
+
+## Automated validation
+
+`tools/test_recipe_cost.lua` covers:
+
+- orange recipes: guaranteed one craft per point
+- yellow and green expected-craft math
+- gray recipes excluded
+- +profession modifiers shifting effective difficulty
+- owned materials preserving market value while reducing immediate gold
+- vendor beating a more expensive Auction House price
+- missing prices producing incomplete estimates, never zero
+- non-immediate drop acquisition rejected
+- trainable acquisition cost exposed as one-time cost
+- reusable tool/reagent cost charged once rather than once per expected craft
+
+## Manual checks
+
+No user-facing route selection is enabled by Task 07, so there is no independent in-game behavior to validate yet. Live route behavior is deferred to the later integration task after Tasks 04/05 supply production metadata.
+
 ## Acceptance criteria
 
-- Orange recipes produce a guaranteed one-craft-per-point calculation.
-- Yellow/green recipes produce an expected-cost calculation without claiming certainty.
-- Gray recipes are never considered useful for skill-ups.
-- Missing prices produce an incomplete/unavailable estimate, not zero.
-- Vendor-vs-AH choice is explicit and testable.
+- PASS — orange recipes produce a guaranteed one-craft-per-point calculation.
+- PASS — yellow/green recipes produce an expected-cost calculation without claiming certainty.
+- PASS — gray recipes are never considered useful for skill-ups.
+- PASS — missing prices produce an incomplete/unavailable estimate, not zero.
+- PASS — vendor-vs-AH choice is explicit and testable.
 
 ## Commit
 

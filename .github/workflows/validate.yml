@@ -22,6 +22,8 @@ jobs:
         run: lua5.1 tools/test_price_provider.lua
       - name: Test TSM AuctionDB provider
         run: lua5.1 tools/test_tsm_price_provider.lua
+      - name: Test recipe cost engine
+        run: lua5.1 tools/test_recipe_cost.lua
       - name: Test Enchanting rod ownership
         run: lua5.1 tools/test_enchanting_rods.lua
       - name: Validate addon structure
