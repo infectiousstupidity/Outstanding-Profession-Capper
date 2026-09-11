@@ -635,23 +635,33 @@ end
 
 local function updateProfessionHeader()
     if professionContext then
-        txtProfessionProgress:SetText(string.format(
-            addonTable.L["profession_progress"],
-            professionContext.professionName,
-            professionContext.effectiveSkill,
-            professionContext.effectiveCap
-        ))
+        if professionContext.hasModifier then
+            txtProfessionProgress:SetText(string.format(
+                addonTable.L["profession_progress_bonus"],
+                professionContext.professionName,
+                professionContext.effectiveSkill,
+                professionContext.effectiveCap,
+                professionContext.activeSkillModifier
+            ))
+        else
+            txtProfessionProgress:SetText(string.format(
+                addonTable.L["profession_progress"],
+                professionContext.professionName,
+                professionContext.effectiveSkill,
+                professionContext.effectiveCap
+            ))
+        end
     else
         txtProfessionProgress:SetText("")
     end
 end
 
 local function getDisplayedTarget(baseTarget)
-    if not baseTarget or not professionContext then
-        return baseTarget
+    if not baseTarget then
+        return nil
     end
 
-    return baseTarget + professionContext.activeSkillModifier
+    return addonTable.getEffectiveSkillForBase(baseTarget, professionContext)
 end
 
 local function updateCraftProgress(currentID, effectiveTarget, craftSeconds)
@@ -752,8 +762,47 @@ function GetCraftingToDo()
     displayRecipe()
 end
 
+local function printProfessionDebug()
+    local rawName, rawRank, rawCap, rawModifier = GetTradeSkillLine()
+    local context = addonTable.readProfessionSkillContext()
+
+    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper debug]|r raw: "
+        .. tostring(rawName) .. " " .. tostring(rawRank) .. " / " .. tostring(rawCap)
+        .. " modifier=" .. tostring(rawModifier))
+
+    if not context then
+        print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper debug]|r no active profession context; open a profession window first")
+        return
+    end
+
+    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper debug]|r inferred: trained "
+        .. context.baseSkill .. " / " .. context.currentCap
+        .. " | bonus +" .. context.activeSkillModifier
+        .. " | effective " .. context.effectiveSkill .. " / " .. context.effectiveCap)
+
+    local handler = professionHandlers[context.professionName]
+    if not handler then
+        print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper debug]|r no guide for " .. tostring(context.professionName))
+        return
+    end
+
+    local recipes, recipeNames, baseTarget = handler(context.baseSkill)
+    if not recipes or not baseTarget then
+        print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper debug]|r no guide step for trained skill " .. context.baseSkill)
+        return
+    end
+
+    local displayedTarget = addonTable.getEffectiveSkillForBase(baseTarget, context)
+    local firstRecipe = recipes[1]
+    local firstName = recipeNames and recipeNames[1] or nil
+    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper debug]|r route: trained "
+        .. context.baseSkill .. " -> " .. baseTarget
+        .. " | displayed " .. context.effectiveSkill .. " -> " .. displayedTarget
+        .. " | recipe " .. tostring(firstRecipe) .. " " .. tostring(firstName or ""))
+end
+
 local function printCommandHelp()
-    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper]|r /pcapper show, hide, attach, detach, lock, unlock, reset, help")
+    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper]|r /pcapper show, hide, attach, detach, lock, unlock, reset, debug, help")
 end
 
 function TogglePcapperFrame(command)
@@ -789,6 +838,8 @@ function TogglePcapperFrame(command)
         addonTable.resetSettings(MainFrameCore)
         addonTable.setEnabled(true)
         MainFrameCore:Show()
+    elseif command == "debug" then
+        printProfessionDebug()
     elseif command == "help" then
         printCommandHelp()
     else

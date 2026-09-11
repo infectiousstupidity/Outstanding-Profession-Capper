@@ -63,6 +63,7 @@ assertEqual(context.activeSkillModifier, 10, "embedded racial active modifier")
 assertEqual(context.currentCap, 375, "embedded racial base cap")
 assertEqual(context.effectiveCap, 385, "embedded racial effective cap")
 assertEqual(context.hasModifier, true, "embedded racial modifier flag")
+assertEqual(addonTable.getEffectiveSkillForBase(299, context), 309, "embedded racial displayed target")
 
 -- The same inference is generic for other profession bonuses, such as +5.
 setScenario("Jewelcrafting", 205, 230, nil, 0, 0)
@@ -103,6 +104,38 @@ local refreshed, modifierChanged = addonTable.refreshProfessionSkillContext()
 assertEqual(modifierChanged, true, "modifier refresh changed")
 assertEqual(refreshed.activeSkillModifier, 15, "modifier refresh value")
 assertEqual(refreshed.effectiveSkill, 307, "modifier refresh effective skill")
+
+-- Integration regression: the observed 302/385 Blood Elf state must select
+-- the trained 265-299 guide step, not the normal 301-310 step.
+addonTable.Enchanting = {
+    ["20017"] = "Enchant Shield - Greater Stamina",
+}
+addonTable.chat_frame_default_color = "FFFFFF"
+assert(loadfile("Guide.lua"))("Profession_Capper", addonTable)
+assert(loadfile("Professions/Enchanting.lua"))("Profession_Capper", addonTable)
+
+setScenario("Enchanting", 302, 385, nil, 0, 0)
+context = addonTable.readProfessionSkillContext()
+local recipes, recipeNames, baseTarget = addonTable.getEnchantingCurrentSkillLevelRecipeToCraft(context.baseSkill)
+assertEqual(context.baseSkill, 292, "route trained skill")
+assertEqual(baseTarget, 299, "route trained target")
+assertEqual(addonTable.getEffectiveSkillForBase(baseTarget, context), 309, "route displayed target")
+assertEqual(recipes[1], 20017, "route recipe")
+assertEqual(recipeNames[1], "Enchant Shield - Greater Stamina", "route recipe name")
+
+-- Without the +10 embedded bonus, skill 302 belongs to the normal 301-310 step.
+setScenario("Enchanting", 302, 375, nil, 0, 0)
+context = addonTable.readProfessionSkillContext()
+local normalRecipes, _, normalTarget = addonTable.getEnchantingCurrentSkillLevelRecipeToCraft(context.baseSkill)
+assertEqual(context.baseSkill, 302, "normal route trained skill")
+assertEqual(normalTarget, 310, "normal route target")
+local foundMajorMana = false
+for i = 1, table.getn(normalRecipes) do
+    if normalRecipes[i] == 20028 then
+        foundMajorMana = true
+    end
+end
+assertEqual(foundMajorMana, true, "normal route contains Major Mana")
 
 tradeSkill.name = "UNKNOWN"
 local missing = addonTable.readProfessionSkillContext()
