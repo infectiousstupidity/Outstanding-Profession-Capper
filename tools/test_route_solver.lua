@@ -230,6 +230,54 @@ local reusableRoute = addonTable.solveCheapestProfessionRoute({
 })
 assertEqual(reusableRoute.totalMarketCost, 12, "reusable cost charged once")
 
+local currentRecipes = {
+    { id = "cheap-market" },
+    { id = "cheap-current" },
+}
+
+local function currentPriceFixture(recipe)
+    if recipe.id == "cheap-market" then
+        return {
+            available = true,
+            useful = true,
+            expectedCraftsPerSkillUp = 1,
+            expectedMarketCostPerSkillUp = 50,
+            expectedGoldNeededNowPerSkillUp = 50,
+            expectedCurrentPurchaseCostPerSkillUp = 200,
+            oneTimeCosts = {},
+            quality = "complete",
+            skillUpChance = 1,
+        }
+    end
+
+    return {
+        available = true,
+        useful = true,
+        expectedCraftsPerSkillUp = 1,
+        expectedMarketCostPerSkillUp = 100,
+        expectedGoldNeededNowPerSkillUp = 100,
+        expectedCurrentPurchaseCostPerSkillUp = 80,
+        oneTimeCosts = {},
+        quality = "complete",
+        skillUpChance = 1,
+    }
+end
+
+local currentPriceRoute = addonTable.solveCheapestProfessionRoute(
+    currentRecipes,
+    nil,
+    { currentCap = 1 },
+    {
+        startSkill = 0,
+        targetSkill = 1,
+        optimizeFor = "current",
+        costRecipe = currentPriceFixture,
+    }
+)
+assertEqual(currentPriceRoute.complete, true, "current-price route complete")
+assertEqual(currentPriceRoute.actions[1].recipeID, "cheap-current", "current AH price drives route")
+assertEqual(currentPriceRoute.totalCurrentPurchaseCost, 80, "current purchase total exposed")
+
 local bounded = addonTable.solveCheapestProfessionRoute({
     { id = "bounded" },
 }, nil, { currentCap = 100 }, {

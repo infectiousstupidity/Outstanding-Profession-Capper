@@ -151,16 +151,32 @@ function addonTable.getMaterialPriceInfo(item, neededQuantity, now)
         }
     end
 
-    local result = addonTable.lookupItemPrice(item, now)
-    local choice, reason = addonTable.chooseUsableUnitPrice(result, "spend")
+    local choice
+    local reason
+    if type(addonTable.chooseCheapestEquivalentUnitPrice) == "function" then
+        choice, reason = addonTable.chooseCheapestEquivalentUnitPrice(item, "purchase", {
+            now = now,
+        })
+    else
+        local result = addonTable.lookupItemPrice(item, now)
+        choice, reason = addonTable.chooseUsableUnitPrice(result, "spend")
+        if not choice then
+            return {
+                available = false,
+                neededQuantity = quantity,
+                reason = reason or (result and result.unavailableReason) or "price_unavailable",
+                source = result and result.source,
+                freshness = result and result.freshness,
+                ageSeconds = result and result.ageSeconds,
+            }
+        end
+    end
+
     if not choice then
         return {
             available = false,
             neededQuantity = quantity,
-            reason = reason or (result and result.unavailableReason) or "price_unavailable",
-            source = result and result.source,
-            freshness = result and result.freshness,
-            ageSeconds = result and result.ageSeconds,
+            reason = reason or "price_unavailable",
         }
     end
 
@@ -174,6 +190,10 @@ function addonTable.getMaterialPriceInfo(item, neededQuantity, now)
         freshness = choice.freshness,
         ageSeconds = choice.ageSeconds,
         isStale = choice.isStale or choice.isTooOld,
+        sourceItemID = choice.sourceItemID,
+        converted = choice.converted and true or false,
+        conversionRatio = choice.conversionRatio,
+        conversionDirection = choice.conversionDirection,
     }
 end
 
@@ -207,6 +227,7 @@ function addonTable.buildLiveProfessionOptimizationInput(recipeCache, skillConte
                     spellID = spellID,
                     name = data.name,
                     profession = skillContext and skillContext.professionName,
+                    liveSkillType = data.skillType,
                     reagents = {},
                     outputs = {},
                 }
@@ -248,6 +269,192 @@ function addonTable.buildLiveProfessionOptimizationInput(recipeCache, skillConte
     return recipes, state
 end
 
+local function getRecipeID(recipe)
+    return recipe and (recipe.spellID or recipe.recipeID or recipe.id) or nil
+end
+
+local LIVE_SKILL_TYPE = {
+    optimal = { difficulty = "orange", defaultChance = 1 },
+    medium = { difficulty = "yellow", defaultChance = 0.75 },
+    easy = { difficulty = "green", defaultChance = 0.25 },
+    trivial = { difficulty = "gray", defaultChance = 0 },
+}
+
+local function applyLiveSkillType(cost, recipe, skill, currentSkill)
+    if skill ~= currentSkill or not recipe.liveSkillType then
+        return cost
+    end
+
+    local live = LIVE_SKILL_TYPE[recipe.liveSkillType]
+    if not live or not cost then
+        return cost
+    end
+
+    local chance = tonumber(cost.skillUpChance)
+    if cost.difficulty ~= live.difficulty then
+        chance = live.defaultChance
+    end
+
+    if live.difficulty == "orange" then
+        chance = 1
+    elseif live.difficulty == "yellow" and (not chance or chance <= 0 or chance > 1) then
+        chance = live.defaultChance
+    end
+
+    cost.difficulty = live.difficulty
+    cost.skillUpChance = chance
+
+    if chance and chance > 0 then
+        cost.expectedCraftsPerSkillUp = 1 / chance
+        if cost.materialMarketValuePerCraft ~= nil then
+            cost.expectedMarketCostPerSkillUp = cost.materialMarketValuePerCraft / chance
+        end
+        if cost.goldNeededNowPerCraft ~= nil then
+            cost.expectedGoldNeededNowPerSkillUp = cost.goldNeededNowPerCraft / chance
+        end
+        if cost.currentPurchaseCostPerCraft ~= nil then
+            cost.expectedCurrentPurchaseCostPerSkillUp = cost.currentPurchaseCostPerCraft / chance
+        end
+    end
+
+    return cost
+end
+
+local function rankCurrentRecipes(recipes, skillContext, state, skill, options)
+    local ranked = {}
+    local currentSkill = tonumber(skillContext and skillContext.baseSkill) or 0
+    if type(addonTable.calculateRecipeCost) ~= "function" then
+        return ranked
+    end
+
+    for i = 1, table.getn(recipes or {}) do
+        local recipe = recipes[i]
+        local cost = addonTable.calculateRecipeCost(recipe, skill, skillContext, state, options or {})
+        cost = applyLiveSkillType(cost, recipe, skill, currentSkill)
+        local eligibleColor
+        if skill == currentSkill and recipe.liveSkillType then
+            eligibleColor = recipe.liveSkillType == "optimal" or recipe.liveSkillType == "medium"
+        else
+            eligibleColor = cost and (cost.difficulty == "orange" or cost.difficulty == "yellow")
+        end
+
+        if eligibleColor
+            and cost
+            and cost.available
+            and cost.useful
+            and cost.skillUpChance
+            and cost.skillUpChance > 0
+        then
+            local expectedCost = cost.expectedCurrentPurchaseCostPerSkillUp
+                or cost.expectedMarketCostPerSkillUp
+            local perCraft = cost.currentPurchaseCostPerCraft
+                or cost.materialMarketValuePerCraft
+
+            if expectedCost ~= nil and perCraft ~= nil then
+                table.insert(ranked, {
+                    recipe = recipe,
+                    recipeID = getRecipeID(recipe),
+                    cost = cost,
+                    expectedCostPerSkillUp = expectedCost,
+                    costPerCraft = perCraft,
+                    difficulty = cost.difficulty,
+                    liveSkillType = recipe.liveSkillType,
+                    skillUpChance = cost.skillUpChance,
+                })
+            end
+        end
+    end
+
+    table.sort(ranked, function(left, right)
+        if left.expectedCostPerSkillUp ~= right.expectedCostPerSkillUp then
+            return left.expectedCostPerSkillUp < right.expectedCostPerSkillUp
+        end
+        if left.costPerCraft ~= right.costPerCraft then
+            return left.costPerCraft < right.costPerCraft
+        end
+        return tonumber(left.recipeID or 0) < tonumber(right.recipeID or 0)
+    end)
+
+    return ranked
+end
+
+local function buildCurrentCheapestSegment(recipes, skillContext, state, targetSkill, options)
+    local startSkill = tonumber(skillContext and skillContext.baseSkill) or 0
+    local firstRanking = rankCurrentRecipes(recipes, skillContext, state, startSkill, options)
+    local first = firstRanking[1]
+    if not first then
+        return nil, firstRanking
+    end
+
+    local selectedID = first.recipeID
+    local segment = {
+        type = "craft",
+        recipe = first.recipe,
+        recipeID = selectedID,
+        skillStart = startSkill,
+        skillEnd = startSkill,
+        expectedCrafts = 0,
+        expectedMaterialCost = 0,
+        expectedCurrentPurchaseCost = 0,
+        firstCost = first.cost,
+        quality = first.cost.quality,
+    }
+
+    local skill = startSkill
+    while skill < targetSkill do
+        local ranking
+        if skill == startSkill then
+            ranking = firstRanking
+        else
+            ranking = rankCurrentRecipes(recipes, skillContext, state, skill, options)
+        end
+
+        local best = ranking[1]
+        if not best or best.recipeID ~= selectedID then
+            break
+        end
+
+        segment.expectedCrafts = segment.expectedCrafts
+            + (tonumber(best.cost.expectedCraftsPerSkillUp) or 0)
+        segment.expectedMaterialCost = segment.expectedMaterialCost
+            + (tonumber(best.expectedCostPerSkillUp) or 0)
+        segment.expectedCurrentPurchaseCost = segment.expectedMaterialCost
+        if best.cost.quality == "stale" then
+            segment.quality = "stale"
+        end
+
+        skill = skill + 1
+        segment.skillEnd = skill
+    end
+
+    if segment.skillEnd <= segment.skillStart then
+        return nil, firstRanking
+    end
+
+    return segment, firstRanking
+end
+
+local function orangeYellowRouteCost(recipe, skill, skillContext, state, options)
+    if type(addonTable.calculateRecipeCost) ~= "function" then
+        return nil
+    end
+
+    local cost = addonTable.calculateRecipeCost(recipe, skill, skillContext, state, options or {})
+    local currentSkill = tonumber(skillContext and skillContext.baseSkill) or 0
+    cost = applyLiveSkillType(cost, recipe, skill, currentSkill)
+    if not cost or not cost.available then
+        return cost
+    end
+
+    if cost.difficulty ~= "orange" and cost.difficulty ~= "yellow" then
+        cost.available = false
+        cost.useful = false
+        cost.incomplete = false
+        cost.unavailableReason = "not_orange_or_yellow"
+    end
+    return cost
+end
+
 function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillContext, options)
     options = options or {}
 
@@ -262,6 +469,10 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         route = nil,
         plan = nil,
         currentSegment = nil,
+        currentCost = nil,
+        candidates = {},
+        routeComplete = false,
+        routeReason = nil,
     }
 
     if type(skillContext) ~= "table" then
@@ -301,20 +512,42 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         return result
     end
 
+    local segment, candidates = buildCurrentCheapestSegment(
+        recipes,
+        skillContext,
+        state,
+        targetSkill,
+        options.costOptions
+    )
+    result.candidates = candidates or {}
+
+    if not segment or not segment.recipeID then
+        result.reason = "no_current_priced_recipe"
+        return result
+    end
+
+    result.currentSegment = segment
+    result.currentCost = segment.firstCost
+    result.available = true
+    result.fallbackToStaticGuide = false
+    result.reason = nil
+
     local route = addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, {
         startSkill = skillContext.baseSkill,
         targetSkill = targetSkill,
-        optimizeFor = options.optimizeFor or "market",
+        optimizeFor = options.optimizeFor or "current",
         maxStates = options.maxStates,
+        costRecipe = orangeYellowRouteCost,
         costOptions = options.costOptions,
     })
     result.route = route
 
     if not route or not route.complete then
-        result.reason = route and route.reason or "no_complete_route"
+        result.routeReason = route and route.reason or "no_complete_route"
         return result
     end
 
+    result.routeComplete = true
     local plan = addonTable.buildProfessionShoppingPlan(route, state, {
         priceRevision = options.priceRevision,
         recipeRevision = options.recipeRevision,
@@ -324,19 +557,10 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     result.plan = plan
 
     if not plan or not plan.complete then
-        result.reason = plan and plan.reason or "shopping_plan_incomplete"
-        return result
+        result.routeComplete = false
+        result.routeReason = plan and plan.reason or "shopping_plan_incomplete"
+        result.plan = nil
     end
 
-    local segment = route.segments and route.segments[1] or nil
-    if not segment or not segment.recipeID then
-        result.reason = "no_current_segment"
-        return result
-    end
-
-    result.currentSegment = segment
-    result.available = true
-    result.fallbackToStaticGuide = false
-    result.reason = nil
     return result
 end

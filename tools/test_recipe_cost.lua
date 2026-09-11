@@ -174,4 +174,33 @@ local trainable = addonTable.calculateRecipeCost(trainableRecipe, 90, nil, {}, {
 assertEqual(trainable.acquisitionCost, 250, "acquisition gold cost")
 assertEqual(trainable.oneTimeCosts[1].kind, "recipe_acquisition", "acquisition exposed as one-time")
 
+prices[16202] = {
+    available = true,
+    marketValue = 300,
+    minBuyout = 300,
+    freshness = "fresh",
+}
+prices[16203] = {
+    available = true,
+    marketValue = 600,
+    minBuyout = 600,
+    freshness = "fresh",
+}
+
+local essenceRecipe = {
+    spellID = 6,
+    acquisition = { status = "learned" },
+    difficulty = { yellow = 100, green = 110, gray = 120 },
+    reagents = {
+        { itemID = 16202, quantity = 3 },
+    },
+}
+local essence = addonTable.calculateRecipeCost(essenceRecipe, 90, nil, {}, {})
+assertEqual(essence.available, true, "essence recipe available")
+assertEqual(essence.currentPurchaseCostPerCraft, 600, "greater essence conversion lowers application cost")
+assertEqual(essence.expectedCurrentPurchaseCostPerSkillUp, 600, "converted price feeds skill-up cost")
+assertEqual(essence.reagentCosts[1].sourceItemID, 16203, "greater eternal essence selected as source")
+assertEqual(essence.reagentCosts[1].converted, true, "essence conversion is explicit")
+assertEqual(essence.reagentCosts[1].conversionDirection, "greater_to_lesser", "conversion direction recorded")
+
 print("Recipe cost engine tests passed.")

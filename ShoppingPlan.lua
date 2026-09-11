@@ -85,6 +85,22 @@ local function choosePurchase(priceResult, chooser)
     return chooser(priceResult, "spend")
 end
 
+local function chooseMaterialPrice(item, purpose, options, priceLookup, priceChooser)
+    if type(addonTable.chooseCheapestEquivalentUnitPrice) == "function" then
+        return addonTable.chooseCheapestEquivalentUnitPrice(item, purpose, {
+            priceLookup = priceLookup,
+            unitPriceChooser = priceChooser,
+            now = options and options.now,
+        })
+    end
+
+    local result = priceLookup(item, options and options.now)
+    if purpose == "purchase" then
+        return choosePurchase(result, priceChooser)
+    end
+    return priceChooser(result, purpose)
+end
+
 local function ensureMaterial(materials, reagent)
     local item = reagent.item or reagent.itemLink or reagent.itemID
     local key = itemKey(reagent.itemID, item)
@@ -107,9 +123,14 @@ local function ensureMaterial(materials, reagent)
             chosenUnitPrice = nil,
             chosenPriceType = nil,
             chosenPriceSource = nil,
+            sourceItemID = nil,
+            converted = false,
+            conversionRatio = nil,
+            conversionDirection = nil,
             freshness = nil,
             ageSeconds = nil,
             estimatedPurchaseCost = nil,
+            estimatedFullPurchaseCost = nil,
             marketUnitValue = nil,
             estimatedMarketValue = nil,
             missingPrice = false,
@@ -296,6 +317,7 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
         complete = false,
         routeComplete = route and route.complete or false,
         estimatedMarketValueCost = nil,
+        estimatedCurrentPurchaseCost = nil,
         estimatedGoldNeededNow = nil,
         acquisitionCost = 0,
         acquisitionMarketCost = 0,
@@ -356,6 +378,7 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
     end
 
     local purchaseTotal = 0
+    local fullPurchaseTotal = 0
     local sourceSet = {}
     local materialList = sortedMaterialList(materials)
 
@@ -368,9 +391,20 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
 
         if entry.quantityStillNeeded > 0 then
             local lookupItem = entry.itemID or entry.item
-            local priceResult = priceLookup(lookupItem, options.now)
-            local marketChoice, marketReason = priceChooser(priceResult, "market")
-            local purchaseChoice, purchaseReason = choosePurchase(priceResult, priceChooser)
+            local marketChoice, marketReason = chooseMaterialPrice(
+                lookupItem,
+                "market",
+                options,
+                priceLookup,
+                priceChooser
+            )
+            local purchaseChoice, purchaseReason = chooseMaterialPrice(
+                lookupItem,
+                "purchase",
+                options,
+                priceLookup,
+                priceChooser
+            )
 
             if marketChoice then
                 entry.marketUnitValue = marketChoice.unitPrice
@@ -390,14 +424,21 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
                 entry.chosenUnitPrice = purchaseChoice.unitPrice
                 entry.chosenPriceType = purchaseChoice.priceType
                 entry.chosenPriceSource = purchaseChoice.source
+                entry.sourceItemID = purchaseChoice.sourceItemID
+                entry.converted = purchaseChoice.converted and true or false
+                entry.conversionRatio = purchaseChoice.conversionRatio
+                entry.conversionDirection = purchaseChoice.conversionDirection
                 entry.freshness = purchaseChoice.freshness
                 entry.ageSeconds = purchaseChoice.ageSeconds
                 entry.estimatedPurchaseCost = entry.quantityStillNeeded * purchaseChoice.unitPrice
+                entry.estimatedFullPurchaseCost = entry.externallyRequiredQuantity * purchaseChoice.unitPrice
                 purchaseTotal = purchaseTotal + entry.estimatedPurchaseCost
+                fullPurchaseTotal = fullPurchaseTotal + entry.estimatedFullPurchaseCost
                 addSource(sourceSet, purchaseChoice.source)
 
                 if purchaseChoice.isStale or purchaseChoice.isTooOld
-                    or (priceResult and priceResult.isSuspicious)
+                    or purchaseChoice.isSuspicious
+                    or (marketChoice and marketChoice.isSuspicious)
                 then
                     result.stalePriceCount = result.stalePriceCount + 1
                 end
@@ -410,6 +451,7 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
             end
         else
             entry.estimatedPurchaseCost = 0
+            entry.estimatedFullPurchaseCost = 0
         end
     end
 
@@ -425,6 +467,7 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
         return result
     end
 
+    result.estimatedCurrentPurchaseCost = fullPurchaseTotal + acquisitionGold
     result.estimatedGoldNeededNow = purchaseTotal + acquisitionGold
     result.complete = true
     result.quality = result.stalePriceCount > 0 and "stale" or "complete"

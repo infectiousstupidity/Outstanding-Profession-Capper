@@ -487,6 +487,22 @@ local function materialRowOnEnter(self)
                 tostring(self.priceInfo.freshness or "unknown"),
                 addonTable.formatPriceAge(self.priceInfo.ageSeconds)
             ), 0.65, 0.65, 0.65, true)
+            if self.priceInfo.converted and self.priceInfo.sourceItemID then
+                local sourceName = GetItemInfo(self.priceInfo.sourceItemID)
+                    or ("item " .. tostring(self.priceInfo.sourceItemID))
+                local conversion
+                if self.priceInfo.conversionDirection == "greater_to_lesser" then
+                    conversion = "1 " .. sourceName .. " -> "
+                        .. tostring(self.priceInfo.conversionRatio or 3) .. " requested"
+                else
+                    conversion = tostring(self.priceInfo.conversionRatio or 3) .. " "
+                        .. sourceName .. " -> 1 requested"
+                end
+                GameTooltip:AddLine(string.format(
+                    addonTable.L["material_price_conversion"],
+                    conversion
+                ), 0.65, 0.82, 1, true)
+            end
         else
             GameTooltip:AddLine(string.format(
                 addonTable.L["material_price_missing"],
@@ -775,23 +791,66 @@ local function updateModeControls()
     end
 end
 
+local function currentCostPriceSummary()
+    local cost = dynamicRecommendation and dynamicRecommendation.currentCost
+    if not cost then
+        return nil, nil, nil
+    end
+
+    local sources = {}
+    local sourceSet = {}
+    local oldestAge
+    local stale = cost.quality == "stale"
+
+    for i = 1, table.getn(cost.reagentCosts or {}) do
+        local reagent = cost.reagentCosts[i]
+        if reagent.source and not sourceSet[reagent.source] then
+            sourceSet[reagent.source] = true
+            table.insert(sources, reagent.source)
+        end
+        if reagent.ageSeconds and (not oldestAge or reagent.ageSeconds > oldestAge) then
+            oldestAge = reagent.ageSeconds
+        end
+    end
+
+    table.sort(sources)
+    local source = table.getn(sources) > 0
+        and table.concat(sources, ", ")
+        or (dynamicRecommendation.providerName or "price provider")
+    return source, stale, oldestAge
+end
+
 local function dynamicPriceLine()
-    if not dynamicRecommendation or not dynamicRecommendation.plan then
+    if not dynamicRecommendation then
         return ""
     end
 
+    local source
+    local stale
+    local age
+
     local plan = dynamicRecommendation.plan
-    local source = dynamicRecommendation.providerName or "price provider"
-    if plan.priceSources and table.getn(plan.priceSources) > 0 then
-        source = table.concat(plan.priceSources, ", ")
+    if plan then
+        source = dynamicRecommendation.providerName or "price provider"
+        if plan.priceSources and table.getn(plan.priceSources) > 0 then
+            source = table.concat(plan.priceSources, ", ")
+        end
+        stale = plan.quality == "stale"
+        age = plan.oldestPriceAgeSeconds
+    else
+        source, stale, age = currentCostPriceSummary()
     end
 
-    local quality = plan.quality == "stale"
+    local quality = stale
         and addonTable.L["dynamic_quality_stale"]
         or addonTable.L["dynamic_quality_current"]
-    local age = addonTable.formatPriceAge(plan.oldestPriceAgeSeconds)
 
-    return string.format(addonTable.L["dynamic_price_line"], source, quality, age)
+    return string.format(
+        addonTable.L["dynamic_price_line"],
+        source or "price provider",
+        quality,
+        addonTable.formatPriceAge(age)
+    )
 end
 
 local function updateRecommendationSummary()
@@ -801,43 +860,53 @@ local function updateRecommendationSummary()
 
     local mode = getRecommendationMode()
     if mode == "dynamic" and dynamicRecommendation and dynamicRecommendation.available then
+        local cost = dynamicRecommendation.currentCost or {}
+        local segment = dynamicRecommendation.currentSegment or {}
+        local perCraft = addonTable.formatCopperShort(
+            cost.currentPurchaseCostPerCraft or cost.materialMarketValuePerCraft
+        )
+        local perSkill = addonTable.formatCopperShort(
+            cost.expectedCurrentPurchaseCostPerSkillUp or cost.expectedMarketCostPerSkillUp
+        )
+        local firstLine = string.format(
+            addonTable.L["dynamic_per_application"],
+            perCraft,
+            perSkill
+        )
+
         local plan = dynamicRecommendation.plan
-        local target = dynamicRecommendation.targetSkill or 450
-        local total = addonTable.formatCopperShort(plan.estimatedMarketValueCost)
-        local goldNow = addonTable.formatCopperShort(plan.estimatedGoldNeededNow)
-        local crafts = math.max(0, math.ceil(tonumber(plan.totalExpectedCrafts) or 0))
-
-        local firstLine
-        if target >= 450 then
-            firstLine = string.format(addonTable.L["dynamic_total_cap"], total, goldNow, crafts)
+        local secondLine
+        if plan and plan.complete then
+            local target = dynamicRecommendation.targetSkill or 450
+            local total = addonTable.formatCopperShort(
+                plan.estimatedCurrentPurchaseCost or plan.estimatedMarketValueCost
+            )
+            local goldNow = addonTable.formatCopperShort(plan.estimatedGoldNeededNow)
+            local crafts = math.max(0, math.ceil(tonumber(plan.totalExpectedCrafts) or 0))
+            secondLine = string.format(
+                addonTable.L["dynamic_route_total"],
+                target,
+                total,
+                goldNow,
+                crafts
+            )
         else
-            firstLine = string.format(addonTable.L["dynamic_total_rank"], target, total, goldNow, crafts)
+            secondLine = string.format(
+                addonTable.L["dynamic_current_only"],
+                tonumber(segment.skillEnd) or ((professionContext and professionContext.baseSkill or 0) + 1)
+            )
         end
 
-        local warnings = {}
-        if (plan.stalePriceCount or 0) > 0 then
-            table.insert(warnings, string.format(addonTable.L["dynamic_stale_count"], plan.stalePriceCount))
-        end
-        if (plan.missingPriceCount or 0) > 0 then
-            table.insert(warnings, string.format(addonTable.L["dynamic_missing_count"], plan.missingPriceCount))
-        end
-
-        local secondLine = dynamicPriceLine()
-        if table.getn(warnings) > 0 then
-            secondLine = secondLine .. "  |  " .. table.concat(warnings, ", ")
-        end
         txtCostSummary:SetText(firstLine .. "\n" .. secondLine)
         return
     end
 
     if mode == "dynamic" then
         local reason = dynamicRecommendation and dynamicRecommendation.reason or "unknown"
-        local line = string.format(addonTable.L["dynamic_fallback"], humanizeDynamicReason(reason))
-        local plan = dynamicRecommendation and dynamicRecommendation.plan
-        if plan and (plan.missingPriceCount or 0) > 0 then
-            line = line .. "\n" .. string.format(addonTable.L["dynamic_missing_count"], plan.missingPriceCount)
-        end
-        txtCostSummary:SetText(line)
+        txtCostSummary:SetText(string.format(
+            addonTable.L["dynamic_fallback"],
+            humanizeDynamicReason(reason)
+        ))
         return
     end
 
@@ -919,42 +988,69 @@ function setRecommendationMode(mode)
 end
 
 function showDynamicRouteTooltip(owner)
-    if not dynamicRecommendation or not dynamicRecommendation.available or not dynamicRecommendation.plan then
+    if not dynamicRecommendation or not dynamicRecommendation.available then
         return
     end
 
     GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-    GameTooltip:SetText(addonTable.L["route_tooltip_title"])
+    GameTooltip:SetText(addonTable.L["compare_tooltip_title"])
 
-    local segments = dynamicRecommendation.plan.segments or {}
-    local limit = math.min(table.getn(segments), 12)
-    for i = 1, limit do
-        local segment = segments[i]
-        if segment.type == "training" then
-            GameTooltip:AddLine(string.format(
-                addonTable.L["route_tooltip_training"],
-                tonumber(segment.oldCap) or 0,
-                tonumber(segment.newCap) or 0,
-                addonTable.formatCopperShort(segment.marketCost)
-            ), 0.9, 0.82, 0.45, true)
+    local candidates = dynamicRecommendation.candidates or {}
+    local candidateLimit = math.min(table.getn(candidates), 8)
+    for i = 1, candidateLimit do
+        local candidate = candidates[i]
+        local name = candidate.recipe and candidate.recipe.name or tostring(candidate.recipeID or "?")
+        local line = string.format(
+            addonTable.L["compare_tooltip_recipe"],
+            name,
+            tostring(candidate.difficulty or "?"),
+            addonTable.formatCopperShort(candidate.costPerCraft),
+            addonTable.formatCopperShort(candidate.expectedCostPerSkillUp)
+        )
+        if i == 1 then
+            GameTooltip:AddLine(line, 0.35, 1, 0.35, true)
         else
-            local name = segment.recipe and segment.recipe.name or tostring(segment.recipeID or "?")
-            GameTooltip:AddLine(string.format(
-                addonTable.L["route_tooltip_craft"],
-                tonumber(segment.skillStart) or 0,
-                tonumber(segment.skillEnd) or 0,
-                name,
-                math.ceil(tonumber(segment.expectedCrafts) or 0),
-                addonTable.formatCopperShort(segment.marketCost)
-            ), 0.82, 0.82, 0.82, true)
+            GameTooltip:AddLine(line, 0.82, 0.82, 0.82, true)
         end
     end
 
-    if table.getn(segments) > limit then
+    if table.getn(candidates) > candidateLimit then
         GameTooltip:AddLine(string.format(
-            addonTable.L["route_tooltip_more"],
-            table.getn(segments) - limit
+            addonTable.L["compare_tooltip_more"],
+            table.getn(candidates) - candidateLimit
         ), 0.65, 0.65, 0.65, true)
+    end
+
+    local plan = dynamicRecommendation.plan
+    if plan and plan.complete then
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(addonTable.L["route_tooltip_title"], 1, 0.82, 0)
+        local segments = plan.segments or {}
+        local limit = math.min(table.getn(segments), 8)
+        for i = 1, limit do
+            local segment = segments[i]
+            if segment.type == "training" then
+                GameTooltip:AddLine(string.format(
+                    addonTable.L["route_tooltip_training"],
+                    tonumber(segment.oldCap) or 0,
+                    tonumber(segment.newCap) or 0,
+                    addonTable.formatCopperShort(segment.marketCost)
+                ), 0.9, 0.82, 0.45, true)
+            else
+                local name = segment.recipe and segment.recipe.name or tostring(segment.recipeID or "?")
+                GameTooltip:AddLine(string.format(
+                    addonTable.L["route_tooltip_craft"],
+                    tonumber(segment.skillStart) or 0,
+                    tonumber(segment.skillEnd) or 0,
+                    name,
+                    math.ceil(tonumber(segment.expectedCrafts) or 0),
+                    addonTable.formatCopperShort(segment.marketCost)
+                ), 0.82, 0.82, 0.82, true)
+            end
+        end
+    else
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(addonTable.L["route_tooltip_incomplete"], 0.75, 0.75, 0.75, true)
     end
 
     GameTooltip:Show()

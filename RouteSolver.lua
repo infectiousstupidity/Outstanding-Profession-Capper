@@ -106,12 +106,15 @@ end
 local function resolveMetricCost(cost, metric)
     if metric == "gold" then
         return cost.expectedGoldNeededNowPerSkillUp
+    elseif metric == "current" then
+        return cost.expectedCurrentPurchaseCostPerSkillUp
+            or cost.expectedMarketCostPerSkillUp
     end
     return cost.expectedMarketCostPerSkillUp
 end
 
 local function oneTimeMetricCost(oneTime, metric)
-    if metric == "gold" then
+    if metric == "gold" or metric == "current" then
         return numberOrZero(oneTime.goldCost)
     end
     return numberOrZero(oneTime.marketCost ~= nil and oneTime.marketCost or oneTime.goldCost)
@@ -277,7 +280,14 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
     local startSkill = tonumber(options.startSkill or state.baseSkill or (skillContext and skillContext.baseSkill)) or 0
     local targetSkill = tonumber(options.targetSkill or state.targetSkill or 450) or 450
     local startingCap = tonumber(state.currentCap or (skillContext and skillContext.currentCap) or targetSkill) or targetSkill
-    local metric = options.optimizeFor == "gold" and "gold" or "market"
+    local metric
+    if options.optimizeFor == "gold" then
+        metric = "gold"
+    elseif options.optimizeFor == "current" then
+        metric = "current"
+    else
+        metric = "market"
+    end
     local maxStates = tonumber(options.maxStates) or DEFAULT_MAX_STATES
     local costRecipe = options.costRecipe or addonTable.calculateRecipeCost
 
@@ -291,6 +301,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
         segments = {},
         totalMarketCost = nil,
         totalGoldCost = nil,
+        totalCurrentPurchaseCost = nil,
         totalExpectedCrafts = 0,
         quality = "incomplete",
         missingData = {},
@@ -303,6 +314,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
         result.fallbackToStaticGuide = false
         result.totalMarketCost = 0
         result.totalGoldCost = 0
+        result.totalCurrentPurchaseCost = 0
         result.quality = "complete"
         return result
     end
@@ -322,6 +334,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
         totalCost = 0,
         totalMarketCost = 0,
         totalGoldCost = 0,
+        totalCurrentPurchaseCost = 0,
         previous = nil,
         transition = nil,
         quality = "complete",
@@ -367,6 +380,10 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
 
                             local edgeMarket = numberOrZero(cost.expectedMarketCostPerSkillUp) + extraMarket
                             local edgeGold = numberOrZero(cost.expectedGoldNeededNowPerSkillUp) + extraGold
+                            local edgeCurrent = numberOrZero(
+                                cost.expectedCurrentPurchaseCostPerSkillUp
+                                    or cost.expectedMarketCostPerSkillUp
+                            ) + extraGold
                             local edgeMetric = numberOrZero(metricCost) + extraMetric
                             local nextSkill = math.min(targetSkill, node.skill + 1)
                             local totalCost = node.totalCost + edgeMetric
@@ -388,6 +405,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                     totalCost = totalCost,
                                     totalMarketCost = node.totalMarketCost + edgeMarket,
                                     totalGoldCost = node.totalGoldCost + edgeGold,
+                                    totalCurrentPurchaseCost = node.totalCurrentPurchaseCost + edgeCurrent,
                                     previous = node,
                                     quality = (node.quality == "stale" or cost.quality == "stale") and "stale" or "complete",
                                     transition = {
@@ -400,6 +418,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                         skillUpChance = cost.skillUpChance,
                                         marketCost = edgeMarket,
                                         goldCost = edgeGold,
+                                        currentPurchaseCost = edgeCurrent,
                                         acquisitionGoldCost = acquisitionGoldCost,
                                         quality = cost.quality,
                                         cost = cost,
@@ -441,6 +460,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                         totalCost = totalCost,
                                         totalMarketCost = node.totalMarketCost + trainingMarket,
                                         totalGoldCost = node.totalGoldCost + trainingGold,
+                                        totalCurrentPurchaseCost = node.totalCurrentPurchaseCost + trainingGold,
                                         previous = node,
                                         quality = node.quality,
                                         transition = {
@@ -452,6 +472,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                             newCap = newCap,
                                             marketCost = trainingMarket,
                                             goldCost = trainingGold,
+                                            currentPurchaseCost = trainingGold,
                                             quality = "complete",
                                         },
                                     }
@@ -486,6 +507,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
     result.segments = buildSegments(result.actions)
     result.totalMarketCost = finalNode.totalMarketCost
     result.totalGoldCost = finalNode.totalGoldCost
+    result.totalCurrentPurchaseCost = finalNode.totalCurrentPurchaseCost
     result.quality = finalNode.quality
     result.complete = true
     result.fallbackToStaticGuide = false

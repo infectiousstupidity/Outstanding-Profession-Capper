@@ -70,4 +70,4 @@ Task 06 may be completed before or after Task 07, but Task 08 must not assume ac
 
 ## Current task
 
-Task 10 is implemented in code and awaiting the required in-game acceptance checks before it can be marked DONE. The panel now supports Cheapest now and Static guide modes, live per-material pricing, estimated route totals, acquisition guidance, route inspection, and automatic fallback when optimizer data is incomplete.
+Task 10 is in manual acceptance. Cheapest now now compares the live game-reported orange/yellow recipes for the current step, ranks them by current purchase cost per expected skill-up, understands Greater/Lesser enchanting essence conversions, exposes per-application cost, and keeps the current recommendation usable even when a complete route cannot yet be priced.
