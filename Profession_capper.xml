@@ -5,6 +5,7 @@
     <Scripts>
       <OnLoad>fnOnLoad(); self:SetBackdropColor(0.025, 0.025, 0.025, 0.96); self:SetBackdropBorderColor(0.22, 0.22, 0.22, 1);</OnLoad>
       <OnEvent>fnOnEvent();</OnEvent>
+      <OnHide>if MainFrameCoreCompare then MainFrameCoreCompare:Hide(); end</OnHide>
       <OnDragStart>ProfessionCapper_OnDragStart();</OnDragStart>
       <OnDragStop>ProfessionCapper_OnDragStop();</OnDragStop>
     </Scripts>
@@ -212,8 +213,7 @@
         <Size><AbsDimension x="78" y="25"/></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="460" y="-52"/></Offset></Anchor></Anchors>
         <Scripts>
-          <OnEnter>showDynamicRouteTooltip(self);</OnEnter>
-          <OnLeave>GameTooltip:Hide();</OnLeave>
+          <OnClick>toggleComparisonPanel();</OnClick>
         </Scripts>
       </Button>
 
@@ -257,6 +257,115 @@
         <Size><AbsDimension x="40" y="32"/></Size>
         <Anchors><Anchor point="BOTTOMRIGHT"><Offset><AbsDimension x="-20" y="16"/></Offset></Anchor></Anchors>
         <Scripts><OnClick>displayNextRecipe();</OnClick></Scripts>
+      </Button>
+    </Frames>
+  </Frame>
+  <Frame name="MainFrameCoreCompare" parent="UIParent" hidden="true" enableMouse="true" clampedToScreen="true">
+    <Size><AbsDimension x="640" y="356"/></Size>
+    <Anchors>
+      <Anchor point="TOPLEFT" relativeTo="MainFrameCore" relativePoint="TOPRIGHT">
+        <Offset><AbsDimension x="8" y="0"/></Offset>
+      </Anchor>
+    </Anchors>
+    <Backdrop bgFile="Interface\ChatFrame\ChatFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+      <TileSize><AbsValue val="16"/></TileSize>
+      <EdgeSize><AbsValue val="12"/></EdgeSize>
+      <BackgroundInsets><AbsInset left="4" right="4" top="4" bottom="4"/></BackgroundInsets>
+    </Backdrop>
+    <Scripts>
+      <OnLoad>CompareFrame_OnLoad(); self:SetBackdropColor(0.025, 0.025, 0.025, 0.97); self:SetBackdropBorderColor(0.22, 0.22, 0.22, 1);</OnLoad>
+      <OnShow>refreshComparisonPanel();</OnShow>
+    </Scripts>
+
+    <Layers>
+      <Layer level="ARTWORK">
+        <FontString name="txtCompareTitle" inherits="GameFontNormalLarge" justifyH="LEFT">
+          <Size><AbsDimension x="500" y="22"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="16" y="-14"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareSubtitle" inherits="GameFontDisableSmall" justifyH="LEFT">
+          <Size><AbsDimension x="590" y="18"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="16" y="-40"/></Offset></Anchor></Anchors>
+        </FontString>
+        <Texture file="Interface\ChatFrame\ChatFrameBackground">
+          <Size><AbsDimension x="608" y="1"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="16" y="-96"/></Offset></Anchor></Anchors>
+          <Color r="0.25" g="0.25" b="0.25" a="0.85"/>
+        </Texture>
+        <FontString name="txtCompareRankHeader" inherits="GameFontDisableSmall" justifyH="CENTER">
+          <Size><AbsDimension x="28" y="16"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-106"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareRecipeHeader" inherits="GameFontDisableSmall" justifyH="LEFT">
+          <Size><AbsDimension x="205" y="16"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="50" y="-106"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareDifficultyHeader" inherits="GameFontDisableSmall" justifyH="CENTER">
+          <Size><AbsDimension x="70" y="16"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="260" y="-106"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareAppHeader" inherits="GameFontDisableSmall" justifyH="RIGHT">
+          <Size><AbsDimension x="82" y="16"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="334" y="-106"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareSkillHeader" inherits="GameFontDisableSmall" justifyH="RIGHT">
+          <Size><AbsDimension x="92" y="16"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="422" y="-106"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareDeltaHeader" inherits="GameFontDisableSmall" justifyH="RIGHT">
+          <Size><AbsDimension x="98" y="16"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="520" y="-106"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareRouteRangeHeader" inherits="GameFontDisableSmall" justifyH="LEFT" hidden="true">
+          <Size><AbsDimension x="80" y="16"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-106"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareRouteStepHeader" inherits="GameFontDisableSmall" justifyH="LEFT" hidden="true">
+          <Size><AbsDimension x="300" y="16"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="106" y="-106"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareRouteCraftsHeader" inherits="GameFontDisableSmall" justifyH="RIGHT" hidden="true">
+          <Size><AbsDimension x="78" y="16"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="412" y="-106"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareRouteCostHeader" inherits="GameFontDisableSmall" justifyH="RIGHT" hidden="true">
+          <Size><AbsDimension x="122" y="16"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="496" y="-106"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareEmpty" inherits="GameFontDisable" justifyH="CENTER" hidden="true">
+          <Size><AbsDimension x="560" y="50"/></Size>
+          <Anchors><Anchor point="TOP"><Offset><AbsDimension x="0" y="-168"/></Offset></Anchor></Anchors>
+        </FontString>
+        <FontString name="txtCompareFooter" inherits="GameFontDisableSmall" justifyH="RIGHT">
+          <Size><AbsDimension x="360" y="18"/></Size>
+          <Anchors><Anchor point="BOTTOMRIGHT"><Offset><AbsDimension x="-16" y="18"/></Offset></Anchor></Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+
+    <Frames>
+      <Button name="$parentCurrentTab" text="Current" inherits="UIPanelButtonTemplate">
+        <Size><AbsDimension x="112" y="24"/></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="16" y="-65"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>setComparisonView("comparison");</OnClick></Scripts>
+      </Button>
+      <Button name="$parentRouteTab" text="Full route" inherits="UIPanelButtonTemplate">
+        <Size><AbsDimension x="112" y="24"/></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="132" y="-65"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>setComparisonView("route");</OnClick></Scripts>
+      </Button>
+      <Button name="$parentClose" inherits="UIPanelCloseButton">
+        <Anchors><Anchor point="TOPRIGHT"><Offset><AbsDimension x="-5" y="-5"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>toggleComparisonPanel(false);</OnClick></Scripts>
+      </Button>
+      <Frame name="MainFrameCoreCompareContent">
+        <Size><AbsDimension x="608" y="1"/></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="16" y="-132"/></Offset></Anchor></Anchors>
+      </Frame>
+      <Button name="$parentShowMore" text="Show more" inherits="UIPanelButtonTemplate" hidden="true">
+        <Size><AbsDimension x="112" y="22"/></Size>
+        <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="16" y="14"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>showMoreComparisonRows();</OnClick></Scripts>
       </Button>
     </Frames>
   </Frame>
