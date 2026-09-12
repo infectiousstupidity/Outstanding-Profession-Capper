@@ -66,7 +66,7 @@ Source of truth: [UI polish plan](docs/UI-POLISH-PLAN.md)
 | Task | Status | Purpose |
 | --- | --- | --- |
 | [15 Core UI hierarchy and material redesign](docs/tasks/15-ui-polish-core-hierarchy.md) | IN PROGRESS | Make the current recommendation, costs, and purchase actions visually clear at a glance. |
-| [16 Inline recipe comparison](docs/tasks/16-ui-polish-comparison.md) | QUEUED | Show why the selected recipe is cheapest without relying on a tooltip. |
+| [16 Inline recipe comparison](docs/tasks/16-ui-polish-comparison.md) | IN PROGRESS | Show why the selected recipe is cheapest without relying on a tooltip. |
 | [17 Compact and expanded detail modes](docs/tasks/17-ui-polish-detail-modes.md) | QUEUED | Keep the default panel focused while preserving deeper comparison/route detail. |
 | [18 Enchant repeat workflow presentation](docs/tasks/18-ui-polish-enchant-workflow.md) | QUEUED | Make target, repeat mode, and progress obvious during repeated enchants. |
 | [19 Final visual QA and compatibility](docs/tasks/19-ui-polish-qa.md) | QUEUED | Verify layout, ElvUI compatibility, state handling, and remove obsolete presentation code. |
@@ -97,4 +97,4 @@ Do not start Task 19 until the preceding UI tasks have had their required in-gam
 
 Task 10 remains in manual acceptance. Tasks 12 and 13 are awaiting in-game Enchant repeat testing. Task 14 is implemented in code and awaiting in-game purchase-guidance checks: equivalent Greater/Lesser Essence pricing is quantity-aware, and converted material rows explicitly tell the player what form and quantity to buy, the direct-vs-recommended cost, and the savings.
 
-Phase 5 Task 15 is implemented in code and awaiting its required in-game acceptance checks. The second UI pass now follows the approved compact mockup: profession progress bar, focused recommendation block, four aligned decision metrics, price freshness metadata, proper Have/Need/Missing/Cost material columns, and a dedicated full-width best-buy conversion callout. Tasks 16–19 remain queued and must not start until Task 15 is manually accepted. Each remains one implementation commit.
+Phase 5 Task 15 remains in manual acceptance; the user reviewed the live rebuilt panel and explicitly authorized proceeding with comparison work. Task 16 is now implemented in code and awaiting in-game acceptance: Compare is a click-toggle companion panel with ranked candidate rows, winner delta, stale-price marking, progressive row expansion, and a separate Full route tab. Tasks 17–19 remain queued.

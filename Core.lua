@@ -10,6 +10,10 @@ local previousRecipeKey = ""
 local recipeCache = {}
 local transientSpellIndexMap = {}
 local materialRows = {}
+local compareRows = {}
+local routeRows = {}
+local compareVisibleCount = 5
+local compareView = "comparison"
 local dynamicRecommendation
 
 local MATERIAL_ROW_HEIGHT = 54
@@ -21,6 +25,15 @@ local REPEAT_FOOTER_SPACE = 104
 local MIN_PANEL_HEIGHT = 468
 local MATERIAL_ROW_WIDTH = 524
 local MATERIAL_NAME_WIDTH = 180
+
+local COMPARE_DEFAULT_VISIBLE = 5
+local COMPARE_EXPAND_STEP = 5
+local COMPARE_MAX_VISIBLE = 10
+local COMPARE_ROW_HEIGHT = 36
+local ROUTE_ROW_HEIGHT = 34
+local COMPARE_CONTENT_TOP = 132
+local COMPARE_FOOTER_SPACE = 58
+local COMPARE_MIN_HEIGHT = 356
 
 local tradeSkillStateMutation = false
 local suppressTradeSkillUpdatesUntil = 0
@@ -1206,6 +1219,10 @@ local function updateModeControls()
             MainFrameCoreRoute:Hide()
         end
     end
+
+    if mode ~= "dynamic" and MainFrameCoreCompare then
+        MainFrameCoreCompare:Hide()
+    end
 end
 
 local function currentCostPriceSummary()
@@ -1397,73 +1414,448 @@ function setRecommendationMode(mode)
     end
 end
 
-function showDynamicRouteTooltip(owner)
-    if not dynamicRecommendation or not dynamicRecommendation.available then
+local COMPARE_DIFFICULTY_COLORS = {
+    orange = { 1, 0.5, 0.05 },
+    yellow = { 1, 0.9, 0.1 },
+}
+
+local function compareDifficultyLabel(difficulty)
+    local key = "difficulty_" .. tostring(difficulty or "")
+    local label = addonTable.L[key]
+    if label then
+        return label
+    end
+    return string.upper(tostring(difficulty or "?"))
+end
+
+local function setCompareTabState(button, selected)
+    if not button then
         return
     end
 
-    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-    GameTooltip:SetText(addonTable.L["compare_tooltip_title"])
-
-    local candidates = dynamicRecommendation.candidates or {}
-    local candidateLimit = math.min(table.getn(candidates), 8)
-    for i = 1, candidateLimit do
-        local candidate = candidates[i]
-        local name = candidate.recipe and candidate.recipe.name or tostring(candidate.recipeID or "?")
-        local line = string.format(
-            addonTable.L["compare_tooltip_recipe"],
-            name,
-            tostring(candidate.difficulty or "?"),
-            addonTable.formatCopperShort(candidate.costPerCraft),
-            addonTable.formatCopperShort(candidate.expectedCostPerSkillUp)
-        )
-        if i == 1 then
-            GameTooltip:AddLine(line, 0.35, 1, 0.35, true)
-        else
-            GameTooltip:AddLine(line, 0.82, 0.82, 0.82, true)
-        end
-    end
-
-    if table.getn(candidates) > candidateLimit then
-        GameTooltip:AddLine(string.format(
-            addonTable.L["compare_tooltip_more"],
-            table.getn(candidates) - candidateLimit
-        ), 0.65, 0.65, 0.65, true)
-    end
-
-    local plan = dynamicRecommendation.plan
-    if plan and plan.complete then
-        GameTooltip:AddLine(" ")
-        GameTooltip:AddLine(addonTable.L["route_tooltip_title"], 1, 0.82, 0)
-        local segments = plan.segments or {}
-        local limit = math.min(table.getn(segments), 8)
-        for i = 1, limit do
-            local segment = segments[i]
-            if segment.type == "training" then
-                GameTooltip:AddLine(string.format(
-                    addonTable.L["route_tooltip_training"],
-                    tonumber(segment.oldCap) or 0,
-                    tonumber(segment.newCap) or 0,
-                    addonTable.formatCopperShort(segment.marketCost)
-                ), 0.9, 0.82, 0.45, true)
-            else
-                local name = segment.recipe and segment.recipe.name or tostring(segment.recipeID or "?")
-                GameTooltip:AddLine(string.format(
-                    addonTable.L["route_tooltip_craft"],
-                    tonumber(segment.skillStart) or 0,
-                    tonumber(segment.skillEnd) or 0,
-                    name,
-                    math.ceil(tonumber(segment.expectedCrafts) or 0),
-                    addonTable.formatCopperShort(segment.marketCost)
-                ), 0.82, 0.82, 0.82, true)
-            end
-        end
+    button:Enable()
+    if selected then
+        button:LockHighlight()
+        button:SetAlpha(1)
     else
-        GameTooltip:AddLine(" ")
-        GameTooltip:AddLine(addonTable.L["route_tooltip_incomplete"], 0.75, 0.75, 0.75, true)
+        button:UnlockHighlight()
+        button:SetAlpha(0.72)
     end
 
-    GameTooltip:Show()
+    local fontString = button.GetFontString and button:GetFontString() or nil
+    if fontString then
+        if selected then
+            fontString:SetTextColor(1, 0.82, 0.12)
+        else
+            fontString:SetTextColor(0.78, 0.78, 0.78)
+        end
+    end
+end
+
+local function hideCompareRows()
+    for i = 1, table.getn(compareRows) do
+        compareRows[i]:Hide()
+    end
+end
+
+local function hideRouteRows()
+    for i = 1, table.getn(routeRows) do
+        routeRows[i]:Hide()
+    end
+end
+
+local function getCompareRow(index)
+    if compareRows[index] then
+        return compareRows[index]
+    end
+
+    local row = CreateFrame("Frame", nil, MainFrameCoreCompareContent)
+    row:SetWidth(608)
+    row:SetHeight(COMPARE_ROW_HEIGHT)
+
+    row.background = row:CreateTexture(nil, "BACKGROUND")
+    row.background:SetAllPoints(row)
+    row.background:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
+    row.background:SetVertexColor(0.03, 0.03, 0.03, 0.58)
+
+    row.rank = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    row.rank:SetPoint("LEFT", row, "LEFT", 2, 0)
+    row.rank:SetWidth(28)
+    row.rank:SetJustifyH("CENTER")
+
+    row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 34, -4)
+    row.name:SetWidth(205)
+    row.name:SetHeight(16)
+    row.name:SetJustifyH("LEFT")
+
+    row.meta = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    row.meta:SetPoint("TOPLEFT", row, "TOPLEFT", 34, -20)
+    row.meta:SetWidth(205)
+    row.meta:SetHeight(13)
+    row.meta:SetJustifyH("LEFT")
+
+    row.difficulty = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.difficulty:SetPoint("LEFT", row, "LEFT", 244, 0)
+    row.difficulty:SetWidth(70)
+    row.difficulty:SetJustifyH("CENTER")
+
+    row.perApp = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.perApp:SetPoint("LEFT", row, "LEFT", 318, 0)
+    row.perApp:SetWidth(82)
+    row.perApp:SetJustifyH("RIGHT")
+
+    row.perSkill = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.perSkill:SetPoint("LEFT", row, "LEFT", 406, 0)
+    row.perSkill:SetWidth(92)
+    row.perSkill:SetJustifyH("RIGHT")
+
+    row.delta = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.delta:SetPoint("LEFT", row, "LEFT", 504, 0)
+    row.delta:SetWidth(98)
+    row.delta:SetJustifyH("RIGHT")
+
+    compareRows[index] = row
+    return row
+end
+
+local function getRouteRow(index)
+    if routeRows[index] then
+        return routeRows[index]
+    end
+
+    local row = CreateFrame("Frame", nil, MainFrameCoreCompareContent)
+    row:SetWidth(608)
+    row:SetHeight(ROUTE_ROW_HEIGHT)
+
+    row.background = row:CreateTexture(nil, "BACKGROUND")
+    row.background:SetAllPoints(row)
+    row.background:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
+    row.background:SetVertexColor(0.03, 0.03, 0.03, 0.50)
+
+    row.range = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.range:SetPoint("LEFT", row, "LEFT", 4, 0)
+    row.range:SetWidth(80)
+    row.range:SetJustifyH("LEFT")
+
+    row.step = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.step:SetPoint("LEFT", row, "LEFT", 90, 0)
+    row.step:SetWidth(300)
+    row.step:SetJustifyH("LEFT")
+
+    row.crafts = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.crafts:SetPoint("LEFT", row, "LEFT", 396, 0)
+    row.crafts:SetWidth(78)
+    row.crafts:SetJustifyH("RIGHT")
+
+    row.cost = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.cost:SetPoint("LEFT", row, "LEFT", 480, 0)
+    row.cost:SetWidth(122)
+    row.cost:SetJustifyH("RIGHT")
+
+    routeRows[index] = row
+    return row
+end
+
+local function setComparisonHeadersVisible(visible)
+    local headers = {
+        txtCompareRankHeader,
+        txtCompareRecipeHeader,
+        txtCompareDifficultyHeader,
+        txtCompareAppHeader,
+        txtCompareSkillHeader,
+        txtCompareDeltaHeader,
+    }
+    for i = 1, table.getn(headers) do
+        if visible then headers[i]:Show() else headers[i]:Hide() end
+    end
+end
+
+local function setRouteHeadersVisible(visible)
+    local headers = {
+        txtCompareRouteRangeHeader,
+        txtCompareRouteStepHeader,
+        txtCompareRouteCraftsHeader,
+        txtCompareRouteCostHeader,
+    }
+    for i = 1, table.getn(headers) do
+        if visible then headers[i]:Show() else headers[i]:Hide() end
+    end
+end
+
+local function filteredComparisonCandidates()
+    local result = {}
+    local candidates = dynamicRecommendation and dynamicRecommendation.candidates or {}
+    for i = 1, table.getn(candidates) do
+        local candidate = candidates[i]
+        local difficulty = candidate and candidate.difficulty
+        if candidate
+            and (difficulty == "orange" or difficulty == "yellow")
+            and candidate.costPerCraft ~= nil
+            and candidate.expectedCostPerSkillUp ~= nil
+        then
+            table.insert(result, candidate)
+        end
+    end
+    return result
+end
+
+local function updateComparePanelHeight(rowCount, rowHeight)
+    local rowsHeight = math.max(1, rowCount) * rowHeight
+    MainFrameCoreCompare:SetHeight(math.max(
+        COMPARE_MIN_HEIGHT,
+        COMPARE_CONTENT_TOP + rowsHeight + COMPARE_FOOTER_SPACE
+    ))
+end
+
+local function renderComparisonView()
+    hideRouteRows()
+    setRouteHeadersVisible(false)
+    setComparisonHeadersVisible(true)
+
+    txtCompareSubtitle:SetText(string.format(
+        addonTable.L["compare_subtitle"],
+        professionContext and professionContext.effectiveSkill or 0
+    ))
+
+    local candidates = filteredComparisonCandidates()
+    local total = table.getn(candidates)
+    local visible = math.min(total, compareVisibleCount, COMPARE_MAX_VISIBLE)
+    local winnerCost = total > 0 and tonumber(candidates[1].expectedCostPerSkillUp) or nil
+
+    hideCompareRows()
+
+    for i = 1, visible do
+        local candidate = candidates[i]
+        local row = getCompareRow(i)
+        row:ClearAllPoints()
+        row:SetPoint("TOPLEFT", MainFrameCoreCompareContent, "TOPLEFT", 0, -((i - 1) * COMPARE_ROW_HEIGHT))
+
+        local name = candidate.recipe and candidate.recipe.name or tostring(candidate.recipeID or "?")
+        local stale = candidate.cost and candidate.cost.quality == "stale"
+        local color = COMPARE_DIFFICULTY_COLORS[candidate.difficulty] or { 0.82, 0.82, 0.82 }
+
+        row.rank:SetText(tostring(i))
+        row.name:SetText(name)
+        row.difficulty:SetText(compareDifficultyLabel(candidate.difficulty))
+        row.difficulty:SetTextColor(color[1], color[2], color[3])
+        row.perApp:SetText("~" .. addonTable.formatCopperShort(candidate.costPerCraft))
+        row.perSkill:SetText("~" .. addonTable.formatCopperShort(candidate.expectedCostPerSkillUp))
+
+        if stale then
+            row.meta:SetText(addonTable.L["compare_stale"])
+            row.meta:SetTextColor(1, 0.72, 0.22)
+            row.perApp:SetTextColor(1, 0.72, 0.22)
+            row.perSkill:SetTextColor(1, 0.72, 0.22)
+        else
+            row.meta:SetText("")
+            row.perApp:SetTextColor(0.92, 0.92, 0.92)
+            row.perSkill:SetTextColor(0.92, 0.92, 0.92)
+        end
+
+        if i == 1 then
+            row.background:SetVertexColor(0.04, 0.19, 0.06, 0.82)
+            row.rank:SetTextColor(0.45, 1, 0.35)
+            row.name:SetTextColor(0.55, 1, 0.45)
+            row.delta:SetText(addonTable.L["compare_best"])
+            row.delta:SetTextColor(0.45, 1, 0.35)
+        else
+            row.background:SetVertexColor(0.03, 0.03, 0.03, 0.58)
+            row.rank:SetTextColor(0.65, 0.65, 0.65)
+            row.name:SetTextColor(0.92, 0.92, 0.92)
+            local delta = winnerCost and (tonumber(candidate.expectedCostPerSkillUp) - winnerCost) or nil
+            if delta and delta > 0 then
+                row.delta:SetText("+" .. addonTable.formatCopperShort(delta))
+            else
+                row.delta:SetText(addonTable.L["compare_same"])
+            end
+            row.delta:SetTextColor(0.72, 0.72, 0.72)
+        end
+
+        row:Show()
+    end
+
+    if total == 0 then
+        txtCompareEmpty:SetText(addonTable.L["compare_no_candidates"])
+        txtCompareEmpty:Show()
+    else
+        txtCompareEmpty:Hide()
+    end
+
+    local canShowMore = visible < total and visible < COMPARE_MAX_VISIBLE
+    if canShowMore then
+        local nextCount = math.min(COMPARE_EXPAND_STEP, total - visible, COMPARE_MAX_VISIBLE - visible)
+        MainFrameCoreCompareShowMore:SetText(string.format(
+            addonTable.L["compare_show_more"],
+            nextCount
+        ))
+        MainFrameCoreCompareShowMore:Show()
+    else
+        MainFrameCoreCompareShowMore:Hide()
+    end
+
+    if total > visible and visible >= COMPARE_MAX_VISIBLE then
+        txtCompareFooter:SetText(string.format(
+            addonTable.L["compare_top_only"],
+            visible,
+            total
+        ))
+    else
+        txtCompareFooter:SetText(addonTable.L["compare_ranking_note"])
+    end
+
+    updateComparePanelHeight(math.max(visible, 1), COMPARE_ROW_HEIGHT)
+end
+
+local function renderRouteView()
+    hideCompareRows()
+    hideRouteRows()
+    setComparisonHeadersVisible(false)
+    setRouteHeadersVisible(true)
+    MainFrameCoreCompareShowMore:Hide()
+
+    txtCompareSubtitle:SetText(addonTable.L["compare_route_subtitle"])
+
+    local plan = dynamicRecommendation and dynamicRecommendation.plan
+    if not plan or not plan.complete then
+        txtCompareEmpty:SetText(addonTable.L["route_tooltip_incomplete"])
+        txtCompareEmpty:Show()
+        txtCompareFooter:SetText("")
+        updateComparePanelHeight(3, ROUTE_ROW_HEIGHT)
+        return
+    end
+
+    txtCompareEmpty:Hide()
+    local segments = plan.segments or {}
+    local count = table.getn(segments)
+
+    for i = 1, count do
+        local segment = segments[i]
+        local row = getRouteRow(i)
+        row:ClearAllPoints()
+        row:SetPoint("TOPLEFT", MainFrameCoreCompareContent, "TOPLEFT", 0, -((i - 1) * ROUTE_ROW_HEIGHT))
+
+        row.range:SetText(string.format(
+            addonTable.L["compare_route_range"],
+            tonumber(segment.skillStart) or 0,
+            tonumber(segment.skillEnd) or 0
+        ))
+
+        if segment.type == "training" then
+            row.step:SetText(string.format(
+                addonTable.L["compare_route_training"],
+                tonumber(segment.oldCap) or 0,
+                tonumber(segment.newCap) or 0
+            ))
+            row.step:SetTextColor(0.9, 0.82, 0.45)
+            row.crafts:SetText(addonTable.L["metric_unknown"])
+        else
+            local name = segment.recipe and segment.recipe.name or tostring(segment.recipeID or "?")
+            row.step:SetText(name)
+            row.step:SetTextColor(0.92, 0.92, 0.92)
+            row.crafts:SetText("~" .. tostring(math.max(0, math.ceil(tonumber(segment.expectedCrafts) or 0))))
+        end
+
+        row.cost:SetText("~" .. addonTable.formatCopperShort(segment.marketCost))
+        row:Show()
+    end
+
+    local totalCost = plan.estimatedCurrentPurchaseCost or plan.estimatedMarketValueCost
+    if totalCost then
+        txtCompareFooter:SetText(string.format(
+            addonTable.L["compare_route_total"],
+            addonTable.formatCopperShort(totalCost)
+        ))
+    else
+        txtCompareFooter:SetText("")
+    end
+
+    updateComparePanelHeight(math.max(count, 1), ROUTE_ROW_HEIGHT)
+end
+
+function refreshComparisonPanel()
+    if not MainFrameCoreCompare or not MainFrameCoreCompare:IsShown() then
+        return
+    end
+
+    if getRecommendationMode() ~= "dynamic"
+        or not dynamicRecommendation
+        or not dynamicRecommendation.available
+    then
+        MainFrameCoreCompare:Hide()
+        return
+    end
+
+    setCompareTabState(MainFrameCoreCompareCurrentTab, compareView == "comparison")
+    setCompareTabState(MainFrameCoreCompareRouteTab, compareView == "route")
+
+    if compareView == "route" then
+        renderRouteView()
+    else
+        renderComparisonView()
+    end
+end
+
+function setComparisonView(view)
+    if view ~= "route" then
+        view = "comparison"
+    end
+    compareView = view
+    refreshComparisonPanel()
+end
+
+function showMoreComparisonRows()
+    compareVisibleCount = math.min(
+        COMPARE_MAX_VISIBLE,
+        compareVisibleCount + COMPARE_EXPAND_STEP
+    )
+    refreshComparisonPanel()
+end
+
+function toggleComparisonPanel(forceState)
+    if not MainFrameCoreCompare then
+        return
+    end
+
+    local shouldShow = forceState
+    if shouldShow == nil then
+        shouldShow = not MainFrameCoreCompare:IsShown()
+    end
+
+    if not shouldShow then
+        MainFrameCoreCompare:Hide()
+        return
+    end
+
+    if getRecommendationMode() ~= "dynamic"
+        or not dynamicRecommendation
+        or not dynamicRecommendation.available
+    then
+        MainFrameCoreCompare:Hide()
+        return
+    end
+
+    compareVisibleCount = COMPARE_DEFAULT_VISIBLE
+    compareView = "comparison"
+    MainFrameCoreCompare:Show()
+    refreshComparisonPanel()
+end
+
+function CompareFrame_OnLoad()
+    local L = addonTable.L
+    txtCompareTitle:SetText(L["compare_title"])
+    txtCompareRankHeader:SetText(L["compare_rank"])
+    txtCompareRecipeHeader:SetText(L["compare_recipe"])
+    txtCompareDifficultyHeader:SetText(L["compare_difficulty"])
+    txtCompareAppHeader:SetText(L["compare_per_app"])
+    txtCompareSkillHeader:SetText(L["compare_per_skill"])
+    txtCompareDeltaHeader:SetText(L["compare_vs_best"])
+    txtCompareRouteRangeHeader:SetText(L["compare_route_range_header"])
+    txtCompareRouteStepHeader:SetText(L["compare_route_step_header"])
+    txtCompareRouteCraftsHeader:SetText(L["compare_route_crafts_header"])
+    txtCompareRouteCostHeader:SetText(L["compare_route_cost_header"])
+    MainFrameCoreCompareCurrentTab:SetText(L["compare_current_tab"])
+    MainFrameCoreCompareRouteTab:SetText(L["compare_route_tab"])
 end
 
 local function getDisplayedTarget(baseTarget)
@@ -1556,6 +1948,9 @@ local function showStatus(message)
     if texDifficultyBackground then texDifficultyBackground:Hide() end
     resetRecommendationMetrics()
     clearMaterialRows()
+    if MainFrameCoreCompare then
+        MainFrameCoreCompare:Hide()
+    end
     hideCraftControls()
     updateModeControls()
     MainFrameCore:SetHeight(MIN_PANEL_HEIGHT)
@@ -2098,6 +2493,10 @@ function displayRecipe()
     MainFrameCoreCraft:Show()
 
     updatePanelHeight(renderedMaterialHeight, targetedEnchant)
+
+    if MainFrameCoreCompare and MainFrameCoreCompare:IsShown() then
+        refreshComparisonPanel()
+    end
 
     previousRecipeKey = currentKey
 end

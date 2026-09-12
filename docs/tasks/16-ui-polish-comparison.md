@@ -1,6 +1,6 @@
 # Task 16 — Inline recipe comparison and optimizer explanation
 
-Status: QUEUED  
+Status: IN PROGRESS  
 Phase: 5 — UI/UX polish  
 Depends on: Task 15
 
@@ -55,6 +55,31 @@ If a full route does not exist, say so briefly without making the current-step r
 - `Core.lua`
 - `Profession_capper.xml`
 - `Localization.lua`
+
+## Implementation note
+
+Implemented on master pending in-game acceptance.
+
+The old hover-only GameTooltip dump is removed from the Compare interaction. The button now toggles a real companion panel anchored to the main Profession Capper window.
+
+Current comparison:
+
+- shows the top five ranked candidates by default;
+- uses the optimizer's existing candidate order without re-ranking;
+- guards against green/gray recipes even if upstream data changes;
+- highlights the winner and shows each alternative's extra expected cost per skill-up versus the winner;
+- marks stale-price rows directly;
+- supports a progressive `Show N more` control up to the top ten candidates;
+- keeps the selected recipe unchanged.
+
+Full route:
+
+- lives behind a separate tab so route detail does not compete with current-step comparison;
+- shows range, recipe/training step, expected crafts, and estimated cost;
+- shows the estimated remaining total when available;
+- uses one brief unavailable message when the route is incomplete.
+
+The panel closes with the main addon, closes when Static guide is selected, and refreshes while open after recommendation updates.
 
 ## Acceptance criteria
 
