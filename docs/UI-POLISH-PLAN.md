@@ -72,15 +72,13 @@ Approximate compact state:
 Expanded detail state:
 
 ```text
-│ WHY THIS ONE                                  │
-│ 1  Greater Agility   Yellow  2.4g/app  3.2g/↑│
-│ 2  Major Mana        Yellow  3.1g/app  4.1g/↑│
-│ 3  Major Health      Orange  4.8g/app  4.8g/↑│
-│                                              │
-│ ROUTE                                         │
-│ 315–320 Greater Agility  ~7 crafts   ~17g    │
-│ 320–325 ...                                  │
+│ ROUTE DETAILS                                 │
+│ To 385: ~214g total · ~104g needed now       │
+│ ~28 crafts · oldest scan 9h · 2 stale        │
+│ 8 comparable recipes · open Compare          │
 ```
+
+Task 16 established `Compare` as a dedicated companion panel for the ranked recipe table. Expanded mode must not duplicate that table inside the main panel.
 
 The exact pixel dimensions can be adjusted during implementation. Preserve a narrow utility-panel feel; do not expand to a full-screen or TradeSkill-sized replacement UI.
 
@@ -181,7 +179,7 @@ A full route total should only appear when the full route is valid. Do not visua
 
 `Compare` should stop being tooltip-only in Phase 5.
 
-It should toggle a compact inline section containing the current orange/yellow candidates, ordered by expected purchase cost per skill-up.
+Task 16 implements it as a compact companion panel anchored beside Profession Capper. It contains the current orange/yellow candidates ordered by expected purchase cost per skill-up. Keep that panel as the single detailed comparison surface rather than duplicating its rows in Expanded mode.
 
 Each row:
 
@@ -208,9 +206,9 @@ Default should be compact.
 Persist one setting:
 
 - `compact` — recommendation + summary + required materials + primary action.
-- `expanded` — adds comparison and route details.
+- `expanded` — adds inline route totals, price coverage, and comparison-count context.
 
-Do not create separate windows.
+Task 17 must not create any additional window. The already-existing Task 16 Compare companion panel remains independent and is not duplicated by Expanded mode.
 
 The expand/collapse control should be a small text/icon affordance, not another large button.
 
@@ -240,7 +238,7 @@ Do not make the user infer repeat state from button labels alone.
 ## Interaction rules
 
 - `Cheapest now` and `Static guide` behave as a two-state segmented control visually, even if implemented with WoW buttons.
-- `Compare` toggles inline detail rather than relying exclusively on hover.
+- `Compare` toggles the Task 16 companion comparison panel rather than relying on hover.
 - Material rows remain hoverable/clickable.
 - Shift-Right-Click on a material searches for the recommended purchase item.
 - Primary action remains a single obvious bottom action.

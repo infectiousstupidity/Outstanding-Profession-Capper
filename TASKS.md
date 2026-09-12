@@ -67,7 +67,7 @@ Source of truth: [UI polish plan](docs/UI-POLISH-PLAN.md)
 | --- | --- | --- |
 | [15 Core UI hierarchy and material redesign](docs/tasks/15-ui-polish-core-hierarchy.md) | IN PROGRESS | Make the current recommendation, costs, and purchase actions visually clear at a glance. |
 | [16 Inline recipe comparison](docs/tasks/16-ui-polish-comparison.md) | IN PROGRESS | Show why the selected recipe is cheapest without relying on a tooltip. |
-| [17 Compact and expanded detail modes](docs/tasks/17-ui-polish-detail-modes.md) | QUEUED | Keep the default panel focused while preserving deeper comparison/route detail. |
+| [17 Compact and expanded detail modes](docs/tasks/17-ui-polish-detail-modes.md) | IN PROGRESS | Keep the default panel focused while preserving deeper comparison/route detail. |
 | [18 Enchant repeat workflow presentation](docs/tasks/18-ui-polish-enchant-workflow.md) | IN PROGRESS | Make target, repeat mode, and progress obvious during repeated enchants. |
 | [19 Final visual QA and compatibility](docs/tasks/19-ui-polish-qa.md) | QUEUED | Verify layout, ElvUI compatibility, state handling, and remove obsolete presentation code. |
 
@@ -97,4 +97,4 @@ Do not start Task 19 until the preceding UI tasks have had their required in-gam
 
 Task 10 remains in manual acceptance. Tasks 12 and 13 are awaiting in-game Enchant repeat testing. Task 14 is implemented in code and awaiting in-game purchase-guidance checks: equivalent Greater/Lesser Essence pricing is quantity-aware, and converted material rows explicitly tell the player what form and quantity to buy, the direct-vs-recommended cost, and the savings.
 
-Phase 5 Tasks 15 and 16 remain in manual acceptance. Task 18 is implemented in code and awaiting in-game acceptance: targeted Enchanting now has a dedicated repeat strip showing mode, fixed count only when relevant, remembered target name/selection state, progress, and visible stop/reselect reasons. Primary Enchant labels are concise. Task 17 remains queued pending spec reconciliation with the new Compare panel; Task 19 remains queued.
+Phase 5 Tasks 15, 16, and 18 remain in manual acceptance. Task 17 is implemented in code and awaiting in-game acceptance: Compact is the default persisted view; Expanded adds inline route total, immediate gold need, expected crafts, route price coverage, and comparable-candidate count without duplicating the Task 16 Compare companion panel. Task 19 remains queued.

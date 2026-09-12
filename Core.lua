@@ -36,6 +36,9 @@ local COMPARE_CONTENT_TOP = 132
 local COMPARE_FOOTER_SPACE = 58
 local COMPARE_MIN_HEIGHT = 356
 
+local DETAILS_PANEL_HEIGHT = 74
+local DETAILS_PANEL_GAP = 10
+
 local tradeSkillStateMutation = false
 local suppressTradeSkillUpdatesUntil = 0
 
@@ -814,9 +817,13 @@ local function renderMaterials(reagents, plannedCrafts)
     return usedHeight, purchaseTotal, purchaseComplete
 end
 
-local function updatePanelHeight(materialHeight, showRepeatControls)
+local function updatePanelHeight(materialHeight, showRepeatControls, showDetails)
     local footerSpace = showRepeatControls and REPEAT_FOOTER_SPACE or FOOTER_SPACE
-    local requiredHeight = MATERIALS_TOP + math.max(0, materialHeight or 0) + footerSpace
+    local detailsHeight = showDetails and (DETAILS_PANEL_HEIGHT + DETAILS_PANEL_GAP) or 0
+    local requiredHeight = MATERIALS_TOP
+        + math.max(0, materialHeight or 0)
+        + detailsHeight
+        + footerSpace
     MainFrameCore:SetHeight(math.max(MIN_PANEL_HEIGHT, requiredHeight))
 end
 
@@ -1244,6 +1251,11 @@ local function getRecommendationMode()
     return db.recommendationMode == "static" and "static" or "dynamic"
 end
 
+local function getDetailMode()
+    local db = addonTable.getSettings()
+    return db.detailMode == "expanded" and "expanded" or "compact"
+end
+
 local DIFFICULTY_PRESENTATION = {
     optimal = { key = "difficulty_orange", color = "ffff7f00" },
     medium = { key = "difficulty_yellow", color = "ffffff00" },
@@ -1391,6 +1403,124 @@ local function dynamicPriceLine()
         quality,
         addonTable.formatPriceAge(age)
     )
+end
+
+local function updateDetailModeControl()
+    if not MainFrameCoreDetailsToggle then
+        return
+    end
+
+    if getDetailMode() == "expanded" then
+        MainFrameCoreDetailsToggle:SetText(addonTable.L["details_collapse"])
+    else
+        MainFrameCoreDetailsToggle:SetText(addonTable.L["details_expand"])
+    end
+end
+
+local function comparableCandidateCount()
+    local count = 0
+    local candidates = dynamicRecommendation and dynamicRecommendation.candidates or {}
+
+    for i = 1, table.getn(candidates) do
+        local candidate = candidates[i]
+        if candidate
+            and (candidate.difficulty == "orange" or candidate.difficulty == "yellow")
+            and candidate.costPerCraft ~= nil
+            and candidate.expectedCostPerSkillUp ~= nil
+        then
+            count = count + 1
+        end
+    end
+
+    return count
+end
+
+local function updateDetailPanel()
+    updateDetailModeControl()
+
+    if not MainFrameCoreDetails then
+        return false
+    end
+
+    if getDetailMode() ~= "expanded" then
+        MainFrameCoreDetails:Hide()
+        return false
+    end
+
+    MainFrameCoreDetails:Show()
+    txtDetailsLabel:SetText(addonTable.L["details_label"])
+
+    local mode = getRecommendationMode()
+    if mode ~= "dynamic" then
+        txtDetailsRoute:SetText(addonTable.L["details_static"])
+        txtDetailsRoute:SetTextColor(0.78, 0.78, 0.78)
+        txtDetailsCoverage:SetText(addonTable.L["static_summary"])
+        txtDetailsCandidates:SetText("")
+        return true
+    end
+
+    if not dynamicRecommendation or not dynamicRecommendation.available then
+        local reason = dynamicRecommendation and dynamicRecommendation.reason or "unknown"
+        txtDetailsRoute:SetText(string.format(
+            addonTable.L["details_unavailable"],
+            humanizeDynamicReason(reason)
+        ))
+        txtDetailsRoute:SetTextColor(1, 0.72, 0.22)
+        txtDetailsCoverage:SetText("")
+        txtDetailsCandidates:SetText("")
+        return true
+    end
+
+    local plan = dynamicRecommendation.plan
+    local target = tonumber(dynamicRecommendation.targetSkill)
+        or (professionContext and professionContext.currentCap)
+        or 450
+
+    if plan and plan.complete then
+        txtDetailsRoute:SetText(string.format(
+            addonTable.L["details_route_summary"],
+            target,
+            addonTable.formatCopperShort(
+                plan.estimatedCurrentPurchaseCost or plan.estimatedMarketValueCost
+            ),
+            addonTable.formatCopperShort(plan.estimatedGoldNeededNow),
+            math.max(0, math.ceil(tonumber(plan.totalExpectedCrafts) or 0))
+        ))
+        txtDetailsRoute:SetTextColor(0.92, 0.92, 0.92)
+    else
+        txtDetailsRoute:SetText(addonTable.L["details_route_incomplete"])
+        txtDetailsRoute:SetTextColor(1, 0.72, 0.22)
+    end
+
+    local staleCount = plan and tonumber(plan.stalePriceCount) or 0
+    local missingCount = plan and tonumber(plan.missingPriceCount) or 0
+    local oldestAge = plan and plan.oldestPriceAgeSeconds or nil
+    txtDetailsCoverage:SetText(string.format(
+        addonTable.L["details_coverage"],
+        addonTable.formatPriceAge(oldestAge),
+        staleCount or 0,
+        missingCount or 0
+    ))
+
+    txtDetailsCandidates:SetText(string.format(
+        addonTable.L["details_candidates"],
+        comparableCandidateCount()
+    ))
+
+    return true
+end
+
+function toggleDetailMode()
+    local nextMode = getDetailMode() == "expanded" and "compact" or "expanded"
+    if not addonTable.setDetailMode(nextMode) then
+        return
+    end
+
+    if targetSkill and MainFrameCore:IsShown() then
+        displayRecipe()
+    else
+        updateDetailPanel()
+    end
 end
 
 local function resetRecommendationMetrics()
@@ -2042,6 +2172,10 @@ local function showStatus(message)
     if texDifficultyBackground then texDifficultyBackground:Hide() end
     resetRecommendationMetrics()
     clearMaterialRows()
+    if MainFrameCoreDetails then
+        MainFrameCoreDetails:Hide()
+    end
+    updateDetailModeControl()
     if MainFrameCoreCompare then
         MainFrameCoreCompare:Hide()
     end
@@ -2348,6 +2482,7 @@ function fnOnLoad()
     if MainFrameCoreRoute then
         MainFrameCoreRoute:SetText(L["route_button"])
     end
+    updateDetailModeControl()
     installEnchantTargetHooks()
     updateModeControls()
     print("|cff" .. addonTable.chat_frame_default_color .. L["loaded_for"] .. "|r |cff" .. addonTable.chat_frame_player_name_color .. "[" .. UnitLevel("player") .. "]" .. UnitName("player") .. "|r")
@@ -2477,6 +2612,7 @@ function displayRecipe()
     txtRecipeStatus:SetText("")
     updateModeControls()
     updateRecommendationSummary()
+    local detailsVisible = updateDetailPanel()
     updateEnchantRepeatControls(targetedEnchant)
     if targetedEnchant then
         updateEnchantRepeatPresentation(currentID)
@@ -2584,7 +2720,7 @@ function displayRecipe()
 
     MainFrameCoreCraft:Show()
 
-    updatePanelHeight(renderedMaterialHeight, targetedEnchant)
+    updatePanelHeight(renderedMaterialHeight, targetedEnchant, detailsVisible)
 
     if MainFrameCoreCompare and MainFrameCoreCompare:IsShown() then
         refreshComparisonPanel()
@@ -2754,6 +2890,10 @@ function resetValues()
     if texDifficultyBackground then texDifficultyBackground:Hide() end
     resetRecommendationMetrics()
     clearMaterialRows()
+    if MainFrameCoreDetails then
+        MainFrameCoreDetails:Hide()
+    end
+    updateDetailModeControl()
     updateEnchantRepeatControls(false)
     updateModeControls()
 

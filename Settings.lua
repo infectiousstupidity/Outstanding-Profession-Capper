@@ -5,6 +5,7 @@ local defaults = {
     attached = true,
     locked = false,
     recommendationMode = "dynamic",
+    detailMode = "compact",
     enchantRepeatMode = "until_change",
     enchantRepeatCount = 5,
     point = "TOPLEFT",
@@ -94,6 +95,15 @@ function addonTable.setRecommendationMode(mode)
     end
 
     getDB().recommendationMode = mode
+    return true
+end
+
+function addonTable.setDetailMode(mode)
+    if mode ~= "compact" and mode ~= "expanded" then
+        return false
+    end
+
+    getDB().detailMode = mode
     return true
 end
 
