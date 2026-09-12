@@ -126,6 +126,18 @@ The code changes:
 - make Cheapest-now / Static-guide selection visually persistent without disabling the selected button;
 - size the footer differently when Enchant repeat controls are actually present.
 
+Second-pass visual implementation now uses the approved restrained mockup as the concrete target:
+
+- wider but still compact 560px panel;
+- profession icon plus a real progress bar;
+- recommendation heading and right-aligned short reason;
+- separate difficulty badge and skill target;
+- four aligned metrics for application cost, skill-up cost, makeable count, and immediate buy-missing cost;
+- subdued TSM source/freshness line;
+- real Have / Need / Missing / Est. Cost material columns;
+- a dedicated green best-buy callout row for Greater/Lesser Essence conversions instead of squeezing guidance into the material line;
+- a larger centered primary action while preserving static recipe navigation and Enchant repeat controls.
+
 The required in-game screenshots and ElvUI checks below are still pending, so this task remains `IN PROGRESS`.
 
 ## Manual screenshots to capture

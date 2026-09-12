@@ -12,14 +12,15 @@ local transientSpellIndexMap = {}
 local materialRows = {}
 local dynamicRecommendation
 
-local MATERIAL_ROW_HEIGHT = 38
-local MATERIALS_TOP = 300
-local FOOTER_SPACE = 66
-local REPEAT_FOOTER_SPACE = 94
-local MIN_PANEL_HEIGHT = 390
-local MATERIAL_ROW_WIDTH = 384
-local MATERIAL_NAME_WIDTH = 220
-local MATERIAL_BUY_WIDTH = 272
+local MATERIAL_ROW_HEIGHT = 54
+local MATERIAL_CONVERSION_ROW_HEIGHT = 88
+local MATERIAL_ROW_GAP = 6
+local MATERIALS_TOP = 360
+local FOOTER_SPACE = 72
+local REPEAT_FOOTER_SPACE = 104
+local MIN_PANEL_HEIGHT = 468
+local MATERIAL_ROW_WIDTH = 524
+local MATERIAL_NAME_WIDTH = 180
 
 local tradeSkillStateMutation = false
 local suppressTradeSkillUpdatesUntil = 0
@@ -432,20 +433,25 @@ end
 
 local function clearMaterialRows()
     for i = 1, table.getn(materialRows) do
-        materialRows[i]:Hide()
-        materialRows[i].itemLink = nil
-        materialRows[i].reagentName = nil
-        materialRows[i].searchName = nil
-        materialRows[i].purchaseName = nil
-        materialRows[i].priceInfo = nil
-        if materialRows[i].buy then
-            materialRows[i].buy:SetText("")
-        end
+        local row = materialRows[i]
+        row:Hide()
+        row.itemLink = nil
+        row.reagentName = nil
+        row.searchName = nil
+        row.purchaseName = nil
+        row.priceInfo = nil
+        if row.buy then row.buy:SetText("") end
+        if row.altBackground then row.altBackground:Hide() end
+        if row.altTitle then row.altTitle:SetText("") end
+        if row.altSub then row.altSub:SetText("") end
+        if row.altSavings then row.altSavings:SetText("") end
     end
 
-    if txtMaterialsLabel then
-        txtMaterialsLabel:Hide()
-    end
+    if txtMaterialsLabel then txtMaterialsLabel:Hide() end
+    if txtMaterialsHaveHeader then txtMaterialsHaveHeader:Hide() end
+    if txtMaterialsNeedHeader then txtMaterialsNeedHeader:Hide() end
+    if txtMaterialsMissingHeader then txtMaterialsMissingHeader:Hide() end
+    if txtMaterialsCostHeader then txtMaterialsCostHeader:Hide() end
 end
 
 local function setAuctionSearchText(reagentName)
@@ -566,48 +572,93 @@ local function getMaterialRow(index)
 
     local row = CreateFrame("Button", nil, MainFrameCoreMaterials)
     row:SetWidth(MATERIAL_ROW_WIDTH)
-    row:SetHeight(34)
+    row:SetHeight(MATERIAL_ROW_HEIGHT)
     row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     row:SetScript("OnEnter", materialRowOnEnter)
     row:SetScript("OnLeave", materialRowOnLeave)
     row:SetScript("OnClick", materialRowOnClick)
 
+    row.background = row:CreateTexture(nil, "BACKGROUND")
+    row.background:SetAllPoints(row)
+    row.background:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
+    row.background:SetVertexColor(0.035, 0.035, 0.035, 0.58)
+
     row.highlight = row:CreateTexture(nil, "BACKGROUND")
     row.highlight:SetAllPoints(row)
     row.highlight:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
     row.highlight:SetBlendMode("ADD")
-    row.highlight:SetAlpha(0.22)
+    row.highlight:SetAlpha(0.16)
     row.highlight:Hide()
 
     row.icon = row:CreateTexture(nil, "ARTWORK")
-    row.icon:SetWidth(22)
-    row.icon:SetHeight(22)
-    row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
+    row.icon:SetWidth(34)
+    row.icon:SetHeight(34)
+    row.icon:SetPoint("TOPLEFT", row, "TOPLEFT", 8, -10)
     row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 8, -1)
+    row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 50, -9)
     row.name:SetWidth(MATERIAL_NAME_WIDTH)
-    row.name:SetHeight(15)
+    row.name:SetHeight(18)
     row.name:SetJustifyH("LEFT")
 
-    row.count = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.count:SetPoint("TOPRIGHT", row, "TOPRIGHT", -2, -1)
-    row.count:SetWidth(80)
-    row.count:SetHeight(15)
-    row.count:SetJustifyH("RIGHT")
-
-    row.buy = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    row.buy:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 8, 1)
-    row.buy:SetWidth(MATERIAL_BUY_WIDTH)
-    row.buy:SetHeight(15)
+    row.buy = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    row.buy:SetPoint("TOPLEFT", row, "TOPLEFT", 50, -30)
+    row.buy:SetWidth(MATERIAL_NAME_WIDTH)
+    row.buy:SetHeight(16)
     row.buy:SetJustifyH("LEFT")
 
+    row.have = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.have:SetPoint("TOPLEFT", row, "TOPLEFT", 236, -16)
+    row.have:SetWidth(48)
+    row.have:SetHeight(18)
+    row.have:SetJustifyH("CENTER")
+
+    row.need = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.need:SetPoint("TOPLEFT", row, "TOPLEFT", 288, -16)
+    row.need:SetWidth(48)
+    row.need:SetHeight(18)
+    row.need:SetJustifyH("CENTER")
+
+    row.missing = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.missing:SetPoint("TOPLEFT", row, "TOPLEFT", 340, -16)
+    row.missing:SetWidth(48)
+    row.missing:SetHeight(18)
+    row.missing:SetJustifyH("CENTER")
+
     row.price = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.price:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -2, 1)
-    row.price:SetWidth(96)
-    row.price:SetHeight(15)
+    row.price:SetPoint("TOPRIGHT", row, "TOPRIGHT", -8, -16)
+    row.price:SetWidth(120)
+    row.price:SetHeight(18)
     row.price:SetJustifyH("RIGHT")
+
+    row.altBackground = row:CreateTexture(nil, "BACKGROUND")
+    row.altBackground:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
+    row.altBackground:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 48, 6)
+    row.altBackground:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -8, 6)
+    row.altBackground:SetHeight(34)
+    row.altBackground:SetVertexColor(0.04, 0.22, 0.04, 0.72)
+    row.altBackground:Hide()
+
+    row.altTitle = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.altTitle:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 58, 24)
+    row.altTitle:SetWidth(330)
+    row.altTitle:SetHeight(15)
+    row.altTitle:SetJustifyH("LEFT")
+    row.altTitle:SetTextColor(0.55, 1, 0.4)
+
+    row.altSub = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    row.altSub:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 58, 9)
+    row.altSub:SetWidth(330)
+    row.altSub:SetHeight(14)
+    row.altSub:SetJustifyH("LEFT")
+
+    row.altSavings = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.altSavings:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -16, 16)
+    row.altSavings:SetWidth(100)
+    row.altSavings:SetHeight(16)
+    row.altSavings:SetJustifyH("RIGHT")
+    row.altSavings:SetTextColor(0.45, 1, 0.35)
 
     materialRows[index] = row
     return row
@@ -618,27 +669,40 @@ local function renderMaterials(reagents, plannedCrafts)
 
     local count = table.getn(reagents or {})
     if count == 0 then
-        return 0
+        if MainFrameCoreMaterials then MainFrameCoreMaterials:SetHeight(1) end
+        return 0, 0, true
     end
 
     txtMaterialsLabel:Show()
+    txtMaterialsHaveHeader:Show()
+    txtMaterialsNeedHeader:Show()
+    txtMaterialsMissingHeader:Show()
+    txtMaterialsCostHeader:Show()
 
     local purchaseTotal = 0
     local purchaseComplete = true
+    local usedHeight = 0
 
     for i = 1, count do
         local reagent = reagents[i]
         local totalRequired = reagent.count * math.max(1, plannedCrafts or 1)
         local owned = reagent.owned or 0
-        local row = getMaterialRow(i)
-
-        row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", MainFrameCoreMaterials, "TOPLEFT", 0, -((i - 1) * MATERIAL_ROW_HEIGHT))
         local needed = math.max(0, totalRequired - owned)
         local priceItem = reagent.itemID or reagent.itemLink or reagent.name
         local priceInfo = addonTable.getMaterialPriceInfo
             and addonTable.getMaterialPriceInfo(priceItem, needed)
             or nil
+        local converted = needed > 0
+            and priceInfo
+            and priceInfo.available
+            and priceInfo.converted
+            and priceInfo.sourceItemID
+
+        local row = getMaterialRow(i)
+        local rowHeight = converted and MATERIAL_CONVERSION_ROW_HEIGHT or MATERIAL_ROW_HEIGHT
+        row:SetHeight(rowHeight)
+        row:ClearAllPoints()
+        row:SetPoint("TOPLEFT", MainFrameCoreMaterials, "TOPLEFT", 0, -usedHeight)
 
         row.itemLink = reagent.itemLink
         row.reagentName = reagent.name
@@ -647,53 +711,76 @@ local function renderMaterials(reagents, plannedCrafts)
         row.priceInfo = priceInfo
         row.icon:SetTexture(reagent.texture or UNKNOWN_ICON)
         row.name:SetText(reagent.name)
-        row.count:SetText(owned .. " / " .. totalRequired)
         row.buy:SetText("")
+        row.have:SetText(tostring(owned))
+        row.need:SetText(tostring(totalRequired))
+        row.missing:SetText(tostring(needed))
+        row.altBackground:Hide()
+        row.altTitle:SetText("")
+        row.altSub:SetText("")
+        row.altSavings:SetText("")
+
+        if owned > 0 then
+            row.have:SetTextColor(0.35, 1, 0.35)
+        else
+            row.have:SetTextColor(0.72, 0.72, 0.72)
+        end
+        row.need:SetTextColor(0.92, 0.92, 0.92)
+        if needed > 0 then
+            row.missing:SetTextColor(1, 0.35, 0.35)
+        else
+            row.missing:SetTextColor(0.35, 1, 0.35)
+        end
 
         if needed <= 0 then
             row.price:SetText("")
         elseif priceInfo and priceInfo.available then
-            row.price:SetText("~" .. addonTable.formatCopperShort(priceInfo.estimatedRemainingCost))
+            local remainingCost = tonumber(priceInfo.estimatedRemainingCost) or 0
+            purchaseTotal = purchaseTotal + remainingCost
+            row.price:SetText("~" .. addonTable.formatCopperShort(remainingCost))
             if priceInfo.isStale then
                 row.price:SetTextColor(1, 0.72, 0.22)
             else
-                row.price:SetTextColor(0.78, 0.78, 0.78)
+                row.price:SetTextColor(0.95, 0.82, 0.42)
             end
 
-            purchaseTotal = purchaseTotal + (tonumber(priceInfo.estimatedRemainingCost) or 0)
-
-            if priceInfo.converted and priceInfo.sourceItemID then
+            if converted then
                 local sourceName = GetItemInfo(priceInfo.sourceItemID)
                     or ("item " .. tostring(priceInfo.sourceItemID))
                 local sourceQuantity = math.max(1, math.ceil(tonumber(priceInfo.sourceQuantity) or 1))
+                local savings = tonumber(priceInfo.savings) or 0
+
                 row.purchaseName = sourceName
                 row.searchName = sourceName
-
-                local savings = tonumber(priceInfo.savings) or 0
+                row.altBackground:Show()
+                row.altTitle:SetText(string.format(
+                    addonTable.L["material_best_buy"],
+                    sourceQuantity,
+                    sourceName
+                ))
                 if savings > 0 then
-                    row.buy:SetText(string.format(
-                        addonTable.L["material_buy_instead_savings"],
-                        sourceQuantity,
-                        sourceName,
+                    row.altSub:SetText(string.format(
+                        addonTable.L["material_best_buy_savings"],
+                        addonTable.formatCopperShort(savings),
+                        reagent.name
+                    ))
+                    row.altSavings:SetText(string.format(
+                        addonTable.L["material_save"],
                         addonTable.formatCopperShort(savings)
                     ))
                 else
-                    row.buy:SetText(string.format(
-                        addonTable.L["material_buy_instead"],
-                        sourceQuantity,
-                        sourceName
-                    ))
+                    row.altSub:SetText(addonTable.L["material_best_buy_equivalent"])
                 end
             else
-                row.buy:SetText(string.format(
-                    addonTable.L["material_buy_quantity"],
-                    needed
-                ))
+                row.buy:SetText(string.format(addonTable.L["material_buy_quantity"], needed))
             end
         else
             purchaseComplete = false
             row.price:SetText(addonTable.L["material_no_price"])
             row.price:SetTextColor(1, 0.35, 0.35)
+            if needed > 0 then
+                row.buy:SetText(string.format(addonTable.L["material_buy_quantity"], needed))
+            end
         end
 
         local _, _, quality = GetItemInfo(reagent.itemLink or reagent.name)
@@ -704,21 +791,18 @@ local function renderMaterials(reagents, plannedCrafts)
             row.name:SetTextColor(1, 1, 1)
         end
 
-        if owned < totalRequired then
-            row.count:SetTextColor(1, 0.35, 0.35)
-        else
-            row.count:SetTextColor(0.92, 0.92, 0.92)
-        end
-
         row:Show()
+        usedHeight = usedHeight + rowHeight
+        if i < count then usedHeight = usedHeight + MATERIAL_ROW_GAP end
     end
 
-    return count, purchaseTotal, purchaseComplete
+    MainFrameCoreMaterials:SetHeight(math.max(1, usedHeight))
+    return usedHeight, purchaseTotal, purchaseComplete
 end
 
-local function updatePanelHeight(materialCount, showRepeatControls)
+local function updatePanelHeight(materialHeight, showRepeatControls)
     local footerSpace = showRepeatControls and REPEAT_FOOTER_SPACE or FOOTER_SPACE
-    local requiredHeight = MATERIALS_TOP + (materialCount * MATERIAL_ROW_HEIGHT) + footerSpace
+    local requiredHeight = MATERIALS_TOP + math.max(0, materialHeight or 0) + footerSpace
     MainFrameCore:SetHeight(math.max(MIN_PANEL_HEIGHT, requiredHeight))
 end
 
@@ -1002,8 +1086,23 @@ local function updateProfessionHeader()
                 professionContext.effectiveCap
             ))
         end
+
+        if imgProfessionIcon then
+            imgProfessionIcon:SetTexture(GetSpellTexture(professionContext.professionName) or UNKNOWN_ICON)
+        end
+        if MainFrameCoreProfessionBar then
+            local cap = math.max(1, tonumber(professionContext.effectiveCap) or 450)
+            local skill = math.max(0, math.min(cap, tonumber(professionContext.effectiveSkill) or 0))
+            MainFrameCoreProfessionBar:SetMinMaxValues(0, cap)
+            MainFrameCoreProfessionBar:SetValue(skill)
+        end
     else
         txtProfessionProgress:SetText("")
+        if imgProfessionIcon then imgProfessionIcon:SetTexture(UNKNOWN_ICON) end
+        if MainFrameCoreProfessionBar then
+            MainFrameCoreProfessionBar:SetMinMaxValues(0, 1)
+            MainFrameCoreProfessionBar:SetValue(0)
+        end
     end
 end
 
@@ -1020,19 +1119,40 @@ local DIFFICULTY_PRESENTATION = {
 }
 
 local function updateRecommendationMeta(data, skillStart, skillEnd)
+    txtTarget:SetText(string.format(addonTable.L["target_line"], skillStart, skillEnd))
+
     local difficulty = data and DIFFICULTY_PRESENTATION[data.skillType] or nil
     if not difficulty then
-        txtTarget:SetText(string.format(addonTable.L["target_line"], skillStart, skillEnd))
+        if txtDifficulty then txtDifficulty:SetText("") end
+        if texDifficultyBackground then texDifficultyBackground:Hide() end
         return
     end
 
-    txtTarget:SetText(string.format(
-        addonTable.L["recommendation_meta"],
-        difficulty.color,
-        addonTable.L[difficulty.key],
-        skillStart,
-        skillEnd
-    ))
+    if txtDifficulty then
+        txtDifficulty:SetText(addonTable.L[difficulty.key])
+        if data.skillType == "optimal" then
+            txtDifficulty:SetTextColor(1, 0.55, 0.05)
+        elseif data.skillType == "medium" then
+            txtDifficulty:SetTextColor(1, 0.9, 0.1)
+        elseif data.skillType == "easy" then
+            txtDifficulty:SetTextColor(0.35, 1, 0.35)
+        else
+            txtDifficulty:SetTextColor(0.65, 0.65, 0.65)
+        end
+    end
+
+    if texDifficultyBackground then
+        if data.skillType == "optimal" then
+            texDifficultyBackground:SetVertexColor(0.42, 0.20, 0.02, 0.80)
+        elseif data.skillType == "medium" then
+            texDifficultyBackground:SetVertexColor(0.34, 0.28, 0.02, 0.80)
+        elseif data.skillType == "easy" then
+            texDifficultyBackground:SetVertexColor(0.03, 0.24, 0.05, 0.80)
+        else
+            texDifficultyBackground:SetVertexColor(0.15, 0.15, 0.15, 0.80)
+        end
+        texDifficultyBackground:Show()
+    end
 end
 
 local function humanizeDynamicReason(reason)
@@ -1061,6 +1181,15 @@ local function setModeButtonState(button, selected)
     else
         button:UnlockHighlight()
         button:SetAlpha(0.72)
+    end
+
+    local fontString = button.GetFontString and button:GetFontString() or nil
+    if fontString then
+        if selected then
+            fontString:SetTextColor(1, 0.82, 0.12)
+        else
+            fontString:SetTextColor(0.78, 0.78, 0.78)
+        end
     end
 end
 
@@ -1127,10 +1256,20 @@ local function dynamicPriceLine()
     )
 end
 
+local function resetRecommendationMetrics()
+    txtMetricApplicationValue:SetText(addonTable.L["metric_unknown"])
+    txtMetricApplicationValue:SetTextColor(0.92, 0.92, 0.92)
+    txtMetricSkillValue:SetText(addonTable.L["metric_unknown"])
+    txtMetricSkillValue:SetTextColor(0.92, 0.92, 0.92)
+    txtMetricCanMakeValue:SetText(addonTable.L["metric_unknown"])
+    txtMetricCanMakeValue:SetTextColor(0.92, 0.92, 0.92)
+    txtMetricBuyValue:SetText(addonTable.L["metric_unknown"])
+    txtMetricBuyValue:SetTextColor(0.92, 0.92, 0.92)
+    txtPriceMeta:SetText("")
+end
+
 local function updateRecommendationSummary()
-    if not txtCostSummary then
-        return
-    end
+    resetRecommendationMetrics()
 
     local mode = getRecommendationMode()
     if mode == "dynamic" and dynamicRecommendation and dynamicRecommendation.available then
@@ -1142,24 +1281,46 @@ local function updateRecommendationSummary()
             cost.expectedCurrentPurchaseCostPerSkillUp or cost.expectedMarketCostPerSkillUp
         )
 
-        txtCostSummary:SetText(string.format(
-            addonTable.L["dynamic_per_application"],
-            perCraft,
-            perSkill
-        ))
+        txtMetricApplicationValue:SetText("~" .. perCraft)
+        txtMetricSkillValue:SetText("~" .. perSkill)
+        txtPriceMeta:SetText(dynamicPriceLine())
         return
     end
 
     if mode == "dynamic" then
         local reason = dynamicRecommendation and dynamicRecommendation.reason or "unknown"
-        txtCostSummary:SetText(string.format(
+        txtPriceMeta:SetText(string.format(
             addonTable.L["dynamic_fallback"],
             humanizeDynamicReason(reason)
         ))
         return
     end
 
-    txtCostSummary:SetText(addonTable.L["static_summary"])
+    txtPriceMeta:SetText(addonTable.L["static_summary"])
+end
+
+local function updateAvailabilityMetrics(canMake, purchaseTotal, purchaseComplete)
+    canMake = math.max(0, tonumber(canMake) or 0)
+    txtMetricCanMakeValue:SetText(tostring(canMake))
+    if canMake > 0 then
+        txtMetricCanMakeValue:SetTextColor(0.92, 0.92, 0.92)
+    else
+        txtMetricCanMakeValue:SetTextColor(1, 0.35, 0.35)
+    end
+
+    if purchaseComplete then
+        purchaseTotal = math.max(0, tonumber(purchaseTotal) or 0)
+        if purchaseTotal > 0 then
+            txtMetricBuyValue:SetText("~" .. addonTable.formatCopperShort(purchaseTotal))
+            txtMetricBuyValue:SetTextColor(0.95, 0.82, 0.42)
+        else
+            txtMetricBuyValue:SetText(addonTable.L["metric_none"])
+            txtMetricBuyValue:SetTextColor(0.35, 1, 0.35)
+        end
+    else
+        txtMetricBuyValue:SetText(addonTable.L["metric_unknown"])
+        txtMetricBuyValue:SetTextColor(0.72, 0.72, 0.72)
+    end
 end
 
 local function getAcquisitionGuidance(spellID)
@@ -1387,13 +1548,13 @@ local function showStatus(message)
     )
     txtTarget:SetText("")
     txtRecipeStatus:SetText("")
+    txtRecipePosition:SetText("")
     txtCraftStats:SetText("")
     txtCraftProgress:SetText("")
     txtCraftEta:SetText("")
-    txtRecipePosition:SetText("")
-    if txtCostSummary then
-        txtCostSummary:SetText("")
-    end
+    if txtDifficulty then txtDifficulty:SetText("") end
+    if texDifficultyBackground then texDifficultyBackground:Hide() end
+    resetRecommendationMetrics()
     clearMaterialRows()
     hideCraftControls()
     updateModeControls()
@@ -1678,7 +1839,16 @@ function fnOnLoad()
     local L = addonTable.L
 
     txtHeaderLabel:SetText(L["header_label"])
+    txtRecommendationLabel:SetText(L["recommendation_label"])
     txtMaterialsLabel:SetText(L["materials_label"])
+    txtMetricApplicationLabel:SetText(L["metric_application"])
+    txtMetricSkillLabel:SetText(L["metric_skill_up"])
+    txtMetricCanMakeLabel:SetText(L["metric_can_make"])
+    txtMetricBuyLabel:SetText(L["metric_buy_missing"])
+    txtMaterialsHaveHeader:SetText(L["materials_have"])
+    txtMaterialsNeedHeader:SetText(L["materials_need"])
+    txtMaterialsMissingHeader:SetText(L["materials_missing"])
+    txtMaterialsCostHeader:SetText(L["materials_cost"])
     if MainFrameCoreCheapestMode then
         MainFrameCoreCheapestMode:SetText(L["mode_cheapest"])
     end
@@ -1819,6 +1989,8 @@ function displayRecipe()
     updateRecommendationSummary()
     updateEnchantRepeatControls(targetedEnchant)
 
+    local renderedMaterialHeight = 0
+
     if data then
         local exactCraftCount = data.skillType == "optimal"
         local statsKey = exactCraftCount and "stats_exact" or "stats_minimum"
@@ -1833,31 +2005,28 @@ function displayRecipe()
         imgSkillIcon:SetTexture(icon or UNKNOWN_ICON)
         updateRecommendationMeta(data, professionContext.effectiveSkill, displayedTarget)
 
+        local requestedDynamic = getRecommendationMode() == "dynamic"
         if usingDynamic then
             txtCraftStats:SetText("")
             txtRecipeStatus:SetText(L["dynamic_preferred"])
+            txtRecipeStatus:SetTextColor(0.45, 1, 0.35)
+        elseif requestedDynamic then
+            txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))
+            txtRecipeStatus:SetText(L["dynamic_fallback_short"])
+            txtRecipeStatus:SetTextColor(1, 0.72, 0.22)
         else
             txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))
             txtRecipeStatus:SetText(L["static_recommendation"])
+            txtRecipeStatus:SetTextColor(0.78, 0.78, 0.78)
         end
 
-        if data.numAvailable <= 0 and skillUpsNeeded > 0 then
-            local reason = usingDynamic and L["dynamic_preferred"] or L["static_recommendation"]
-            txtRecipeStatus:SetText(reason .. " · " .. L["missing_materials"])
-        end
-
-        local materialCount, immediatePurchaseCost, purchaseCostComplete = renderMaterials(data.reagents, materialCrafts)
-        if usingDynamic then
-            if purchaseCostComplete and immediatePurchaseCost > 0 then
-                txtCraftStats:SetText(string.format(
-                    L["dynamic_availability_purchase"],
-                    data.numAvailable,
-                    addonTable.formatCopperShort(immediatePurchaseCost)
-                ))
-            else
-                txtCraftStats:SetText(string.format(L["dynamic_availability"], data.numAvailable))
-            end
-        end
+        local immediatePurchaseCost
+        local purchaseCostComplete
+        renderedMaterialHeight, immediatePurchaseCost, purchaseCostComplete = renderMaterials(
+            data.reagents,
+            materialCrafts
+        )
+        updateAvailabilityMetrics(data.numAvailable, immediatePurchaseCost, purchaseCostComplete)
 
         local craftSeconds = getCraftTimeSeconds(currentID)
         if usingDynamic then
@@ -1920,6 +2089,7 @@ function displayRecipe()
         txtCraftProgress:SetText("")
         txtCraftEta:SetText("")
         clearMaterialRows()
+        updateAvailabilityMetrics(0, 0, false)
         updateEnchantRepeatControls(false)
         MainFrameCoreCraft:Disable()
         MainFrameCoreCraft:SetText(L["craft_button_unavail"])
@@ -1927,11 +2097,7 @@ function displayRecipe()
 
     MainFrameCoreCraft:Show()
 
-    local visibleMaterialCount = 0
-    if data then
-        visibleMaterialCount = table.getn(data.reagents or {})
-    end
-    updatePanelHeight(visibleMaterialCount, targetedEnchant)
+    updatePanelHeight(renderedMaterialHeight, targetedEnchant)
 
     previousRecipeKey = currentKey
 end
@@ -2078,6 +2244,11 @@ function resetValues()
     dynamicRecommendation = nil
 
     txtProfessionProgress:SetText("")
+    if imgProfessionIcon then imgProfessionIcon:SetTexture(UNKNOWN_ICON) end
+    if MainFrameCoreProfessionBar then
+        MainFrameCoreProfessionBar:SetMinMaxValues(0, 1)
+        MainFrameCoreProfessionBar:SetValue(0)
+    end
     txtShouldCraft:SetText("")
     imgSkillIcon:SetTexture(UNKNOWN_ICON)
     txtTarget:SetText("")
@@ -2086,9 +2257,9 @@ function resetValues()
     txtCraftProgress:SetText("")
     txtCraftEta:SetText("")
     txtRecipePosition:SetText("")
-    if txtCostSummary then
-        txtCostSummary:SetText("")
-    end
+    if txtDifficulty then txtDifficulty:SetText("") end
+    if texDifficultyBackground then texDifficultyBackground:Hide() end
+    resetRecommendationMetrics()
     clearMaterialRows()
     updateEnchantRepeatControls(false)
     updateModeControls()
