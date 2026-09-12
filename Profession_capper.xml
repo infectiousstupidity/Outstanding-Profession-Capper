@@ -171,9 +171,30 @@
           <Anchors><Anchor point="TOPRIGHT"><Offset><AbsDimension x="-18" y="-339"/></Offset></Anchor></Anchors>
         </FontString>
 
-        <FontString name="txtRepeatLabel" inherits="GameFontHighlightSmall" justifyH="LEFT" hidden="true">
-          <Size><AbsDimension x="42" y="18"/></Size>
-          <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="20" y="60"/></Offset></Anchor></Anchors>
+        <Texture name="texRepeatBackground" file="Interface\ChatFrame\ChatFrameBackground" hidden="true">
+          <Size><AbsDimension x="524" y="68"/></Size>
+          <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="18" y="56"/></Offset></Anchor></Anchors>
+          <Color r="0.035" g="0.035" b="0.035" a="0.72"/>
+        </Texture>
+
+        <FontString name="txtRepeatLabel" inherits="GameFontDisableSmall" justifyH="LEFT" hidden="true">
+          <Size><AbsDimension x="48" y="18"/></Size>
+          <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="30" y="100"/></Offset></Anchor></Anchors>
+        </FontString>
+
+        <FontString name="txtRepeatProgress" inherits="GameFontHighlightSmall" justifyH="LEFT" hidden="true">
+          <Size><AbsDimension x="290" y="18"/></Size>
+          <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="30" y="69"/></Offset></Anchor></Anchors>
+        </FontString>
+
+        <FontString name="txtRepeatTargetLabel" inherits="GameFontDisableSmall" justifyH="LEFT" hidden="true">
+          <Size><AbsDimension x="46" y="18"/></Size>
+          <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="322" y="69"/></Offset></Anchor></Anchors>
+        </FontString>
+
+        <FontString name="txtRepeatTargetValue" inherits="GameFontHighlightSmall" justifyH="RIGHT" hidden="true">
+          <Size><AbsDimension x="156" y="18"/></Size>
+          <Anchors><Anchor point="BOTTOMRIGHT"><Offset><AbsDimension x="-30" y="69"/></Offset></Anchor></Anchors>
         </FontString>
 
         <FontString name="txtCraftStats" inherits="GameFontHighlightSmall" hidden="true">
@@ -227,13 +248,13 @@
         <Scripts><OnClick>TogglePcapperFrame("hide");</OnClick></Scripts>
       </Button>
       <Button name="$parentRepeatMode" text="Until change" inherits="UIPanelButtonTemplate" hidden="true">
-        <Size><AbsDimension x="108" y="22"/></Size>
-        <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="62" y="56"/></Offset></Anchor></Anchors>
+        <Size><AbsDimension x="112" y="22"/></Size>
+        <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="78" y="94"/></Offset></Anchor></Anchors>
         <Scripts><OnClick>toggleEnchantRepeatMode();</OnClick></Scripts>
       </Button>
       <EditBox name="$parentRepeatCount" inherits="InputBoxTemplate" autoFocus="false" hidden="true">
         <Size><AbsDimension x="42" y="20"/></Size>
-        <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="180" y="57"/></Offset></Anchor></Anchors>
+        <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="198" y="95"/></Offset></Anchor></Anchors>
         <Scripts>
           <OnLoad>self:SetNumeric(true); self:SetMaxLetters(3); self:SetJustifyH("CENTER");</OnLoad>
           <OnTextChanged>enchantRepeatCountChanged(self);</OnTextChanged>
