@@ -1,6 +1,6 @@
 # Task 18 — Enchant repeat workflow presentation
 
-Status: QUEUED  
+Status: IN PROGRESS  
 Phase: 5 — UI/UX polish  
 Depends on: Task 12, Task 13, Task 15
 
@@ -62,6 +62,22 @@ No extra UI is needed for auto-confirm unless it fails. If WoW blocks the action
 - `Core.lua`
 - `Profession_capper.xml`
 - `Localization.lua`
+
+## Implementation note
+
+Implemented on master pending in-game acceptance.
+
+Presentation changes:
+
+- targeted Enchant recommendations now show a dedicated repeat strip above the primary action;
+- repeat mode is always visible and the numeric count exists only in Fixed mode;
+- remembered targets are validated using the existing item-ID/location check before their item name is shown;
+- invalid/moved targets are cleared and surfaced as `Target moved or changed · select item again`;
+- recommendation changes preserve a presentation-only stop notice after the old repeat session is cleared;
+- fixed sessions show `N / total applied`, while Until change shows the successful application count;
+- the old targeted-enchant progress copy is removed from the recommendation area to avoid duplicate workflow text;
+- primary labels are now only `Enchant`, `Enchant again`, or `Enchant N / total`;
+- the underlying one-hardware-click-per-application flow, remembered-target reuse, and replacement auto-confirm logic are unchanged.
 
 ## Acceptance criteria
 

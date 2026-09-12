@@ -14,6 +14,7 @@ local compareRows = {}
 local routeRows = {}
 local compareVisibleCount = 5
 local compareView = "comparison"
+local enchantRepeatNotice
 local dynamicRecommendation
 
 local MATERIAL_ROW_HEIGHT = 54
@@ -21,7 +22,7 @@ local MATERIAL_CONVERSION_ROW_HEIGHT = 88
 local MATERIAL_ROW_GAP = 6
 local MATERIALS_TOP = 360
 local FOOTER_SPACE = 72
-local REPEAT_FOOTER_SPACE = 104
+local REPEAT_FOOTER_SPACE = 144
 local MIN_PANEL_HEIGHT = 468
 local MATERIAL_ROW_WIDTH = 524
 local MATERIAL_NAME_WIDTH = 180
@@ -861,39 +862,51 @@ local function getEnchantRepeatSettings()
 end
 
 local function updateEnchantRepeatControls(visible)
-    if not MainFrameCoreRepeatMode or not MainFrameCoreRepeatCount or not txtRepeatLabel then
+    if not MainFrameCoreRepeatMode
+        or not MainFrameCoreRepeatCount
+        or not txtRepeatLabel
+        or not txtRepeatTargetLabel
+    then
         return
     end
 
     if not visible then
+        if texRepeatBackground then texRepeatBackground:Hide() end
         txtRepeatLabel:Hide()
+        txtRepeatProgress:Hide()
+        txtRepeatTargetLabel:Hide()
+        txtRepeatTargetValue:Hide()
         MainFrameCoreRepeatMode:Hide()
         MainFrameCoreRepeatCount:Hide()
         return
     end
 
     local mode, count = getEnchantRepeatSettings()
+    if texRepeatBackground then texRepeatBackground:Show() end
     txtRepeatLabel:SetText(addonTable.L["repeat_label"])
     txtRepeatLabel:Show()
+    txtRepeatProgress:Show()
+    txtRepeatTargetLabel:SetText(addonTable.L["repeat_target_label"])
+    txtRepeatTargetLabel:Show()
+    txtRepeatTargetValue:Show()
 
     MainFrameCoreRepeatMode:SetText(
         mode == "fixed"
-            and addonTable.L["repeat_fixed"]
+            and addonTable.L["repeat_fixed_short"]
             or addonTable.L["repeat_until_change"]
     )
     MainFrameCoreRepeatMode:Show()
 
-    if not MainFrameCoreRepeatCount:HasFocus() then
-        MainFrameCoreRepeatCount:SetText(tostring(count))
-    end
     if mode == "fixed" then
+        if not MainFrameCoreRepeatCount:HasFocus() then
+            MainFrameCoreRepeatCount:SetText(tostring(count))
+        end
         MainFrameCoreRepeatCount:Enable()
         MainFrameCoreRepeatCount:SetTextColor(1, 1, 1)
+        MainFrameCoreRepeatCount:Show()
     else
-        MainFrameCoreRepeatCount:Disable()
-        MainFrameCoreRepeatCount:SetTextColor(0.5, 0.5, 0.5)
+        MainFrameCoreRepeatCount:Hide()
     end
-    MainFrameCoreRepeatCount:Show()
 end
 
 function toggleEnchantRepeatMode()
@@ -950,6 +963,7 @@ local function captureEnchantTarget(kind, bag, slot)
 
     local itemID = addonTable.getItemIDFromLink and addonTable.getItemIDFromLink(itemLink) or nil
     addonTable.setCraftSessionTarget(kind, bag, slot, itemID)
+    enchantRepeatNotice = nil
 
     if type(addonTable.confirmReplaceEnchantIfVisible) == "function" then
         addonTable.confirmReplaceEnchantIfVisible()
@@ -975,18 +989,22 @@ local function installEnchantTargetHooks()
     end
 end
 
-local function targetStillMatches(target)
+local function getEnchantTargetLink(target)
     if not target then
-        return false
+        return nil
     end
 
-    local itemLink
     if target.kind == "bag" and GetContainerItemLink then
-        itemLink = GetContainerItemLink(target.bag, target.slot)
+        return GetContainerItemLink(target.bag, target.slot)
     elseif target.kind == "inventory" and GetInventoryItemLink then
-        itemLink = GetInventoryItemLink("player", target.slot)
+        return GetInventoryItemLink("player", target.slot)
     end
 
+    return nil
+end
+
+local function targetStillMatches(target)
+    local itemLink = getEnchantTargetLink(target)
     if not itemLink then
         return false
     end
@@ -998,10 +1016,112 @@ local function targetStillMatches(target)
     return true
 end
 
+local function getEnchantTargetName(target)
+    if not target or not targetStillMatches(target) then
+        return nil
+    end
+
+    local itemLink = getEnchantTargetLink(target)
+    if not itemLink then
+        return nil
+    end
+
+    local itemName = GetItemInfo and GetItemInfo(itemLink) or nil
+    return itemName or itemLink
+end
+
+local function updateEnchantRepeatPresentation(currentID)
+    local L = addonTable.L
+    local session = addonTable.getCraftSession()
+    local target
+    local targetName
+
+    if session
+        and session.spellID == currentID
+        and session.mode == "targeted_enchant"
+    then
+        target = addonTable.getCraftSessionTarget()
+        if target and (not target.itemID or not targetStillMatches(target)) then
+            addonTable.clearCraftSessionTarget()
+            target = nil
+            enchantRepeatNotice = "target_moved"
+        end
+        targetName = getEnchantTargetName(target)
+    end
+
+    txtRepeatTargetValue:SetText(targetName or L["repeat_target_select"])
+    if targetName then
+        txtRepeatTargetValue:SetTextColor(0.55, 1, 0.45)
+    else
+        txtRepeatTargetValue:SetTextColor(1, 0.72, 0.22)
+    end
+
+    if enchantRepeatNotice == "recommendation_changed" then
+        txtRepeatProgress:SetText(L["repeat_stopped_recommendation"])
+        txtRepeatProgress:SetTextColor(1, 0.72, 0.22)
+        return
+    elseif enchantRepeatNotice == "target_moved" then
+        txtRepeatProgress:SetText(L["repeat_target_moved"])
+        txtRepeatProgress:SetTextColor(1, 0.72, 0.22)
+        return
+    end
+
+    if not session
+        or session.spellID ~= currentID
+        or session.mode ~= "targeted_enchant"
+    then
+        txtRepeatProgress:SetText(L["repeat_ready"])
+        txtRepeatProgress:SetTextColor(0.72, 0.72, 0.72)
+        return
+    end
+
+    if session.reachedTarget then
+        txtRepeatProgress:SetText(L["target_reached"])
+        txtRepeatProgress:SetTextColor(0.45, 1, 0.35)
+    elseif session.active then
+        if targetName then
+            txtRepeatProgress:SetText(L["repeat_applying"])
+            txtRepeatProgress:SetTextColor(0.82, 0.82, 0.82)
+        else
+            txtRepeatProgress:SetText(L["repeat_select_target"])
+            txtRepeatProgress:SetTextColor(1, 0.72, 0.22)
+        end
+    elseif session.repeatMode == "fixed" then
+        if session.finished then
+            txtRepeatProgress:SetText(string.format(
+                L["repeat_fixed_complete"],
+                session.completed,
+                session.queued
+            ))
+            txtRepeatProgress:SetTextColor(0.45, 1, 0.35)
+        else
+            txtRepeatProgress:SetText(string.format(
+                L["repeat_fixed_progress"],
+                session.completed,
+                session.queued
+            ))
+            txtRepeatProgress:SetTextColor(0.82, 0.82, 0.82)
+        end
+    elseif session.needsContinue then
+        txtRepeatProgress:SetText(string.format(
+            L["repeat_until_progress"],
+            session.completed
+        ))
+        txtRepeatProgress:SetTextColor(0.82, 0.82, 0.82)
+    else
+        txtRepeatProgress:SetText(L["repeat_ready"])
+        txtRepeatProgress:SetTextColor(0.72, 0.72, 0.72)
+    end
+end
+
 local function reuseRememberedEnchantTarget()
     local target = addonTable.getCraftSessionTarget()
-    if not target or not targetStillMatches(target) then
+    if not target then
+        return false
+    end
+    if not targetStillMatches(target) then
         addonTable.clearCraftSessionTarget()
+        enchantRepeatNotice = "target_moved"
         return false
     end
 
@@ -1880,32 +2000,6 @@ local function updateCraftProgress(currentID, effectiveTarget, craftSeconds)
     end
 
     if session.mode == "targeted_enchant" then
-        if session.active then
-            if addonTable.getCraftSessionTarget() then
-                txtCraftProgress:SetText(addonTable.L["enchant_applying"])
-            else
-                txtCraftProgress:SetText(addonTable.L["enchant_select_target"])
-            end
-        elseif session.needsContinue then
-            if session.repeatMode == "fixed" then
-                txtCraftProgress:SetText(string.format(
-                    addonTable.L["enchant_repeat_progress_fixed"],
-                    session.completed,
-                    session.queued
-                ))
-            else
-                txtCraftProgress:SetText(string.format(
-                    addonTable.L["enchant_repeat_progress_auto"],
-                    session.completed
-                ))
-            end
-        elseif session.finished and session.repeatMode == "fixed" then
-            txtCraftProgress:SetText(string.format(
-                addonTable.L["enchant_repeat_complete"],
-                session.completed,
-                session.queued
-            ))
-        end
         return
     end
 
@@ -2029,6 +2123,7 @@ function GetCraftingToDo()
     if session and session.mode == "targeted_enchant" then
         local recommendedID = shouldCraft[1]
         if session.spellID ~= recommendedID then
+            enchantRepeatNotice = "recommendation_changed"
             addonTable.clearCraftSession()
         end
     end
@@ -2383,6 +2478,9 @@ function displayRecipe()
     updateModeControls()
     updateRecommendationSummary()
     updateEnchantRepeatControls(targetedEnchant)
+    if targetedEnchant then
+        updateEnchantRepeatPresentation(currentID)
+    end
 
     local renderedMaterialHeight = 0
 
@@ -2442,7 +2540,6 @@ function displayRecipe()
         elseif batchCount > 0 and skillUpsNeeded > 0 then
             MainFrameCoreCraft:Enable()
             if targetedEnchant then
-                local repeatMode, repeatCount = getEnchantRepeatSettings()
                 if session
                     and session.spellID == currentID
                     and session.mode == "targeted_enchant"
@@ -2450,20 +2547,15 @@ function displayRecipe()
                 then
                     if session.repeatMode == "fixed" then
                         MainFrameCoreCraft:SetText(string.format(
-                            L["enchant_again_fixed"],
+                            L["enchant_progress_button"],
                             session.completed + 1,
                             session.queued
                         ))
                     else
                         MainFrameCoreCraft:SetText(L["enchant_again"])
                     end
-                elseif repeatMode == "fixed" then
-                    MainFrameCoreCraft:SetText(string.format(
-                        L["enchant_fixed"],
-                        math.min(data.numAvailable, repeatCount)
-                    ))
                 else
-                    MainFrameCoreCraft:SetText(L["enchant_until_change"])
+                    MainFrameCoreCraft:SetText(L["enchant_button"])
                 end
             elseif session and session.spellID == currentID and session.needsContinue then
                 MainFrameCoreCraft:SetText(string.format(L["continue_to"], displayedTarget))
@@ -2569,6 +2661,7 @@ function craftRecipe()
             if canResume then
                 addonTable.resumeCraftSession(currentID)
             else
+                enchantRepeatNotice = nil
                 addonTable.startCraftSession(
                     currentID,
                     skillName,
@@ -2641,6 +2734,7 @@ function resetValues()
     recipeCache = {}
     transientSpellIndexMap = {}
     dynamicRecommendation = nil
+    enchantRepeatNotice = nil
 
     txtProfessionProgress:SetText("")
     if imgProfessionIcon then imgProfessionIcon:SetTexture(UNKNOWN_ICON) end
