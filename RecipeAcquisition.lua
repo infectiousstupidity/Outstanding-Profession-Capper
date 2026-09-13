@@ -26,19 +26,26 @@ local ALLOWED_FACTIONS = {
     horde = true,
 }
 
+local STANDING_VALUES = {
+    hated = 0,
+    hostile = 1,
+    unfriendly = 2,
+    neutral = 3,
+    friendly = 4,
+    honored = 5,
+    revered = 6,
+    exalted = 7,
+}
+
 local function nonNegative(value)
     value = tonumber(value)
-    if value and value >= 0 then
-        return value
-    end
+    if value and value >= 0 then return value end
     return nil
 end
 
 local function positive(value)
     value = tonumber(value)
-    if value and value > 0 then
-        return value
-    end
+    if value and value > 0 then return value end
     return nil
 end
 
@@ -65,29 +72,21 @@ end
 
 local function normalizeInline(recipe)
     local acquisition = recipe and recipe.acquisition
-    if type(acquisition) ~= "table" then
-        return nil
-    end
+    if type(acquisition) ~= "table" then return nil end
 
     local entry = {}
-    for key, value in pairs(acquisition) do
-        entry[key] = value
-    end
+    for key, value in pairs(acquisition) do entry[key] = value end
     entry.spellID = entry.spellID or recipe.spellID or recipe.recipeID
     entry.profession = entry.profession or recipe.profession or "Unknown"
     entry.sourceType = entry.sourceType or sourceTypeFromLegacy(entry.status or entry.state)
-    entry.purchasePrice = entry.purchasePrice
-        or entry.goldCost
-    entry.marketCost = entry.marketCost
-    entry.sourceName = entry.sourceName or entry.source
+    entry.purchasePrice = entry.purchasePrice or entry.goldCost
+    entry.sourceName = entry.sourceName or entry.source or "Inline acquisition"
     entry.recipeItemID = entry.recipeItemID or entry.itemID
     return entry
 end
 
 function addonTable.validateRecipeAcquisitionEntry(entry)
-    if type(entry) ~= "table" then
-        return false, "acquisition_not_table"
-    end
+    if type(entry) ~= "table" then return false, "acquisition_not_table" end
 
     local spellID = positive(entry.spellID or entry.recipeID)
     local key = entry.key
@@ -96,9 +95,7 @@ function addonTable.validateRecipeAcquisitionEntry(entry)
     end
 
     local sourceType = entry.sourceType or sourceTypeFromLegacy(entry.status or entry.state)
-    if not ALLOWED_TYPES[sourceType] then
-        return false, "unsupported_acquisition_type"
-    end
+    if not ALLOWED_TYPES[sourceType] then return false, "unsupported_acquisition_type" end
 
     if entry.profession ~= nil and (type(entry.profession) ~= "string" or entry.profession == "") then
         return false, "invalid_profession"
@@ -140,6 +137,9 @@ function addonTable.validateRecipeAcquisitionEntry(entry)
     if entry.requiredSkill ~= nil and nonNegative(entry.requiredSkill) == nil then
         return false, "invalid_required_skill"
     end
+    if entry.requiredLevel ~= nil and nonNegative(entry.requiredLevel) == nil then
+        return false, "invalid_required_level"
+    end
 
     if entry.coordinates ~= nil then
         local coordinates = entry.coordinates
@@ -156,9 +156,11 @@ end
 function addonTable.registerRecipeAcquisition(entry)
     local valid, reason = addonTable.validateRecipeAcquisitionEntry(entry)
     if not valid then error("Invalid recipe acquisition metadata: " .. tostring(reason)) end
+
     local copy = {}
     for key, value in pairs(entry) do copy[key] = value end
     copy.sourceType = copy.sourceType or sourceTypeFromLegacy(copy.status or copy.state)
+
     local spellID = positive(copy.spellID or copy.recipeID)
     if spellID then
         copy.spellID = spellID
@@ -174,6 +176,7 @@ function addonTable.getRecipeAcquisitionRecords(recipeOrSpellID)
     if type(recipeOrSpellID) == "table" then spellID = recipeOrSpellID.spellID or recipeOrSpellID.recipeID end
     spellID = positive(spellID)
     if not spellID then return {} end
+
     local source = recordsBySpell[spellID] or {}
     local result = {}
     for index = 1, table.getn(source) do result[index] = source[index] end
@@ -186,25 +189,53 @@ function addonTable.getRecipeAcquisitionRecord(recipeOrSpellID)
 end
 
 function addonTable.getProfessionAcquisitionRecord(key)
-    if type(key) ~= "string" then
-        return nil
-    end
+    if type(key) ~= "string" then return nil end
     return recordsByKey[key]
 end
 
 local function learnedInState(spellID, state)
-    if not spellID or type(state) ~= "table" or type(state.learnedRecipes) ~= "table" then
-        return false
-    end
-    return state.learnedRecipes[spellID] == true
-        or state.learnedRecipes[tostring(spellID)] == true
+    if not spellID or type(state) ~= "table" or type(state.learnedRecipes) ~= "table" then return false end
+    return state.learnedRecipes[spellID] == true or state.learnedRecipes[tostring(spellID)] == true
 end
 
-local function currentAuctionCost(entry, options)
-    local itemID = positive(entry.recipeItemID or entry.itemID)
-    if not itemID then
-        return nil, "auction_requires_recipe_item"
+local function acquiredInRoute(spellID, state)
+    if not spellID or type(state) ~= "table" or type(state.acquiredOneTime) ~= "table" then return false end
+    return state.acquiredOneTime["recipe:" .. tostring(spellID)] == true
+end
+
+local function inventoryCount(itemID, state)
+    if not itemID or type(state) ~= "table" or type(state.inventory) ~= "table" then return 0 end
+    return math.max(0, tonumber(state.inventory[itemID] or state.inventory[tostring(itemID)]) or 0)
+end
+
+local function standingValue(value)
+    if type(value) == "table" then
+        value = value.standingID or value.rank or value.standing
     end
+    local numeric = tonumber(value)
+    if numeric then return numeric end
+    if type(value) == "string" then return STANDING_VALUES[string.lower(value)] end
+    return nil
+end
+
+local function knowsSpell(spellID, state, options)
+    if not positive(spellID) then return true end
+    if type(state.learnedSpells) == "table" then
+        local known = state.learnedSpells[spellID]
+        if known == nil then known = state.learnedSpells[tostring(spellID)] end
+        if known ~= nil then return known == true end
+    end
+    if learnedInState(spellID, state) then return true end
+    if options and type(options.isSpellKnown) == "function" then
+        local ok, known = pcall(options.isSpellKnown, spellID)
+        if ok then return known == true end
+    end
+    return nil
+end
+
+local function currentAuctionCost(itemID, options)
+    itemID = positive(itemID)
+    if not itemID then return nil, "auction_requires_recipe_item" end
 
     local lookup = options and options.priceLookup or addonTable.lookupItemPrice
     local chooser = options and options.unitPriceChooser or addonTable.chooseUsableUnitPrice
@@ -214,24 +245,23 @@ local function currentAuctionCost(entry, options)
 
     local price = lookup(itemID, options and options.now)
     local choice, reason = chooser(price, "auction")
-    if not choice or not choice.unitPrice then
+    if not choice or not positive(choice.unitPrice) then
         return nil, reason or "recipe_item_not_currently_listed"
     end
     return choice.unitPrice, nil, choice
 end
 
 local function resultBase(entry, spellID)
+    entry = entry or {}
     return {
         handled = true,
         record = entry,
         spellID = spellID,
         key = entry.key or (spellID and ("recipe:" .. tostring(spellID)) or nil),
-        sourceType = entry.sourceType,
-        source = entry.sourceType,
+        sourceType = entry.sourceType or "unknown",
+        source = entry.sourceType or "unknown",
         sourceName = entry.sourceName,
         sourceID = entry.sourceID or entry.trainerID or entry.vendorID,
-        provider = entry.provider,
-        providerSourceIDs = entry.providerSourceIDs,
         zone = entry.zone,
         coordinates = entry.coordinates,
         faction = entry.faction,
@@ -241,8 +271,10 @@ local function resultBase(entry, spellID)
         notes = entry.notes,
         limitedStock = entry.limitedStock == true,
         available = false,
+        reliable = false,
         alreadyAcquired = false,
         immediate = false,
+        requiresLearning = true,
         goldCost = nil,
         marketCost = nil,
         state = "unavailable_unknown",
@@ -250,12 +282,197 @@ local function resultBase(entry, spellID)
     }
 end
 
-function addonTable.resolveRecipeAcquisition(recipeOrSpellID, state, skillContext, options)
+local function fail(result, stateName, reason)
+    result.state = stateName or "unavailable"
+    result.reason = reason
+    return result
+end
+
+local function passesRequirements(entry, result, state, skillContext, options)
+    local requiredSkill = nonNegative(entry.requiredSkill)
+    if requiredSkill then
+        local base = tonumber(options and options.baseSkill) or tonumber(skillContext and skillContext.baseSkill) or 0
+        local effective = effectiveSkill(base, skillContext)
+        result.requiredSkill = requiredSkill
+        result.effectiveSkill = effective
+        if effective < requiredSkill then return false, "required_skill_not_met" end
+    end
+
+    local requiredLevel = nonNegative(entry.requiredLevel)
+    if requiredLevel and requiredLevel > 0 then
+        result.requiredLevel = requiredLevel
+        local level = tonumber(state.playerLevel)
+        if not level then return false, "player_level_unknown" end
+        if level < requiredLevel then return false, "required_level_not_met" end
+    end
+
+    if entry.faction then
+        local requiredFaction = string.lower(tostring(entry.faction))
+        if requiredFaction ~= "neutral" then
+            if not state.faction then return false, "faction_unknown" end
+            if requiredFaction ~= string.lower(tostring(state.faction)) then return false, "faction_restricted" end
+        end
+    end
+
+    local prerequisites = entry.prerequisiteSpellIDs
+    if type(prerequisites) == "table" then
+        for index = 1, table.getn(prerequisites) do
+            local prerequisite = positive(prerequisites[index])
+            if prerequisite then
+                local known = knowsSpell(prerequisite, state, options)
+                if known == nil then return false, "prerequisite_state_unknown" end
+                if not known then return false, "prerequisite_spell_not_known" end
+            end
+        end
+    end
+
+    if entry.specializationSpellID then
+        local known = knowsSpell(entry.specializationSpellID, state, options)
+        if known == nil then return false, "specialization_state_unknown" end
+        if not known then return false, "specialization_not_known" end
+    end
+
+    if entry.reputation then
+        local rep = entry.reputation
+        local required = standingValue(rep.standingID or rep.standing)
+        local standings = state.reputation
+        if type(standings) ~= "table" then return false, "reputation_state_unknown" end
+        local current = standings[rep.factionID] or standings[tostring(rep.factionID or "")] or standings[rep.faction]
+        current = standingValue(current)
+        if current == nil then return false, "reputation_state_unknown" end
+        if required ~= nil and current < required then return false, "reputation_requirement_not_met" end
+    end
+
+    return true
+end
+
+local function fixedGoldCost(entry)
+    local cost = nonNegative(entry.purchasePrice or entry.goldCost)
+    if cost == nil then return nil end
+    if cost == 0 and entry.free ~= true then
+        return nil
+    end
+    return cost
+end
+
+local function evaluateStaticEntry(entry, spellID, state, skillContext, options)
+    local result = resultBase(entry, spellID)
+    local sourceType = entry.sourceType or sourceTypeFromLegacy(entry.status or entry.state)
+    result.sourceType = sourceType
+    result.source = sourceType
+
+    local requirementsOK, requirementReason = passesRequirements(entry, result, state, skillContext, options)
+    if not requirementsOK then
+        return fail(result, "unavailable", requirementReason)
+    end
+
+    if sourceType == "learned" or entry.alreadyLearned then
+        result.available, result.reliable, result.alreadyAcquired, result.immediate = true, true, true, true
+        result.requiresLearning = false
+        result.goldCost, result.marketCost, result.state = 0, 0, "immediately_usable"
+        return result
+    end
+
+    if sourceType == "trainer" or sourceType == "vendor" or sourceType == "reputation" then
+        local cost = fixedGoldCost(entry)
+        if cost == nil then
+            return fail(result, sourceType == "trainer" and "trainable_now" or "purchasable_now", "missing_acquisition_cost")
+        end
+        result.available, result.reliable, result.immediate = true, true, true
+        result.goldCost = cost
+        result.marketCost = nonNegative(entry.marketCost) or cost
+        if sourceType == "trainer" then
+            result.state = "trainable_now"
+        elseif sourceType == "reputation" then
+            result.state = "reputation_vendor_now"
+        else
+            result.state = "purchasable_now"
+        end
+        return result
+    end
+
+    if sourceType == "auction" then
+        local cost, reason, choice = currentAuctionCost(entry.recipeItemID or entry.itemID, options)
+        if not cost then return fail(result, "unavailable", reason or "recipe_item_not_currently_listed") end
+        result.available, result.reliable, result.immediate = true, true, true
+        result.goldCost, result.marketCost, result.state = cost, cost, "purchasable_now"
+        result.priceSource = choice and choice.source
+        result.priceFreshness = choice and choice.freshness
+        return result
+    end
+
+    if sourceType == "limited_vendor" then
+        result.goldCost = nonNegative(entry.purchasePrice or entry.goldCost)
+        result.marketCost = nonNegative(entry.marketCost) or result.goldCost
+        return fail(result, "conditional", "limited_stock_not_guaranteed")
+    end
+    if sourceType == "quest" then return fail(result, "conditional", "quest_requirement") end
+    if sourceType == "drop" or sourceType == "world_drop" then return fail(result, "conditional", "drop_not_guaranteed") end
+    if sourceType == "manual" or sourceType == "other" then return fail(result, "unavailable_unknown", "manual_acquisition_required") end
+    return fail(result, "unavailable_unknown", "unknown_acquisition")
+end
+
+local function auctionAlternative(entry, spellID, state, skillContext, options)
+    local itemID = positive(entry.recipeItemID or entry.itemID)
+    if not itemID then return nil end
+
+    local probe = resultBase(entry, spellID)
+    local requirementsOK, requirementReason = passesRequirements(entry, probe, state, skillContext, options)
+    local result = resultBase(entry, spellID)
+    result.sourceType = "auction"
+    result.source = "auction"
+    result.sourceName = "Auction House"
+    result.sourceID = nil
+    result.recipeItemID = itemID
+    result.requiredSkill = probe.requiredSkill
+    result.effectiveSkill = probe.effectiveSkill
+    result.requiredLevel = probe.requiredLevel
+    if not requirementsOK then return fail(result, "unavailable", requirementReason) end
+
+    local cost, reason, choice = currentAuctionCost(itemID, options)
+    if not cost then return fail(result, "unavailable", reason or "recipe_item_not_currently_listed") end
+    result.available, result.reliable, result.immediate = true, true, true
+    result.goldCost, result.marketCost, result.state = cost, cost, "purchasable_now"
+    result.priceSource = choice and choice.source
+    result.priceFreshness = choice and choice.freshness
+    return result
+end
+
+local function candidateCost(candidate)
+    return tonumber(candidate.goldCost) or tonumber(candidate.marketCost) or math.huge
+end
+
+local function candidateRank(candidate)
+    if candidate.sourceType == "learned" or candidate.sourceType == "simulated_learned" then return 0 end
+    if candidate.sourceType == "owned_recipe_item" then return 1 end
+    if candidate.sourceType == "trainer" then return 2 end
+    if candidate.sourceType == "vendor" or candidate.sourceType == "reputation" then return 3 end
+    if candidate.sourceType == "auction" then return 4 end
+    return 9
+end
+
+local function chooseReliable(candidates)
+    local best
+    for index = 1, table.getn(candidates) do
+        local candidate = candidates[index]
+        if candidate.available and candidate.reliable then
+            if not best
+                or candidateCost(candidate) < candidateCost(best)
+                or (candidateCost(candidate) == candidateCost(best) and candidateRank(candidate) < candidateRank(best))
+            then
+                best = candidate
+            end
+        end
+    end
+    return best
+end
+
+function addonTable.resolveRecipeAcquisitionPaths(recipeOrSpellID, state, skillContext, options)
     state = state or {}
     options = options or {}
 
-    local spellID
     local recipe
+    local spellID
     if type(recipeOrSpellID) == "table" then
         recipe = recipeOrSpellID
         spellID = positive(recipe.spellID or recipe.recipeID)
@@ -263,147 +480,124 @@ function addonTable.resolveRecipeAcquisition(recipeOrSpellID, state, skillContex
         spellID = positive(recipeOrSpellID)
     end
 
+    local key = spellID and ("recipe:" .. tostring(spellID)) or nil
     if learnedInState(spellID, state) then
-        return {
+        return {{
             handled = true,
             spellID = spellID,
-            key = "recipe:" .. tostring(spellID),
+            key = key,
             sourceType = "learned",
             source = "learned",
             sourceName = "Already learned",
             available = true,
+            reliable = true,
             alreadyAcquired = true,
             immediate = true,
+            requiresLearning = false,
             goldCost = 0,
             marketCost = 0,
             state = "immediately_usable",
-        }
+        }}
     end
 
-    local stored = spellID and recordsBySpell[spellID] or nil
-    local entry = type(stored) == "table" and stored[1] or nil
-    if not entry and recipe then
-        entry = normalizeInline(recipe)
-    end
-
-
-    if not entry then
-        return {
+    if acquiredInRoute(spellID, state) then
+        return {{
             handled = true,
             spellID = spellID,
-            key = spellID and ("recipe:" .. tostring(spellID)) or nil,
+            key = key,
+            sourceType = "simulated_learned",
+            source = "simulated_learned",
+            sourceName = "Already acquired in route",
+            available = true,
+            reliable = true,
+            alreadyAcquired = true,
+            immediate = true,
+            requiresLearning = false,
+            goldCost = 0,
+            marketCost = 0,
+            state = "immediately_usable",
+        }}
+    end
+
+    local records = addonTable.getRecipeAcquisitionRecords(spellID)
+    if table.getn(records) == 0 and recipe then
+        local inline = normalizeInline(recipe)
+        if inline then records = { inline } end
+    end
+
+    if table.getn(records) == 0 then
+        return {{
+            handled = true,
+            spellID = spellID,
+            key = key,
             sourceType = "unknown",
             source = "unknown",
             available = false,
+            reliable = false,
             alreadyAcquired = false,
             immediate = false,
+            requiresLearning = true,
             state = "unavailable_unknown",
             reason = "missing_acquisition_metadata",
-        }
+        }}
     end
 
-    local sourceType = entry.sourceType or sourceTypeFromLegacy(entry.status or entry.state)
-    entry.sourceType = sourceType
+    local candidates = {}
+    local seenOwnedItems = {}
+    local seenAuctionItems = {}
 
-    if sourceType == "learned" or entry.alreadyLearned then
-        local learned = resultBase(entry, spellID)
-        learned.available = true
-        learned.alreadyAcquired = true
-        learned.immediate = true
-        learned.goldCost = 0
-        learned.marketCost = 0
-        learned.state = "immediately_usable"
-        return learned
-    end
+    for index = 1, table.getn(records) do
+        local entry = records[index]
+        local itemID = positive(entry.recipeItemID or entry.itemID)
 
-    local result = resultBase(entry, spellID)
-    local requiredSkill = nonNegative(entry.requiredSkill)
-    if requiredSkill then
-        local base = tonumber(skillContext and skillContext.baseSkill) or tonumber(options.baseSkill) or 0
-        local effective = effectiveSkill(base, skillContext)
-        result.requiredSkill = requiredSkill
-        result.effectiveSkill = effective
-        if effective < requiredSkill then
-            result.reason = "required_skill_not_met"
-            result.state = "unavailable"
-            return result
+        if itemID and inventoryCount(itemID, state) > 0 and not seenOwnedItems[itemID] then
+            local owned = resultBase(entry, spellID)
+            owned.sourceType, owned.source, owned.sourceName = "owned_recipe_item", "owned_recipe_item", "Recipe item already owned"
+            owned.recipeItemID = itemID
+            local requirementsOK, requirementReason = passesRequirements(entry, owned, state, skillContext, options)
+            if requirementsOK then
+                owned.available, owned.reliable, owned.immediate = true, true, true
+                owned.goldCost, owned.marketCost, owned.state = 0, 0, "recipe_item_owned"
+            else
+                fail(owned, "unavailable", requirementReason)
+            end
+            table.insert(candidates, owned)
+            seenOwnedItems[itemID] = true
+        end
+
+        table.insert(candidates, evaluateStaticEntry(entry, spellID, state, skillContext, options))
+
+        if itemID and not seenAuctionItems[itemID] then
+            local auction = auctionAlternative(entry, spellID, state, skillContext, options)
+            if auction then table.insert(candidates, auction) end
+            seenAuctionItems[itemID] = true
         end
     end
 
-    if entry.faction and state.faction then
-        local requiredFaction = string.lower(tostring(entry.faction))
-        local characterFaction = string.lower(tostring(state.faction))
-        if requiredFaction ~= "neutral" and requiredFaction ~= characterFaction then
-            result.reason = "faction_restricted"
-            result.state = "unavailable"
-            return result
-        end
+    return candidates
+end
+
+function addonTable.resolveRecipeAcquisition(recipeOrSpellID, state, skillContext, options)
+    local candidates = addonTable.resolveRecipeAcquisitionPaths(recipeOrSpellID, state, skillContext, options)
+    local best = chooseReliable(candidates)
+    if best then
+        best.alternatives = candidates
+        best.chosen = true
+        return best
     end
 
-    if sourceType == "trainer" or sourceType == "vendor" then
-        local cost = nonNegative(entry.purchasePrice or entry.goldCost)
-        if cost == nil then
-            result.reason = "missing_acquisition_cost"
-            result.state = sourceType == "trainer" and "trainable_now" or "purchasable_now"
-            return result
-        end
-        result.available = true
-        result.immediate = true
-        result.goldCost = cost
-        result.marketCost = nonNegative(entry.marketCost) or cost
-        result.state = sourceType == "trainer" and "trainable_now" or "purchasable_now"
-        return result
-    end
-
-    if sourceType == "limited_vendor" then
-        result.goldCost = nonNegative(entry.purchasePrice or entry.goldCost)
-        result.marketCost = nonNegative(entry.marketCost) or result.goldCost
-        result.state = "obtainable"
-        result.reason = "limited_stock_not_guaranteed"
-        return result
-    end
-
-    if sourceType == "auction" then
-        local cost, reason, choice = currentAuctionCost(entry, options)
-        if not cost then
-            result.reason = reason or "recipe_item_not_currently_listed"
-            result.state = "unavailable"
-            return result
-        end
-        result.available = true
-        result.immediate = true
-        result.goldCost = cost
-        result.marketCost = cost
-        result.state = "purchasable_now"
-        result.priceSource = choice and choice.source
-        result.priceFreshness = choice and choice.freshness
-        return result
-    end
-
-    if sourceType == "reputation" then
-        result.state = "obtainable_non_gold"
-        result.reason = "reputation_requirement"
-        return result
-    end
-    if sourceType == "quest" then
-        result.state = "obtainable_non_gold"
-        result.reason = "quest_requirement"
-        return result
-    end
-    if sourceType == "drop" then
-        result.state = "obtainable_non_gold"
-        result.reason = "drop_not_guaranteed"
-        return result
-    end
-    if sourceType == "manual" then
-        result.state = "unavailable_unknown"
-        result.reason = "manual_acquisition_required"
-        return result
-    end
-
-    result.state = "unavailable_unknown"
-    result.reason = "unknown_acquisition"
-    return result
+    local fallback = candidates[1] or {
+        handled = true,
+        sourceType = "unknown",
+        source = "unknown",
+        available = false,
+        reliable = false,
+        state = "unavailable_unknown",
+        reason = "missing_acquisition_metadata",
+    }
+    fallback.alternatives = candidates
+    fallback.chosen = false
+    return fallback
 end
 
 function addonTable.explainRecipeAcquisition(recipeOrSpellID, state, skillContext, options)
@@ -421,6 +615,9 @@ function addonTable.explainRecipeAcquisition(recipeOrSpellID, state, skillContex
         recipeItemID = result.recipeItemID,
         purchasePrice = result.goldCost,
         limitedStock = result.limitedStock,
+        requiresLearning = result.requiresLearning,
+        reliable = result.reliable,
+        alternatives = result.alternatives,
         notes = result.notes,
     }
 end
