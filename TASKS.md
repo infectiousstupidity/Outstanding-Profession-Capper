@@ -11,7 +11,8 @@ This file governs implementation work. Keep it current as work progresses.
 - Mark a task `IN PROGRESS` only when implementation begins.
 - Mark a task `DONE` only when its acceptance criteria pass.
 - If a task discovers new required work, add a new task doc and queue it explicitly rather than silently expanding scope.
-- Preserve the deterministic static guide as a fallback. Dynamic pricing must never make the addon unusable when external addon data is missing or stale.
+- Preserve the deterministic static guide as a fallback. Dynamic pricing must never make the addon unusable when external price data is missing or stale.
+- Static recipe and acquisition knowledge must be self-contained in Profession Capper. Do not depend on Ackis Recipe List or another recipe addon for optimizer coverage.
 - Stay compatible with WoW 3.3.5 / Lua 5.1.
 - Run the repository validation workflow for every task.
 - Manual in-game checks that CI cannot prove must be recorded in the task doc before the task is marked `DONE`.
@@ -40,7 +41,7 @@ This file governs implementation work. Keep it current as work progresses.
 | --- | --- | --- |
 | [04 Recipe difficulty metadata](docs/tasks/04-recipe-difficulty-metadata.md) | DONE | Model orange/yellow/green/gray thresholds for route calculations. |
 | [05 Recipe acquisition model](docs/tasks/05-recipe-acquisition-model.md) | DONE | Model trainer/vendor/AH/reputation/drop acquisition and costs. |
-| [06 Acquisition provider integration](docs/tasks/06-acquisition-provider-integration.md) | DONE | Optionally consume compatible existing addon data without copying restricted databases. |
+| [06 Acquisition provider integration](docs/tasks/06-acquisition-provider-integration.md) | DONE | Historical optional-provider implementation; Task 21 supersedes the Ackis runtime approach with complete bundled data. |
 
 ### Phase 3 — Cost engine and optimizer
 
@@ -71,17 +72,26 @@ Source of truth: [UI polish plan](docs/UI-POLISH-PLAN.md)
 | [18 Enchant repeat workflow presentation](docs/tasks/18-ui-polish-enchant-workflow.md) | IN PROGRESS | Make target, repeat mode, and progress obvious during repeated enchants. |
 | [19 Final visual QA and compatibility](docs/tasks/19-ui-polish-qa.md) | QUEUED | Verify layout, ElvUI compatibility, state handling, and remove obsolete presentation code. |
 
+### Phase 6 — Self-contained full recipe optimization
+
+| Task | Status | Purpose |
+| --- | --- | --- |
+| [20 Complete self-contained recipe catalog](docs/tasks/20-complete-recipe-catalog.md) | QUEUED | Bundle a deterministic catalog of all supported WotLK recipes, including recipes the character has not learned. |
+| [21 Complete self-contained acquisition database](docs/tasks/21-complete-acquisition-database.md) | QUEUED | Bundle complete recipe-source data and remove the Ackis runtime dependency path. |
+| [22 Multi-source acquisition and character eligibility](docs/tasks/22-multi-source-acquisition.md) | QUEUED | Resolve all acquisition paths against character/route state and choose the cheapest reliable source. |
+| [23 Full-catalog cheapest-route optimization](docs/tasks/23-full-catalog-route-optimization.md) | QUEUED | Optimize across known and unknown-but-obtainable recipes, including one-time learning costs and future unlocks. |
+| [24 Learn/buy-first recommendation UI](docs/tasks/24-acquisition-recommendation-ui.md) | QUEUED | Make train/buy/learn actions first-class recommendations before crafting an unknown recipe. |
+| [25 Full recipe optimization coverage and regression QA](docs/tasks/25-full-recipe-optimization-qa.md) | QUEUED | Prove catalog/acquisition coverage, route correctness, performance, fallback behavior, and in-game transitions. |
+
 ## Dependency order
 
 `01 -> 02 -> 03`
 
 `01 -> 04 -> 07`
 
-`05 -> 06`
+`05 -> 06` (historical provider path; superseded by Phase 6)
 
 `02 + 03 + 04 + 05 -> 07 -> 08 -> 09 -> 10`
-
-Task 06 may be completed before or after Task 07, but Task 08 must not assume acquisition-provider data is always available.
 
 Phase 5 UI order:
 
@@ -91,10 +101,20 @@ Phase 5 UI order:
 
 `15 + 16 + 17 + 18 -> 19`
 
-Do not start Task 19 until the preceding UI tasks have had their required in-game checks.
+Phase 6 full-recipe optimization order:
+
+`04 -> 20 -> 21 -> 22`
+
+`07 + 08 + 09 + 20 + 21 + 22 -> 23 -> 24 -> 25`
+
+Task 21 removes the Ackis runtime dependency after bundled acquisition coverage is in place. Task 23 must not activate full-catalog recommendations until Tasks 20–22 provide complete conservative recipe/acquisition inputs.
+
+Do not start Task 19 until the preceding UI tasks have had their required in-game checks. Do not mark Task 25 complete until the unknown-recipe acquisition -> learning -> crafting transition has been verified in game.
 
 ## Current task
 
 Task 10 remains in manual acceptance. Tasks 12 and 13 are awaiting in-game Enchant repeat testing. Task 14 is implemented in code and awaiting in-game purchase-guidance checks: equivalent Greater/Lesser Essence pricing is quantity-aware, and converted material rows explicitly tell the player what form and quantity to buy, the direct-vs-recommended cost, and the savings.
 
 Phase 5 Tasks 15, 16, and 18 remain in manual acceptance. Task 17 is implemented in code and awaiting in-game acceptance: Compact is the default persisted view; Expanded adds inline route total, immediate gold need, expected crafts, route price coverage, and comparable-candidate count without duplicating the Task 16 Compare companion panel. Task 19 remains queued.
+
+Phase 6 Tasks 20–25 are queued. They replace the known-recipes-only optimizer input with complete bundled WotLK recipe/acquisition knowledge, remove Ackis from the runtime design, and add acquisition-aware cheapest-route recommendations.
