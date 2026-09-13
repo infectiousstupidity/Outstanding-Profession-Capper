@@ -1,36 +1,100 @@
 # Task 23 — Full-catalog cheapest-route optimization
 
-Status: DONE  
+Status: QUEUED  
 Phase: 6 — Self-contained full recipe optimization  
 Depends on: Tasks 07, 08, 09, 20, 21, and 22
 
 ## Goal
 
-Make the bundled recipe universe, rather than only the live profession book, the optimizer input and make the global route the source of truth for the current recommendation.
+Make dynamic recommendations optimize across all usable WotLK recipes, including recipes the character has not learned yet.
 
-## Implementation
+This task is the behavior change that fixes the current known-recipes-only limitation.
 
-- Added `buildFullProfessionOptimizationInput()`: all eligible catalog recipes for the active profession are merged with live profession-book data.
-- Only live rows are marked learned. Unknown recipes keep bundled reagents, outputs, required skill and acquisition metadata.
-- Character state now includes player level, faction, inventory, known prerequisite/specialization spells, queried reputation standings, learned recipes and reusable tools.
-- Added `ProfessionTraining.lua` with deterministic WotLK profession-rank costs/requirements through 450. Dynamic routing targets the highest rank currently reachable by player level and can insert rank training into the route.
-- The global cheapest route is computed first. Its first craft segment is the authoritative main recommendation; the old separate greedy current-step choice is no longer allowed to disagree with it.
-- Green recipes are allowed when their expected skill-up-adjusted cost actually makes them cheaper; gray/unusable recipes remain excluded by the cost engine.
-- Route segments retain their first cost/acquisition object so an unknown selected recipe exposes `nextAction = "acquire_recipe"` and cannot be mistaken for a live craftable row.
-- If the complete route or shopping plan cannot be proven, dynamic mode falls back to the deterministic static guide.
+## Optimization input
 
-## Regression coverage
+Replace the current live-only recipe input with a merged catalog input:
 
-Automated Lua 5.1 tests cover the required future-unlock scenario: craft a known recipe to the threshold, acquire a previously unknown trainer recipe once, then switch because the remainder is cheaper. The inverse high-acquisition-cost case stays on the known recipe.
+`bundled recipe catalog + live profession book + character state + acquisition state + current prices`
 
-Coverage also verifies:
+Rules:
 
-- full catalog vs learned-state separation,
-- unknown recipe selected as an acquisition-first action,
-- Blood Elf +10 Enchanting threshold behavior,
-- profession-rank training followed by a newly useful recipe,
-- current inventory/prerequisite state capture,
-- no external recipe addon dependency,
-- static fallback when the price provider is unavailable.
+- all catalog recipes for the current profession are candidates
+- only recipes actually present in the live profession book are marked learned
+- live data overlays known recipes
+- unknown recipes keep bundled reagents/output/difficulty/acquisition metadata
+- invalid/incomplete recipes are excluded with explicit reasons rather than guessed
 
-All deterministic acceptance criteria pass in CI.
+## Route semantics
+
+The globally cheapest complete route should become authoritative when available.
+
+Do not choose the immediate recipe with a separate greedy ranking that can disagree with the full route.
+
+The route cost must include:
+
+- expected material cost per skill-up
+- inventory-aware immediate gold need
+- one-time recipe acquisition cost
+- reusable tool/rod costs
+- profession-rank training costs
+- current recipe-item AH price when that is the chosen acquisition method
+
+The first route step may therefore be conceptually:
+
+`learn/buy recipe -> craft recipe`
+
+rather than simply "craft a known recipe."
+
+## Required scenario
+
+A deterministic regression fixture must cover this exact behavior:
+
+1. Start below a recipe unlock threshold.
+2. Craft the cheapest available recipe until the threshold.
+3. A previously unknown trainer/vendor recipe becomes obtainable.
+4. Its acquisition cost plus remaining material cost makes it the cheapest continuation.
+5. The route switches to it.
+
+Also test the inverse where the recipe's acquisition cost makes staying with a known recipe cheaper.
+
+## Current recommendation behavior
+
+When the selected recipe is already learned, preserve normal craft behavior.
+
+When the selected recipe is not learned:
+
+- do not attempt to select/craft a nonexistent live profession-book entry
+- expose the acquisition as the required next action
+- keep the planned craft segment and costs attached so Task 24 can explain what happens after learning it
+- refresh naturally after `TRADE_SKILL_UPDATE` once the recipe becomes known
+
+## Fallback
+
+The deterministic static guide remains the safe fallback when the full dynamic route cannot be computed due to missing required price/runtime data.
+
+An unavailable conditional recipe must not make the whole addon unusable if another valid route exists.
+
+## Automated validation
+
+Add integration tests for:
+
+- known recipe vs cheaper trainer recipe
+- trainer acquisition too expensive, so known recipe wins
+- vendor recipe
+- owned recipe item
+- AH-listed recipe item
+- unavailable drop/quest/limited-stock recipe excluded from guaranteed route
+- route that unlocks a recipe at a future skill
+- Blood Elf +10 Enchanting behavior
+- profession-rank training followed by newly available recipes
+- route remains stable when no external recipe addon is installed
+- comparison candidates include eligible unknown recipes
+- fallback remains available when prices are incomplete
+
+## Acceptance criteria
+
+- Cheapest-route optimization no longer means "cheapest recipe I already know."
+- All reliably obtainable catalog recipes participate.
+- Recipe acquisition cost can change which route wins.
+- The route's first action/segment is the source of truth for the main recommendation.
+- No Ackis installation changes optimizer coverage.

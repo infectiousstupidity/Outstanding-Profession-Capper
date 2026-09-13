@@ -264,12 +264,6 @@ local function buildSegments(actions)
                     cumulativeMarketCost = cumulativeMarket,
                     cumulativeGoldCost = cumulativeGold,
                     quality = action.quality,
-                    firstCost = action.cost,
-                    acquisition = action.cost and action.cost.acquisition or nil,
-                    requiresAcquisition = action.cost
-                        and action.cost.acquisition
-                        and action.cost.acquisition.alreadyAcquired ~= true
-                        or false,
                 })
             end
         end
