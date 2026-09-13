@@ -463,10 +463,21 @@ local function rankCurrentRecipes(recipes, skillContext, state, skill, options)
             and cost.skillUpChance
             and cost.skillUpChance > 0
         then
-            local expectedCost = cost.expectedCurrentPurchaseCostPerSkillUp
-                or cost.expectedMarketCostPerSkillUp
-            local perCraft = cost.currentPurchaseCostPerCraft
-                or cost.materialMarketValuePerCraft
+            local expectedCost
+            local perCraft
+            if options and options.requireAvailableNow then
+                expectedCost = cost.expectedGoldNeededNowPerSkillUp
+                    or cost.expectedCurrentPurchaseCostPerSkillUp
+                    or cost.expectedMarketCostPerSkillUp
+                perCraft = cost.goldNeededNowPerCraft
+                    or cost.currentPurchaseCostPerCraft
+                    or cost.materialMarketValuePerCraft
+            else
+                expectedCost = cost.expectedCurrentPurchaseCostPerSkillUp
+                    or cost.expectedMarketCostPerSkillUp
+                perCraft = cost.currentPurchaseCostPerCraft
+                    or cost.materialMarketValuePerCraft
+            end
 
             if expectedCost ~= nil and perCraft ~= nil then
                 table.insert(ranked, {
@@ -650,6 +661,7 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     costOptions.priceLookup = cachedPriceLookup or costOptions.priceLookup
     costOptions.unitPriceChooser = costOptions.unitPriceChooser or addonTable.chooseUsableUnitPrice
     costOptions.costRecipe = cachedRecipeCost
+    costOptions.requireAvailableNow = result.requireAvailableNow
     result.priceLookup = cachedPriceLookup
 
     local recipes, state = addonTable.buildLiveProfessionOptimizationInput(recipeCache, skillContext)

@@ -30,6 +30,8 @@ addonTable.chooseUsableUnitPrice = function(result, purpose)
             isFresh = (result.freshness or "fresh") == "fresh",
             isStale = result.freshness == "stale",
             isTooOld = false,
+            ageSeconds = result.ageSeconds,
+            numAuctions = result.numAuctions,
             availableQuantity = result.availableQuantity,
         }
     end
@@ -73,6 +75,8 @@ prices[1002] = {
     marketValue = 50,
     minBuyout = 60,
     freshness = "fresh",
+    ageSeconds = 60,
+    numAuctions = 1,
 }
 
 local recipe = {
@@ -130,8 +134,23 @@ local auctionOnlyRecipe = {
     },
 }
 local freshAuction = addonTable.calculateRecipeCost(auctionOnlyRecipe, 90, nil, {}, {})
-assertEqual(freshAuction.availableNow, true, "fresh AH listing is available now")
-assertEqual(freshAuction.availabilityConfidence, "fresh_listing", "TSM listing-only availability is explicit")
+assertEqual(freshAuction.availableNow, true, "recent AH listing with confirmed minimum quantity is available now")
+assertEqual(freshAuction.availabilityConfidence, "confirmed", "available AH path requires confirmed evidence")
+assertEqual(freshAuction.reagentCosts[1].availabilityReason, "confirmed_minimum_quantity", "auction count is a conservative quantity lower bound")
+
+prices[1002].numAuctions = nil
+local unknownQuantity = addonTable.calculateRecipeCost(auctionOnlyRecipe, 90, nil, {}, {})
+assertEqual(unknownQuantity.available, true, "unknown AH quantity remains priceable for cheapest mode")
+assertEqual(unknownQuantity.availableNow, false, "unknown AH quantity is rejected by available mode")
+assertEqual(unknownQuantity.availabilityIssues[1].reason, "auction_quantity_unknown", "unknown quantity reason")
+prices[1002].numAuctions = 1
+
+prices[1002].ageSeconds = 16 * 60
+local oldForAvailable = addonTable.calculateRecipeCost(auctionOnlyRecipe, 90, nil, {}, {})
+assertEqual(oldForAvailable.available, true, "older scan remains priceable for cheapest mode")
+assertEqual(oldForAvailable.availableNow, false, "older scan is too old for available mode")
+assertEqual(oldForAvailable.availabilityIssues[1].reason, "auction_scan_too_old_for_available", "available mode uses tighter freshness")
+prices[1002].ageSeconds = 60
 
 prices[1002].freshness = "stale"
 local staleAuction = addonTable.calculateRecipeCost(auctionOnlyRecipe, 90, nil, {}, {})
@@ -139,6 +158,18 @@ assertEqual(staleAuction.available, true, "stale price remains usable for cheape
 assertEqual(staleAuction.availableNow, false, "stale AH listing is rejected by available mode")
 assertEqual(staleAuction.availabilityIssues[1].reason, "auction_scan_stale", "stale availability reason")
 prices[1002].freshness = "fresh"
+
+local twoAuctionItemsRecipe = {
+    spellID = 21,
+    acquisition = { status = "learned" },
+    difficulty = { yellow = 100, green = 110, gray = 120 },
+    reagents = {
+        { itemID = 1002, quantity = 2 },
+    },
+}
+local insufficientAuction = addonTable.calculateRecipeCost(twoAuctionItemsRecipe, 90, nil, {}, {})
+assertEqual(insufficientAuction.availableNow, false, "auction count below required quantity is unavailable")
+assertEqual(insufficientAuction.availabilityIssues[1].reason, "insufficient_auction_quantity", "insufficient AH quantity reason")
 
 local reusableRecipe = {
     spellID = 2,
@@ -207,6 +238,8 @@ prices[16203] = {
     marketValue = 900,
     minBuyout = 900,
     freshness = "fresh",
+    ageSeconds = 60,
+    numAuctions = 1,
 }
 
 local essenceRecipe = {
@@ -228,6 +261,15 @@ assertEqual(essence.reagentCosts[1].purchaseTotalCost, 900, "recommended purchas
 assertEqual(essence.reagentCosts[1].savings, 300, "conversion savings exposed")
 assertEqual(essence.reagentCosts[1].converted, true, "essence conversion is explicit")
 assertEqual(essence.reagentCosts[1].conversionDirection, "greater_to_lesser", "conversion direction recorded")
+
+prices[16202].minBuyout = 200
+local availableEssence = addonTable.calculateRecipeCost(essenceRecipe, 90, nil, {}, {
+    requireAvailableNow = true,
+})
+assertEqual(availableEssence.availableNow, true, "available mode finds confirmed equivalent source")
+assertEqual(availableEssence.reagentCosts[1].availabilitySourceItemID, 16203, "available mode skips cheaper but unconfirmed direct source")
+assertEqual(availableEssence.goldNeededNowPerCraft, 900, "available mode prices the confirmed source")
+prices[16202].minBuyout = 400
 
 local twoLesserRecipe = {
     spellID = 7,
