@@ -20,6 +20,8 @@ jobs:
         run: lua5.1 tools/test_character_skill.lua
       - name: Test recipe difficulty metadata
         run: lua5.1 tools/test_recipe_difficulty.lua
+      - name: Test bundled recipe catalog
+        run: lua5.1 tools/test_recipe_catalog.lua
       - name: Test recipe acquisition model
         run: lua5.1 tools/test_recipe_acquisition.lua
       - name: Test Ackis Recipe List acquisition provider
