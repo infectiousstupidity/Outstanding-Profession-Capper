@@ -1,6 +1,6 @@
 # Task 19 — Final visual QA and compatibility polish
 
-Status: QUEUED  
+Status: IN PROGRESS  
 Phase: 5 — UI/UX polish  
 Depends on: Tasks 15–18
 
@@ -66,6 +66,21 @@ Check:
 - auto-confirm existing enchant;
 - fixed repeat count editing;
 - normal batch crafting.
+
+## Cleanup findings from 2026-09-13 in-game review
+
+The current live UI exposed three concrete cleanup issues:
+
+- Compare rows looked like table rows but had no mouse interaction, so there was no way to inspect the materials behind a candidate recipe.
+- Expanded route details showed misleading `oldest age unknown · 0 stale · 0 missing` coverage when the full route was unavailable.
+- Static guide mode still exposed an expanded `Route details` control even though current-price route details are intentionally inactive, and single-option static steps displayed a redundant `1 / 1` counter.
+
+Implemented on master pending final in-game verification:
+
+- Compare rows are real mouse-enabled buttons with hover/click material tooltips showing recipe difficulty, per-application cost, per-skill-up cost, required materials, and current owned counts.
+- Incomplete routes no longer render fake zero/unknown coverage statistics.
+- Static guide hides the Details control/detail block while preserving the persisted detail preference for when Cheapest now is selected again.
+- Static guide suppresses the recipe-position counter when there is only one option.
 
 ## Cleanup
 

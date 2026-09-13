@@ -1,6 +1,6 @@
 # Task 16 — Inline recipe comparison and optimizer explanation
 
-Status: IN PROGRESS  
+Status: DONE  
 Phase: 5 — UI/UX polish  
 Depends on: Task 15
 
@@ -91,6 +91,10 @@ The panel closes with the main addon, closes when Static guide is selected, and 
 - Incomplete full route does not disable current comparison.
 - Panel resizes cleanly when comparison opens/closes.
 - Comparison remains readable with at least five candidates.
+
+## Manual acceptance
+
+Accepted in-game on 2026-09-13. The user reviewed the live Phase 5 UI and explicitly requested that the prior Phase 5 blockers be closed so remaining presentation issues can move into Task 19 cleanup.
 
 ## Commit
 

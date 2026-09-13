@@ -1410,6 +1410,12 @@ local function updateDetailModeControl()
         return
     end
 
+    if getRecommendationMode() ~= "dynamic" then
+        MainFrameCoreDetailsToggle:Hide()
+        return
+    end
+
+    MainFrameCoreDetailsToggle:Show()
     if getDetailMode() == "expanded" then
         MainFrameCoreDetailsToggle:SetText(addonTable.L["details_collapse"])
     else
@@ -1442,6 +1448,11 @@ local function updateDetailPanel()
         return false
     end
 
+    if getRecommendationMode() ~= "dynamic" then
+        MainFrameCoreDetails:Hide()
+        return false
+    end
+
     if getDetailMode() ~= "expanded" then
         MainFrameCoreDetails:Hide()
         return false
@@ -1449,15 +1460,6 @@ local function updateDetailPanel()
 
     MainFrameCoreDetails:Show()
     txtDetailsLabel:SetText(addonTable.L["details_label"])
-
-    local mode = getRecommendationMode()
-    if mode ~= "dynamic" then
-        txtDetailsRoute:SetText(addonTable.L["details_static"])
-        txtDetailsRoute:SetTextColor(0.78, 0.78, 0.78)
-        txtDetailsCoverage:SetText(addonTable.L["static_summary"])
-        txtDetailsCandidates:SetText("")
-        return true
-    end
 
     if not dynamicRecommendation or not dynamicRecommendation.available then
         local reason = dynamicRecommendation and dynamicRecommendation.reason or "unknown"
@@ -1487,20 +1489,20 @@ local function updateDetailPanel()
             math.max(0, math.ceil(tonumber(plan.totalExpectedCrafts) or 0))
         ))
         txtDetailsRoute:SetTextColor(0.92, 0.92, 0.92)
+
+        local staleCount = tonumber(plan.stalePriceCount) or 0
+        local missingCount = tonumber(plan.missingPriceCount) or 0
+        txtDetailsCoverage:SetText(string.format(
+            addonTable.L["details_coverage"],
+            addonTable.formatPriceAge(plan.oldestPriceAgeSeconds),
+            staleCount,
+            missingCount
+        ))
     else
         txtDetailsRoute:SetText(addonTable.L["details_route_incomplete"])
         txtDetailsRoute:SetTextColor(1, 0.72, 0.22)
+        txtDetailsCoverage:SetText("")
     end
-
-    local staleCount = plan and tonumber(plan.stalePriceCount) or 0
-    local missingCount = plan and tonumber(plan.missingPriceCount) or 0
-    local oldestAge = plan and plan.oldestPriceAgeSeconds or nil
-    txtDetailsCoverage:SetText(string.format(
-        addonTable.L["details_coverage"],
-        addonTable.formatPriceAge(oldestAge),
-        staleCount or 0,
-        missingCount or 0
-    ))
 
     txtDetailsCandidates:SetText(string.format(
         addonTable.L["details_candidates"],
@@ -1704,7 +1706,10 @@ end
 
 local function hideCompareRows()
     for i = 1, table.getn(compareRows) do
-        compareRows[i]:Hide()
+        local row = compareRows[i]
+        row.candidate = nil
+        if row.highlight then row.highlight:Hide() end
+        row:Hide()
     end
 end
 
@@ -1714,19 +1719,119 @@ local function hideRouteRows()
     end
 end
 
+local function getCompareReagentName(reagent)
+    if not reagent then
+        return addonTable.L["compare_material_unknown"]
+    end
+
+    local itemID = reagent.itemID or reagent.item
+    if itemID and GetItemInfo then
+        local itemName = GetItemInfo(itemID)
+        if itemName and itemName ~= "" then
+            return itemName
+        end
+    end
+
+    return reagent.name
+        or (itemID and ("Item " .. tostring(itemID)))
+        or addonTable.L["compare_material_unknown"]
+end
+
+local function compareRowOnEnter(self)
+    if self.highlight then
+        self.highlight:Show()
+    end
+
+    local candidate = self.candidate
+    if not candidate then
+        return
+    end
+
+    local recipe = candidate.recipe or {}
+    local recipeName = recipe.name or tostring(candidate.recipeID or "?")
+    local difficulty = compareDifficultyLabel(candidate.difficulty)
+
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(recipeName, 1, 0.82, 0.12)
+    GameTooltip:AddLine(string.format(
+        addonTable.L["compare_material_costs"],
+        difficulty,
+        addonTable.formatCopperShort(candidate.costPerCraft),
+        addonTable.formatCopperShort(candidate.expectedCostPerSkillUp)
+    ), 0.82, 0.82, 0.82, true)
+
+    if candidate.cost and candidate.cost.quality == "stale" then
+        GameTooltip:AddLine(addonTable.L["compare_stale"], 1, 0.72, 0.22, true)
+    end
+
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine(addonTable.L["compare_materials_title"], 1, 0.82, 0.12)
+
+    local reagents = recipe.reagents or {}
+    local inventory = dynamicRecommendation
+        and dynamicRecommendation.state
+        and dynamicRecommendation.state.inventory
+        or {}
+
+    if table.getn(reagents) == 0 then
+        GameTooltip:AddLine(addonTable.L["compare_material_none"], 0.7, 0.7, 0.7, true)
+    else
+        for i = 1, table.getn(reagents) do
+            local reagent = reagents[i]
+            local quantity = tonumber(reagent.quantity or reagent.count) or 0
+            local itemID = reagent.itemID or reagent.item
+            local owned = itemID and tonumber(inventory[itemID]) or nil
+            local rightText = owned ~= nil
+                and string.format(addonTable.L["compare_material_have"], owned)
+                or ""
+
+            GameTooltip:AddDoubleLine(
+                string.format("%dx %s", quantity, getCompareReagentName(reagent)),
+                rightText,
+                0.92, 0.92, 0.92,
+                0.65, 0.65, 0.65
+            )
+        end
+    end
+
+    GameTooltip:Show()
+end
+
+local function compareRowOnLeave(self)
+    if self.highlight then
+        self.highlight:Hide()
+    end
+    GameTooltip:Hide()
+end
+
+local function compareRowOnClick(self)
+    compareRowOnEnter(self)
+end
+
 local function getCompareRow(index)
     if compareRows[index] then
         return compareRows[index]
     end
 
-    local row = CreateFrame("Frame", nil, MainFrameCoreCompareContent)
+    local row = CreateFrame("Button", nil, MainFrameCoreCompareContent)
     row:SetWidth(608)
     row:SetHeight(COMPARE_ROW_HEIGHT)
+    row:RegisterForClicks("LeftButtonUp")
+    row:SetScript("OnEnter", compareRowOnEnter)
+    row:SetScript("OnLeave", compareRowOnLeave)
+    row:SetScript("OnClick", compareRowOnClick)
 
     row.background = row:CreateTexture(nil, "BACKGROUND")
     row.background:SetAllPoints(row)
     row.background:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
     row.background:SetVertexColor(0.03, 0.03, 0.03, 0.58)
+
+    row.highlight = row:CreateTexture(nil, "OVERLAY")
+    row.highlight:SetAllPoints(row)
+    row.highlight:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+    row.highlight:SetBlendMode("ADD")
+    row.highlight:SetAlpha(0.16)
+    row.highlight:Hide()
 
     row.rank = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     row.rank:SetPoint("LEFT", row, "LEFT", 2, 0)
@@ -1878,6 +1983,7 @@ local function renderComparisonView()
     for i = 1, visible do
         local candidate = candidates[i]
         local row = getCompareRow(i)
+        row.candidate = candidate
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", MainFrameCoreCompareContent, "TOPLEFT", 0, -((i - 1) * COMPARE_ROW_HEIGHT))
 
@@ -2604,10 +2710,11 @@ function displayRecipe()
 
     updateProfessionHeader()
     txtTarget:SetText(string.format(L["target_line"], professionContext.effectiveSkill, displayedTarget))
-    if usingDynamic then
+    local recipeOptionCount = table.getn(shouldCraft)
+    if usingDynamic or recipeOptionCount <= 1 then
         txtRecipePosition:SetText("")
     else
-        txtRecipePosition:SetText(string.format(L["recipe_position"], craftRecipeOptionsIndex, table.getn(shouldCraft)))
+        txtRecipePosition:SetText(string.format(L["recipe_position"], craftRecipeOptionsIndex, recipeOptionCount))
     end
     txtRecipeStatus:SetText("")
     updateModeControls()
