@@ -128,6 +128,9 @@ local function readRawRecord(record)
     local historicalValue = positiveNumber(record.hist or record.historical or record.DBHistorical)
     local recentValue = positiveNumber(record.mv or record.marketValueRecent or record.DBRecent)
     local numAuctions = positiveNumber(record.na or record.numAuctions)
+    local availableQuantity = positiveNumber(
+        record.nq or record.availableQuantity or record.totalQuantity
+    )
     local updatedAt = positiveNumber(record.ts or record.lastScan or record.updatedAt)
 
     -- Older backport schemas used marketValue for the latest scan snapshot.
@@ -135,7 +138,7 @@ local function readRawRecord(record)
         recentValue = positiveNumber(record.marketValue)
     end
 
-    return minBuyout, marketValue, historicalValue, recentValue, numAuctions, updatedAt
+    return minBuyout, marketValue, historicalValue, recentValue, numAuctions, updatedAt, availableQuantity
 end
 
 local function getPublicPrice(sourceKey, itemString)
@@ -197,7 +200,7 @@ function provider:getItemPrice(item)
 
     local realmData, rawBackend = getRealmData()
     local rawRecord = getRawRecord(realmData, itemString, itemID)
-    local rawMinBuyout, rawMarket, rawHistorical, rawRecent, numAuctions, updatedAt = readRawRecord(rawRecord)
+    local rawMinBuyout, rawMarket, rawHistorical, rawRecent, numAuctions, updatedAt, availableQuantity = readRawRecord(rawRecord)
 
     local publicMinBuyout = getPublicPrice("DBMinBuyout", itemString)
     local publicMarket = getPublicPrice("DBMarket", itemString)
@@ -244,6 +247,7 @@ function provider:getItemPrice(item)
         historicalValue = historicalValue,
         recentValue = recentValue,
         numAuctions = numAuctions,
+        availableQuantity = availableQuantity,
         updatedAt = updatedAt,
         source = DISPLAY_SOURCE,
         providerVersion = getAddonVersion(),

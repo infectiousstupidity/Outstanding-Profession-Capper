@@ -90,7 +90,7 @@ function addonTable.setEnabled(enabled)
 end
 
 function addonTable.setRecommendationMode(mode)
-    if mode ~= "dynamic" and mode ~= "static" then
+    if mode ~= "dynamic" and mode ~= "available" and mode ~= "static" then
         return false
     end
 

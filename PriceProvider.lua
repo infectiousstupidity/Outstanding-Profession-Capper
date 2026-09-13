@@ -81,6 +81,7 @@ local function unavailableResult(item, source, reason, detail)
         recentValue = nil,
         vendorBuyPrice = nil,
         numAuctions = nil,
+        availableQuantity = nil,
         updatedAt = nil,
         ageSeconds = nil,
         isSuspicious = false,
@@ -150,6 +151,7 @@ function addonTable.normalizePriceResult(item, raw, providerName, nowOverride)
     local recentValue = positiveNumber(raw.recentValue)
     local vendorBuyPrice = positiveNumber(raw.vendorBuyPrice)
     local numAuctions = positiveNumber(raw.numAuctions)
+    local availableQuantity = positiveNumber(raw.availableQuantity or raw.totalQuantity)
 
     if not minBuyout and not marketValue and not historicalValue and not recentValue and not vendorBuyPrice then
         local result = unavailableResult(
@@ -185,6 +187,7 @@ function addonTable.normalizePriceResult(item, raw, providerName, nowOverride)
         recentValue = recentValue,
         vendorBuyPrice = vendorBuyPrice,
         numAuctions = numAuctions,
+        availableQuantity = availableQuantity,
         updatedAt = updatedAt,
         freshness = freshness,
         ageSeconds = ageSeconds,
@@ -354,6 +357,8 @@ local function buildChoice(result, amount, priceType)
         isFresh = result.isFresh,
         isStale = result.isStale,
         isTooOld = result.isTooOld,
+        numAuctions = result.numAuctions,
+        availableQuantity = result.availableQuantity,
     }
 end
 

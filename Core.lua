@@ -1248,7 +1248,16 @@ end
 
 local function getRecommendationMode()
     local db = addonTable.getSettings()
-    return db.recommendationMode == "static" and "static" or "dynamic"
+    if db.recommendationMode == "static" then
+        return "static"
+    elseif db.recommendationMode == "available" then
+        return "available"
+    end
+    return "dynamic"
+end
+
+local function isOptimizedMode(mode)
+    return mode == "dynamic" or mode == "available"
 end
 
 local function getDetailMode()
@@ -1310,6 +1319,8 @@ local function humanizeDynamicReason(reason)
         incomplete_price_data = L["dynamic_reason_missing_prices"],
         shopping_plan_incomplete = L["dynamic_reason_missing_prices"],
         price_provider_unavailable = L["dynamic_reason_no_prices"],
+        no_available_recipe = L["dynamic_reason_no_available_recipe"],
+        materials_not_available_now = L["dynamic_reason_no_available_recipe"],
     }
     return reasons[reason] or tostring(reason or L["dynamic_reason_unknown"])
 end
@@ -1342,17 +1353,18 @@ local function updateModeControls()
     local mode = getRecommendationMode()
 
     setModeButtonState(MainFrameCoreCheapestMode, mode == "dynamic")
+    setModeButtonState(MainFrameCoreAvailableMode, mode == "available")
     setModeButtonState(MainFrameCoreStaticMode, mode == "static")
 
     if MainFrameCoreRoute then
-        if mode == "dynamic" and dynamicRecommendation and dynamicRecommendation.available then
+        if isOptimizedMode(mode) and dynamicRecommendation and dynamicRecommendation.available then
             MainFrameCoreRoute:Show()
         else
             MainFrameCoreRoute:Hide()
         end
     end
 
-    if mode ~= "dynamic" and MainFrameCoreCompare then
+    if not isOptimizedMode(mode) and MainFrameCoreCompare then
         MainFrameCoreCompare:Hide()
     end
 end
@@ -1410,7 +1422,7 @@ local function updateDetailModeControl()
         return
     end
 
-    if getRecommendationMode() ~= "dynamic" then
+    if not isOptimizedMode(getRecommendationMode()) then
         MainFrameCoreDetailsToggle:Hide()
         return
     end
@@ -1448,7 +1460,7 @@ local function updateDetailPanel()
         return false
     end
 
-    if getRecommendationMode() ~= "dynamic" then
+    if not isOptimizedMode(getRecommendationMode()) then
         MainFrameCoreDetails:Hide()
         return false
     end
@@ -1541,7 +1553,7 @@ local function updateRecommendationSummary()
     resetRecommendationMetrics()
 
     local mode = getRecommendationMode()
-    if mode == "dynamic" and dynamicRecommendation and dynamicRecommendation.available then
+    if isOptimizedMode(mode) and dynamicRecommendation and dynamicRecommendation.available then
         local cost = dynamicRecommendation.currentCost or {}
         local perCraft = addonTable.formatCopperShort(
             cost.currentPurchaseCostPerCraft or cost.materialMarketValuePerCraft
@@ -1556,10 +1568,11 @@ local function updateRecommendationSummary()
         return
     end
 
-    if mode == "dynamic" then
+    if isOptimizedMode(mode) then
         local reason = dynamicRecommendation and dynamicRecommendation.reason or "unknown"
+        local fallbackKey = mode == "available" and "available_fallback" or "dynamic_fallback"
         txtPriceMeta:SetText(string.format(
-            addonTable.L["dynamic_fallback"],
+            addonTable.L[fallbackKey],
             humanizeDynamicReason(reason)
         ))
         return
@@ -1941,10 +1954,12 @@ end
 local function filteredComparisonCandidates()
     local result = {}
     local candidates = dynamicRecommendation and dynamicRecommendation.candidates or {}
+    local requireAvailable = getRecommendationMode() == "available"
     for i = 1, table.getn(candidates) do
         local candidate = candidates[i]
         local difficulty = candidate and candidate.difficulty
         if candidate
+            and (not requireAvailable or candidate.availableNow)
             and (difficulty == "orange" or difficulty == "yellow")
             and candidate.costPerCraft ~= nil
             and candidate.expectedCostPerSkillUp ~= nil
@@ -1968,8 +1983,11 @@ local function renderComparisonView()
     setRouteHeadersVisible(false)
     setComparisonHeadersVisible(true)
 
+    local subtitleKey = getRecommendationMode() == "available"
+        and "compare_available_subtitle"
+        or "compare_subtitle"
     txtCompareSubtitle:SetText(string.format(
-        addonTable.L["compare_subtitle"],
+        addonTable.L[subtitleKey],
         professionContext and professionContext.effectiveSkill or 0
     ))
 
@@ -2003,6 +2021,11 @@ local function renderComparisonView()
             row.meta:SetTextColor(1, 0.72, 0.22)
             row.perApp:SetTextColor(1, 0.72, 0.22)
             row.perSkill:SetTextColor(1, 0.72, 0.22)
+        elseif not candidate.availableNow then
+            row.meta:SetText(addonTable.L["compare_not_available_now"])
+            row.meta:SetTextColor(1, 0.72, 0.22)
+            row.perApp:SetTextColor(0.92, 0.92, 0.92)
+            row.perSkill:SetTextColor(0.92, 0.92, 0.92)
         else
             row.meta:SetText("")
             row.perApp:SetTextColor(0.92, 0.92, 0.92)
@@ -2057,7 +2080,11 @@ local function renderComparisonView()
             total
         ))
     else
-        txtCompareFooter:SetText(addonTable.L["compare_ranking_note"])
+        txtCompareFooter:SetText(
+            getRecommendationMode() == "available"
+                and addonTable.L["compare_available_note"]
+                or addonTable.L["compare_ranking_note"]
+        )
     end
 
     updateComparePanelHeight(math.max(visible, 1), COMPARE_ROW_HEIGHT)
@@ -2134,7 +2161,7 @@ function refreshComparisonPanel()
         return
     end
 
-    if getRecommendationMode() ~= "dynamic"
+    if not isOptimizedMode(getRecommendationMode())
         or not dynamicRecommendation
         or not dynamicRecommendation.available
     then
@@ -2183,7 +2210,7 @@ function toggleComparisonPanel(forceState)
         return
     end
 
-    if getRecommendationMode() ~= "dynamic"
+    if not isOptimizedMode(getRecommendationMode())
         or not dynamicRecommendation
         or not dynamicRecommendation.available
     then
@@ -2322,12 +2349,14 @@ function GetCraftingToDo()
         buildRecipeCache()
         cacheAllRecipeReagents()
 
-        if getRecommendationMode() == "dynamic"
+        local recommendationMode = getRecommendationMode()
+        if isOptimizedMode(recommendationMode)
             and type(addonTable.computeDynamicProfessionRecommendation) == "function"
         then
             dynamicRecommendation = addonTable.computeDynamicProfessionRecommendation(
                 recipeCache,
-                professionContext
+                professionContext,
+                { requireAvailableNow = recommendationMode == "available" }
             )
         end
 
@@ -2651,7 +2680,7 @@ end
 
 function displayRecipe()
     local L = addonTable.L
-    local usingDynamic = getRecommendationMode() == "dynamic"
+    local usingDynamic = isOptimizedMode(getRecommendationMode())
         and dynamicRecommendation
         and dynamicRecommendation.available
     local currentKey = recipeKey(shouldCraft)
@@ -2741,14 +2770,23 @@ function displayRecipe()
         imgSkillIcon:SetTexture(icon or UNKNOWN_ICON)
         updateRecommendationMeta(data, professionContext.effectiveSkill, displayedTarget)
 
-        local requestedDynamic = getRecommendationMode() == "dynamic"
+        local recommendationMode = getRecommendationMode()
+        local requestedDynamic = isOptimizedMode(recommendationMode)
         if usingDynamic then
             txtCraftStats:SetText("")
-            txtRecipeStatus:SetText(L["dynamic_preferred"])
+            txtRecipeStatus:SetText(
+                recommendationMode == "available"
+                    and L["available_preferred"]
+                    or L["dynamic_preferred"]
+            )
             txtRecipeStatus:SetTextColor(0.45, 1, 0.35)
         elseif requestedDynamic then
             txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))
-            txtRecipeStatus:SetText(L["dynamic_fallback_short"])
+            txtRecipeStatus:SetText(
+                recommendationMode == "available"
+                    and L["available_fallback_short"]
+                    or L["dynamic_fallback_short"]
+            )
             txtRecipeStatus:SetTextColor(1, 0.72, 0.22)
         else
             txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))

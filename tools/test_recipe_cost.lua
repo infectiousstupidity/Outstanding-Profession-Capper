@@ -27,8 +27,10 @@ addonTable.chooseUsableUnitPrice = function(result, purpose)
             priceType = priceType,
             source = result.source or "fixture",
             freshness = result.freshness or "fresh",
+            isFresh = (result.freshness or "fresh") == "fresh",
             isStale = result.freshness == "stale",
             isTooOld = false,
+            availableQuantity = result.availableQuantity,
         }
     end
 
@@ -91,6 +93,7 @@ assertEqual(orange.materialMarketValuePerCraft, 200, "orange market per craft")
 assertEqual(orange.goldNeededNowPerCraft, 160, "vendor beats AH")
 assertEqual(orange.expectedGoldNeededNowPerSkillUp, 160, "orange gold per point")
 assertEqual(orange.reagentCosts[1].purchasePriceType, "vendor", "vendor source explicit")
+assertEqual(orange.availableNow, true, "vendor-backed recipe is available now")
 
 local yellow = addonTable.calculateRecipeCost(recipe, 105, nil, {}, {})
 assertEqual(yellow.difficulty, "yellow", "yellow difficulty")
@@ -117,6 +120,25 @@ local owned = addonTable.calculateRecipeCost(recipe, 90, nil, {
 }, {})
 assertEqual(owned.materialMarketValuePerCraft, 200, "owned material keeps market value")
 assertEqual(owned.goldNeededNowPerCraft, 80, "owned material reduces cash")
+
+local auctionOnlyRecipe = {
+    spellID = 20,
+    acquisition = { status = "learned" },
+    difficulty = { yellow = 100, green = 110, gray = 120 },
+    reagents = {
+        { itemID = 1002, quantity = 1 },
+    },
+}
+local freshAuction = addonTable.calculateRecipeCost(auctionOnlyRecipe, 90, nil, {}, {})
+assertEqual(freshAuction.availableNow, true, "fresh AH listing is available now")
+assertEqual(freshAuction.availabilityConfidence, "fresh_listing", "TSM listing-only availability is explicit")
+
+prices[1002].freshness = "stale"
+local staleAuction = addonTable.calculateRecipeCost(auctionOnlyRecipe, 90, nil, {}, {})
+assertEqual(staleAuction.available, true, "stale price remains usable for cheapest mode")
+assertEqual(staleAuction.availableNow, false, "stale AH listing is rejected by available mode")
+assertEqual(staleAuction.availabilityIssues[1].reason, "auction_scan_stale", "stale availability reason")
+prices[1002].freshness = "fresh"
 
 local reusableRecipe = {
     spellID = 2,
