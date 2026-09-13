@@ -8,6 +8,7 @@ local preferredProviderName
 local freshnessSettings = {
     freshMaxAgeSeconds = 6 * 60 * 60,
     staleMaxAgeSeconds = 72 * 60 * 60,
+    availableNowMaxAgeSeconds = 15 * 60,
 }
 
 addonTable.priceFreshnessSettings = freshnessSettings

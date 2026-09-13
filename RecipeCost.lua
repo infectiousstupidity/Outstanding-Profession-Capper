@@ -566,20 +566,148 @@ local function classifyPurchaseAvailability(choice, requiredQuantity)
         return false, "auction_scan_stale"
     end
 
-    local availableQuantity = tonumber(choice.availableQuantity)
+    local maxAge = 15 * 60
+    if addonTable.priceFreshnessSettings
+        and tonumber(addonTable.priceFreshnessSettings.availableNowMaxAgeSeconds)
+    then
+        maxAge = tonumber(addonTable.priceFreshnessSettings.availableNowMaxAgeSeconds)
+    end
+
+    local ageSeconds = tonumber(choice.ageSeconds)
+    if not ageSeconds then
+        return false, "auction_scan_age_unknown"
+    end
+    if ageSeconds > maxAge then
+        return false, "auction_scan_too_old_for_available"
+    end
+
     local needed = math.max(0, tonumber(requiredQuantity) or 0)
-    if availableQuantity and availableQuantity < needed then
+    local availableQuantity = tonumber(choice.availableQuantity)
+    local minimumQuantity = availableQuantity or tonumber(choice.numAuctions)
+    if not minimumQuantity then
+        return false, "auction_quantity_unknown"
+    end
+    if minimumQuantity < needed then
         return false, "insufficient_auction_quantity"
     end
 
     if availableQuantity then
         return true, "confirmed_quantity"
     end
+    return true, "confirmed_minimum_quantity"
+end
 
-    -- The current WotLK TSM AuctionDB backport confirms that a listing existed
-    -- at scan time but does not persist total stack quantity. Treat a fresh
-    -- listing as available, but expose the weaker confidence explicitly.
-    return true, "fresh_listing"
+local function chooseConfirmedAvailableEquivalentPurchase(item, quantity, options)
+    options = options or {}
+    quantity = math.max(0, tonumber(quantity) or 0)
+    if quantity <= 0 then
+        return {
+            requestedItemID = parseItemID(item),
+            requestedQuantity = 0,
+            sourceItemID = parseItemID(item),
+            sourceQuantity = 0,
+            sourceUnitPrice = 0,
+            totalCost = 0,
+            effectiveUnitPrice = 0,
+            unitPrice = 0,
+            producedQuantity = 0,
+            excessQuantity = 0,
+            converted = false,
+            availabilityReason = "owned",
+        }
+    end
+
+    local lookup = getPriceLookup(options)
+    local chooser = getPriceChooser(options)
+    if type(lookup) ~= "function" or type(chooser) ~= "function" then
+        return nil, "price_provider_unavailable"
+    end
+
+    local itemID = parseItemID(item)
+    local directChoice, directReason = chooseItemPrice(item, "purchase", lookup, chooser, options.now)
+    local direct = buildQuantityChoice(
+        directChoice,
+        itemID,
+        quantity,
+        itemID,
+        ceilPositive(quantity),
+        false,
+        nil
+    )
+    local directAvailabilityReason
+    if direct then
+        local confirmed
+        confirmed, directAvailabilityReason = classifyPurchaseAvailability(
+            direct,
+            direct.sourceQuantity
+        )
+        if confirmed then
+            direct.availabilityReason = directAvailabilityReason
+        else
+            direct = nil
+        end
+    end
+
+    local equivalent = itemID and ESSENCE_EQUIVALENTS[itemID] or nil
+    local alternate
+    local alternateReason
+    local alternateAvailabilityReason
+    if equivalent then
+        local alternateChoice
+        alternateChoice, alternateReason = chooseItemPrice(
+            equivalent.alternateItemID,
+            "purchase",
+            lookup,
+            chooser,
+            options.now
+        )
+
+        local alternateSourceQuantity
+        if equivalent.direction == "greater_to_lesser" then
+            alternateSourceQuantity = ceilPositive(quantity / equivalent.ratio)
+        else
+            alternateSourceQuantity = ceilPositive(quantity * equivalent.ratio)
+        end
+
+        alternate = buildQuantityChoice(
+            alternateChoice,
+            itemID,
+            quantity,
+            equivalent.alternateItemID,
+            alternateSourceQuantity,
+            true,
+            equivalent
+        )
+        if alternate then
+            local confirmed
+            confirmed, alternateAvailabilityReason = classifyPurchaseAvailability(
+                alternate,
+                alternate.sourceQuantity
+            )
+            if confirmed then
+                alternate.availabilityReason = alternateAvailabilityReason
+            else
+                alternate = nil
+            end
+        end
+    end
+
+    if direct and alternate then
+        return alternate.totalCost < direct.totalCost and alternate or direct
+    end
+    if direct then
+        return direct
+    end
+    if alternate then
+        return alternate
+    end
+
+    return nil,
+        directAvailabilityReason
+        or alternateAvailabilityReason
+        or directReason
+        or alternateReason
+        or "no_confirmed_purchase_source"
 end
 
 function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, options)
@@ -677,7 +805,6 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
     local expectedCurrentPurchase = 0
     local hasStale = false
     local allPurchasesAvailableNow = true
-    local listingOnlyAvailability = false
     local inventoryRemaining = copyMap(state.inventory)
     local acquiredOneTime = state.acquiredOneTime or state.acquiredReusable or {}
 
@@ -716,11 +843,18 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
             )
             local neededPurchaseChoice
             local neededPurchaseReason
+            local availabilityChoice
+            local availabilityReason
             if purchaseQuantity > 0 then
                 neededPurchaseChoice, neededPurchaseReason = addonTable.chooseCheapestEquivalentPurchase(
                     item,
                     purchaseQuantity,
                     "purchase",
+                    equivalentOptions
+                )
+                availabilityChoice, availabilityReason = chooseConfirmedAvailableEquivalentPurchase(
+                    item,
+                    purchaseQuantity,
                     equivalentOptions
                 )
             end
@@ -734,20 +868,19 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                 )
             else
                 local availabilityConfirmed = true
-                local availabilityReason = alreadyAcquired and "owned_reusable" or "owned"
+                availabilityReason = alreadyAcquired and "owned_reusable" or "owned"
                 if purchaseQuantity > 0 and not alreadyAcquired then
-                    availabilityConfirmed, availabilityReason = classifyPurchaseAvailability(
-                        neededPurchaseChoice,
-                        neededPurchaseChoice and neededPurchaseChoice.sourceQuantity or purchaseQuantity
-                    )
+                    availabilityConfirmed = availabilityChoice ~= nil
+                    availabilityReason = availabilityChoice
+                        and availabilityChoice.availabilityReason
+                        or availabilityReason
+                        or "no_confirmed_purchase_source"
                     if not availabilityConfirmed then
                         allPurchasesAvailableNow = false
                         table.insert(result.availabilityIssues, {
                             item = item,
                             reason = availabilityReason,
                         })
-                    elseif availabilityReason == "fresh_listing" then
-                        listingOnlyAvailability = true
                     end
                 end
 
@@ -760,7 +893,10 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                 end
 
                 local craftMarket = marketChoice.totalCost
-                local craftGold = neededPurchaseChoice and neededPurchaseChoice.totalCost or 0
+                local currentGoldChoice = options.requireAvailableNow
+                    and availabilityChoice
+                    or neededPurchaseChoice
+                local craftGold = currentGoldChoice and currentGoldChoice.totalCost or 0
                 local craftCurrentPurchase = purchaseChoice.totalCost
                 local multiplier = reusable and 1 or expectedCrafts
 
@@ -831,11 +967,13 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                     conversionDirection = purchaseChoice.conversionDirection,
                     availableNow = availabilityConfirmed,
                     availabilityReason = availabilityReason,
-                    availabilityPriceType = neededPurchaseChoice and neededPurchaseChoice.priceType or nil,
-                    availabilityAgeSeconds = neededPurchaseChoice and neededPurchaseChoice.ageSeconds or nil,
-                    availabilitySourceItemID = neededPurchaseChoice and neededPurchaseChoice.sourceItemID or nil,
-                    availabilitySourceQuantity = neededPurchaseChoice and neededPurchaseChoice.sourceQuantity or 0,
-                    availabilityQuantity = neededPurchaseChoice and neededPurchaseChoice.availableQuantity or nil,
+                    availabilityPriceType = availabilityChoice and availabilityChoice.priceType or nil,
+                    availabilityAgeSeconds = availabilityChoice and availabilityChoice.ageSeconds or nil,
+                    availabilitySourceItemID = availabilityChoice and availabilityChoice.sourceItemID or nil,
+                    availabilitySourceQuantity = availabilityChoice and availabilityChoice.sourceQuantity or 0,
+                    availabilityQuantity = availabilityChoice and (
+                        availabilityChoice.availableQuantity or availabilityChoice.numAuctions
+                    ) or nil,
                 })
             end
         end
@@ -855,9 +993,7 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
     result.expectedGoldNeededNowPerSkillUp = expectedGold
     result.expectedCurrentPurchaseCostPerSkillUp = expectedCurrentPurchase
     result.availableNow = allPurchasesAvailableNow
-    result.availabilityConfidence = allPurchasesAvailableNow
-        and (listingOnlyAvailability and "fresh_listing" or "confirmed")
-        or "unavailable"
+    result.availabilityConfidence = allPurchasesAvailableNow and "confirmed" or "unavailable"
     result.available = true
     result.useful = true
     result.quality = hasStale and "stale" or "complete"

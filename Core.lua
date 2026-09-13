@@ -365,7 +365,10 @@ end
 
 local function getOwnedItemCount(itemID, fallback)
     if itemID and type(GetItemCount) == "function" then
-        local ok, count = pcall(GetItemCount, itemID)
+        local ok, count = pcall(GetItemCount, itemID, true)
+        if not ok then
+            ok, count = pcall(GetItemCount, itemID)
+        end
         if ok and tonumber(count) then
             return math.max(0, tonumber(count))
         end

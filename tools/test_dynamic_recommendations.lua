@@ -36,8 +36,12 @@ addonTable.lookupItemPrice = function(item)
 end
 
 local recipeCostCalls = 0
-addonTable.calculateRecipeCost = function(recipe, skill)
+local sawAvailableModeCost = false
+addonTable.calculateRecipeCost = function(recipe, skill, _, _, options)
     recipeCostCalls = recipeCostCalls + 1
+    if options and options.requireAvailableNow then
+        sawAvailableModeCost = true
+    end
     local id = recipe.spellID
     if id == 10 then
         return {
@@ -202,6 +206,7 @@ assert(availableRecommendation.currentSegment.recipeID == 10, "available mode sh
 assert(table.getn(availableRecommendation.availableCandidates) == 1, "only one orange/yellow candidate is available now")
 assert(availableRecommendation.availableCandidates[1].recipeID == 10, "freshly available candidate should be exposed")
 assert(solverCalls == 2, "available mode should also attempt an availability-constrained route")
+assert(sawAvailableModeCost == true, "available mode must reach recipe costing so confirmed sources can be selected")
 
 providerName = "null"
 local noProvider = addonTable.computeDynamicProfessionRecommendation(cache, {
