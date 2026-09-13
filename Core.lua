@@ -8,6 +8,7 @@ local targetSkill
 local craftRecipeOptionsIndex = 1
 local previousRecipeKey = ""
 local recipeCache = {}
+local recipeReagentCache = {}
 local transientSpellIndexMap = {}
 local materialRows = {}
 local compareRows = {}
@@ -41,6 +42,10 @@ local DETAILS_PANEL_GAP = 10
 
 local tradeSkillStateMutation = false
 local suppressTradeSkillUpdatesUntil = 0
+local pendingProfessionRefresh = false
+local professionRefreshDeadline = 0
+local professionRefreshDriver
+local PROFESSION_REFRESH_DEBOUNCE = 0.20
 
 local UNKNOWN_ICON = "Interface\\InventoryItems\\WoWUnknownItem01"
 local ENGRAVING_ICON = "Interface\\Icons\\Trade_Engraving"
@@ -358,6 +363,33 @@ local function buildRecipeCache()
     end
 end
 
+local function getOwnedItemCount(itemID, fallback)
+    if itemID and type(GetItemCount) == "function" then
+        local ok, count = pcall(GetItemCount, itemID)
+        if ok and tonumber(count) then
+            return math.max(0, tonumber(count))
+        end
+    end
+
+    return math.max(0, tonumber(fallback) or 0)
+end
+
+local function copyCachedRecipeReagents(cached)
+    local result = {}
+    for i = 1, table.getn(cached or {}) do
+        local reagent = cached[i]
+        result[i] = {
+            name = reagent.name,
+            texture = reagent.texture,
+            itemLink = reagent.itemLink,
+            itemID = reagent.itemID,
+            count = reagent.count,
+            owned = getOwnedItemCount(reagent.itemID, reagent.owned),
+        }
+    end
+    return result
+end
+
 local function cacheRecipeReagents(spellID)
     local data = recipeCache[spellID]
     local recipeIndex = transientSpellIndexMap[spellID]
@@ -366,7 +398,15 @@ local function cacheRecipeReagents(spellID)
         return
     end
 
+    local cached = recipeReagentCache[spellID]
+    if cached then
+        data.reagents = copyCachedRecipeReagents(cached)
+        return
+    end
+
     data.reagents = {}
+    local staticReagents = {}
+    local cacheable = true
     local numReagents = GetTradeSkillNumReagents(recipeIndex)
 
     for i = 1, numReagents do
@@ -377,15 +417,34 @@ local function cacheRecipeReagents(spellID)
                 itemLink = GetTradeSkillReagentItemLink(recipeIndex, i)
             end
 
-            table.insert(data.reagents, {
+            local itemID = addonTable.getItemIDFromLink and addonTable.getItemIDFromLink(itemLink) or nil
+            local reagent = {
                 name = reagentName,
                 texture = reagentTexture,
                 itemLink = itemLink,
-                itemID = addonTable.getItemIDFromLink and addonTable.getItemIDFromLink(itemLink) or nil,
+                itemID = itemID,
                 count = reagentCount or 0,
                 owned = reagentOwned or 0,
-            })
+            }
+            table.insert(data.reagents, reagent)
+
+            if itemID then
+                table.insert(staticReagents, {
+                    name = reagentName,
+                    texture = reagentTexture,
+                    itemLink = itemLink,
+                    itemID = itemID,
+                    count = reagentCount or 0,
+                    owned = 0,
+                })
+            else
+                cacheable = false
+            end
         end
+    end
+
+    if cacheable then
+        recipeReagentCache[spellID] = staticReagents
     end
 end
 
@@ -699,6 +758,13 @@ local function renderMaterials(reagents, plannedCrafts)
     local purchaseTotal = 0
     local purchaseComplete = true
     local usedHeight = 0
+    local priceOptions
+    if dynamicRecommendation and type(dynamicRecommendation.priceLookup) == "function" then
+        priceOptions = {
+            priceLookup = dynamicRecommendation.priceLookup,
+            unitPriceChooser = addonTable.chooseUsableUnitPrice,
+        }
+    end
 
     for i = 1, count do
         local reagent = reagents[i]
@@ -707,7 +773,7 @@ local function renderMaterials(reagents, plannedCrafts)
         local needed = math.max(0, totalRequired - owned)
         local priceItem = reagent.itemID or reagent.itemLink or reagent.name
         local priceInfo = addonTable.getMaterialPriceInfo
-            and addonTable.getMaterialPriceInfo(priceItem, needed)
+            and addonTable.getMaterialPriceInfo(priceItem, needed, nil, priceOptions)
             or nil
         local converted = needed > 0
             and priceInfo
@@ -2553,25 +2619,25 @@ end
 
 local function refreshProfessionState(forceRefresh)
     if tradeSkillStateMutation or GetTime() < suppressTradeSkillUpdatesUntil then
-        return
+        return false
     end
 
     if IsTradeSkillLinked() then
         professionContext = nil
         addonTable.clearProfessionSkillContext()
         MainFrameCore:Hide()
-        return
+        return false
     end
 
     local nextContext, changed = addonTable.refreshProfessionSkillContext()
     if not nextContext then
         professionContext = nil
         MainFrameCore:Hide()
-        return
+        return false
     end
 
     if not forceRefresh and not changed then
-        return
+        return false
     end
 
     professionContext = nextContext
@@ -2579,7 +2645,7 @@ local function refreshProfessionState(forceRefresh)
 
     if not professionHandlers[professionContext.professionName] then
         MainFrameCore:Hide()
-        return
+        return false
     end
 
     resetValues()
@@ -2591,6 +2657,55 @@ local function refreshProfessionState(forceRefresh)
     else
         MainFrameCore:Hide()
     end
+
+    return true
+end
+
+local function cancelScheduledProfessionRefresh()
+    pendingProfessionRefresh = false
+    professionRefreshDeadline = 0
+    if professionRefreshDriver then
+        professionRefreshDriver:Hide()
+    end
+end
+
+local function scheduleProfessionRefresh(delay)
+    if not MainFrameCore or not MainFrameCore:IsShown() then
+        return
+    end
+
+    if not professionRefreshDriver then
+        professionRefreshDriver = CreateFrame("Frame")
+        professionRefreshDriver:Hide()
+        professionRefreshDriver:SetScript("OnUpdate", function(self)
+            if not pendingProfessionRefresh then
+                self:Hide()
+                return
+            end
+
+            local now = GetTime()
+            if tradeSkillStateMutation or now < suppressTradeSkillUpdatesUntil then
+                professionRefreshDeadline = math.max(
+                    professionRefreshDeadline,
+                    suppressTradeSkillUpdatesUntil + 0.02
+                )
+                return
+            end
+
+            if now < professionRefreshDeadline then
+                return
+            end
+
+            pendingProfessionRefresh = false
+            professionRefreshDeadline = 0
+            self:Hide()
+            refreshProfessionState(true)
+        end)
+    end
+
+    pendingProfessionRefresh = true
+    professionRefreshDeadline = GetTime() + math.max(0, tonumber(delay) or PROFESSION_REFRESH_DEBOUNCE)
+    professionRefreshDriver:Show()
 end
 
 function fnOnLoad()
@@ -2627,6 +2742,8 @@ function fnOnLoad()
 
     this:RegisterEvent("TRADE_SKILL_UPDATE")
     this:RegisterEvent("TRADE_SKILL_CLOSE")
+    this:RegisterEvent("BAG_UPDATE")
+    this:RegisterEvent("LEARNED_SPELL_IN_TAB")
     this:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
     this:RegisterEvent("UNIT_AURA")
     this:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
@@ -2654,10 +2771,24 @@ function fnOnEvent()
     end
 
     if event == "TRADE_SKILL_CLOSE" then
+        cancelScheduledProfessionRefresh()
         addonTable.clearCraftSession()
         addonTable.clearProfessionSkillContext()
         professionContext = nil
         MainFrameCore:Hide()
+        return
+    end
+
+    if event == "BAG_UPDATE" then
+        local session = addonTable.getCraftSession()
+        if not session or not session.active then
+            scheduleProfessionRefresh(PROFESSION_REFRESH_DEBOUNCE)
+        end
+        return
+    end
+
+    if event == "LEARNED_SPELL_IN_TAB" then
+        scheduleProfessionRefresh(0.05)
         return
     end
 
@@ -2674,7 +2805,9 @@ function fnOnEvent()
     end
 
     if event == "TRADE_SKILL_UPDATE" then
-        refreshProfessionState(true)
+        if refreshProfessionState(false) then
+            cancelScheduledProfessionRefresh()
+        end
     end
 end
 
