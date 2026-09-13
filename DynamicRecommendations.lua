@@ -298,6 +298,169 @@ function addonTable.buildLiveProfessionOptimizationInput(recipeCache, skillConte
     return recipes, state
 end
 
+
+local function copyCatalogReagent(reagent)
+    local itemID = tonumber(reagent and reagent.itemID)
+    local reusable = itemID and REUSABLE_PROFESSION_TOOLS[itemID] and true or false
+    local result = {
+        itemID = itemID,
+        item = itemID,
+        name = reagent and reagent.name,
+        quantity = tonumber(reagent and (reagent.count or reagent.quantity)) or 0,
+        reusable = reusable,
+    }
+    if reusable then result.reusableKey = "item:" .. tostring(itemID) end
+    return result
+end
+
+local function spellName(spellID, fallback)
+    if type(GetSpellInfo) == "function" then
+        local ok, name = pcall(GetSpellInfo, spellID)
+        if ok and type(name) == "string" and name ~= "" then return name end
+    end
+    return fallback or ("Spell " .. tostring(spellID))
+end
+
+local function addKnownSpell(state, spellID)
+    spellID = tonumber(spellID)
+    if not spellID or spellID <= 0 or state.learnedSpells[spellID] ~= nil then return end
+    if type(IsSpellKnown) == "function" then
+        local ok, known = pcall(IsSpellKnown, spellID)
+        if ok then state.learnedSpells[spellID] = known and true or false end
+    end
+end
+
+function addonTable.buildFullProfessionOptimizationInput(recipeCache, skillContext)
+    local liveRecipes, state = addonTable.buildLiveProfessionOptimizationInput(recipeCache, skillContext)
+    local liveBySpell = {}
+    for index = 1, table.getn(liveRecipes) do
+        liveBySpell[liveRecipes[index].spellID] = liveRecipes[index]
+    end
+
+    state.learnedSpells = {}
+    state.reputation = {}
+    if type(UnitLevel) == "function" then
+        local ok, level = pcall(UnitLevel, "player")
+        if ok and tonumber(level) then state.playerLevel = tonumber(level) end
+    end
+
+    local profession = skillContext and skillContext.professionName
+    local catalog = type(addonTable.getRecipeCatalogRecipes) == "function"
+        and addonTable.getRecipeCatalogRecipes(profession)
+        or {}
+    local recipes = {}
+    local seen = {}
+    local inventoryItems = {}
+
+    for index = 1, table.getn(catalog) do
+        local record = catalog[index]
+        local eligible = true
+        if type(addonTable.isRecipeEligibleForDynamicOptimization) == "function" then
+            eligible = addonTable.isRecipeEligibleForDynamicOptimization(record.spellID)
+        end
+        if eligible then
+            local live = liveBySpell[record.spellID]
+            local recipe = {
+                spellID = record.spellID,
+                name = live and live.name or spellName(record.spellID, record.name),
+                profession = record.profession,
+                requiredSkill = record.requiredSkill,
+                outputItemID = record.outputItemID,
+                outputQuantity = record.outputQuantity,
+                recipeItemID = record.recipeItemID,
+                liveSkillType = live and live.liveSkillType or nil,
+                learned = live ~= nil,
+                catalogRecord = record,
+                reagents = {},
+                outputs = {},
+            }
+
+            if live then
+                recipe.reagents = live.reagents or {}
+                recipe.outputs = live.outputs or {}
+            else
+                for reagentIndex = 1, table.getn(record.reagents or {}) do
+                    table.insert(recipe.reagents, copyCatalogReagent(record.reagents[reagentIndex]))
+                end
+                if record.outputItemID then
+                    table.insert(recipe.outputs, {
+                        itemID = record.outputItemID,
+                        item = record.outputItemID,
+                        quantity = tonumber(record.outputQuantity) or 1,
+                    })
+                end
+            end
+
+            for reagentIndex = 1, table.getn(recipe.reagents or {}) do
+                local reagent = recipe.reagents[reagentIndex]
+                if reagent.itemID then inventoryItems[reagent.itemID] = true end
+            end
+            if record.recipeItemID then inventoryItems[record.recipeItemID] = true end
+
+            local acquisitions = type(addonTable.getRecipeAcquisitionRecords) == "function"
+                and addonTable.getRecipeAcquisitionRecords(record.spellID)
+                or {}
+            for sourceIndex = 1, table.getn(acquisitions) do
+                local source = acquisitions[sourceIndex]
+                if source.recipeItemID then inventoryItems[source.recipeItemID] = true end
+                for prerequisiteIndex = 1, table.getn(source.prerequisiteSpellIDs or {}) do
+                    addKnownSpell(state, source.prerequisiteSpellIDs[prerequisiteIndex])
+                end
+                if source.specializationSpellID then addKnownSpell(state, source.specializationSpellID) end
+                if source.reputation and source.reputation.factionID
+                    and state.reputation[source.reputation.factionID] == nil
+                    and type(GetFactionInfoByID) == "function"
+                then
+                    local ok, _, _, standingID = pcall(GetFactionInfoByID, source.reputation.factionID)
+                    if ok and tonumber(standingID) then
+                        state.reputation[source.reputation.factionID] = math.max(0, tonumber(standingID) - 1)
+                    end
+                end
+            end
+
+            if state.learnedRecipes[record.spellID] then state.learnedSpells[record.spellID] = true end
+            table.insert(recipes, recipe)
+            seen[record.spellID] = true
+        end
+    end
+
+    -- Preserve any live recipe not present in the pinned catalog rather than
+    -- making a catalog mismatch hide a recipe the client proves is learned.
+    for index = 1, table.getn(liveRecipes) do
+        local live = liveRecipes[index]
+        if not seen[live.spellID] then
+            table.insert(recipes, live)
+            seen[live.spellID] = true
+        end
+    end
+
+    for itemID in pairs(inventoryItems) do
+        if state.inventory[itemID] == nil then
+            state.inventory[itemID] = getOwnedCount(itemID, 0)
+        end
+        if REUSABLE_PROFESSION_TOOLS[itemID] and state.inventory[itemID] > 0 then
+            state.acquiredOneTime["item:" .. tostring(itemID)] = true
+        end
+    end
+
+    if type(addonTable.getProfessionTrainingSteps) == "function" then
+        state.trainingSteps, state.reachableCap = addonTable.getProfessionTrainingSteps(
+            profession,
+            state.currentCap,
+            state.playerLevel
+        )
+    else
+        state.trainingSteps = {}
+        state.reachableCap = state.currentCap
+    end
+
+    table.sort(recipes, function(left, right)
+        return tonumber(left.spellID or 0) < tonumber(right.spellID or 0)
+    end)
+
+    return recipes, state
+end
+
 local function getRecipeID(recipe)
     return recipe and (recipe.spellID or recipe.recipeID or recipe.id) or nil
 end
@@ -463,25 +626,11 @@ local function buildCurrentCheapestSegment(recipes, skillContext, state, targetS
     return segment, firstRanking
 end
 
-local function orangeYellowRouteCost(recipe, skill, skillContext, state, options)
-    if type(addonTable.calculateRecipeCost) ~= "function" then
-        return nil
-    end
-
+local function fullCatalogRouteCost(recipe, skill, skillContext, state, options)
+    if type(addonTable.calculateRecipeCost) ~= "function" then return nil end
     local cost = addonTable.calculateRecipeCost(recipe, skill, skillContext, state, options or {})
     local currentSkill = tonumber(skillContext and skillContext.baseSkill) or 0
-    cost = applyLiveSkillType(cost, recipe, skill, currentSkill)
-    if not cost or not cost.available then
-        return cost
-    end
-
-    if cost.difficulty ~= "orange" and cost.difficulty ~= "yellow" then
-        cost.available = false
-        cost.useful = false
-        cost.incomplete = false
-        cost.unavailableReason = "not_orange_or_yellow"
-    end
-    return cost
+    return applyLiveSkillType(cost, recipe, skill, currentSkill)
 end
 
 function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillContext, options)
@@ -502,6 +651,10 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         candidates = {},
         routeComplete = false,
         routeReason = nil,
+        selectedRecipeLearned = false,
+        requiresAcquisition = false,
+        acquisition = nil,
+        nextAction = nil,
     }
 
     if type(skillContext) ~= "table" then
@@ -519,12 +672,13 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
 
     if type(addonTable.solveCheapestProfessionRoute) ~= "function"
         or type(addonTable.buildProfessionShoppingPlan) ~= "function"
+        or type(addonTable.buildFullProfessionOptimizationInput) ~= "function"
     then
         result.reason = "optimizer_unavailable"
         return result
     end
 
-    local recipes, state = addonTable.buildLiveProfessionOptimizationInput(recipeCache, skillContext)
+    local recipes, state = addonTable.buildFullProfessionOptimizationInput(recipeCache, skillContext)
     result.recipes = recipes
     result.state = state
     if table.getn(recipes) == 0 then
@@ -532,64 +686,71 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         return result
     end
 
-    local targetSkill = tonumber(options.targetSkill or skillContext.currentCap) or 450
+    local targetSkill = tonumber(options.targetSkill or state.reachableCap or skillContext.currentCap) or 450
     targetSkill = math.min(450, targetSkill)
     result.targetSkill = targetSkill
-
     if targetSkill <= (tonumber(skillContext.baseSkill) or 0) then
         result.reason = "target_reached"
         return result
     end
 
-    local segment, candidates = buildCurrentCheapestSegment(
+    result.candidates = rankCurrentRecipes(
         recipes,
         skillContext,
         state,
-        targetSkill,
+        tonumber(skillContext.baseSkill) or 0,
         options.costOptions
     )
-    result.candidates = candidates or {}
-
-    if not segment or not segment.recipeID then
-        result.reason = "no_current_priced_recipe"
-        return result
-    end
-
-    result.currentSegment = segment
-    result.currentCost = segment.firstCost
-    result.available = true
-    result.fallbackToStaticGuide = false
-    result.reason = nil
 
     local route = addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, {
         startSkill = skillContext.baseSkill,
         targetSkill = targetSkill,
         optimizeFor = options.optimizeFor or "current",
         maxStates = options.maxStates,
-        costRecipe = orangeYellowRouteCost,
+        costRecipe = fullCatalogRouteCost,
         costOptions = options.costOptions,
+        trainingSteps = state.trainingSteps,
     })
     result.route = route
 
     if not route or not route.complete then
-        result.routeReason = route and route.reason or "no_complete_route"
+        result.reason = route and route.reason or "no_complete_route"
+        result.routeReason = result.reason
+        return result
+    end
+
+    local segment = route.segments and route.segments[1]
+    if not segment or not segment.recipeID then
+        result.reason = "no_current_priced_recipe"
+        result.routeReason = result.reason
+        return result
+    end
+
+    result.currentSegment = segment
+    result.currentCost = segment.firstCost
+    result.selectedRecipeLearned = state.learnedRecipes[segment.recipeID] == true
+    result.acquisition = result.currentCost and result.currentCost.acquisition or nil
+    result.requiresAcquisition = not result.selectedRecipeLearned
+        and result.acquisition ~= nil
+        and result.acquisition.alreadyAcquired ~= true
+    result.nextAction = result.requiresAcquisition and "acquire_recipe" or "craft"
+
+    local plan = addonTable.buildProfessionShoppingPlan(route, state, {
+        priceRevision = options.priceRevision,
+        recipeRevision = options.recipeRevision,
+        acquisitionRevision = options.acquisitionRevision or addonTable.recipeAcquisitionDataRevision,
+    })
+    result.plan = plan
+    if not plan or not plan.complete then
+        result.reason = plan and plan.reason or "shopping_plan_incomplete"
+        result.routeReason = result.reason
+        result.plan = nil
         return result
     end
 
     result.routeComplete = true
-    local plan = addonTable.buildProfessionShoppingPlan(route, state, {
-        priceRevision = options.priceRevision,
-        recipeRevision = options.recipeRevision,
-        acquisitionRevision = options.acquisitionRevision
-            or addonTable.recipeAcquisitionDataRevision,
-    })
-    result.plan = plan
-
-    if not plan or not plan.complete then
-        result.routeComplete = false
-        result.routeReason = plan and plan.reason or "shopping_plan_incomplete"
-        result.plan = nil
-    end
-
+    result.available = true
+    result.fallbackToStaticGuide = false
+    result.reason = nil
     return result
 end

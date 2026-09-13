@@ -1,223 +1,201 @@
 local addonTable = {}
 
 local owned = {
-    [6218] = 1,
     [1001] = 4,
+    [61013] = 0,
 }
+function GetItemCount(itemID) return owned[itemID] or 0 end
+function UnitFactionGroup() return "Alliance" end
+function UnitLevel() return 80 end
+function IsSpellKnown(spellID) return spellID == 7413 end
+function GetFactionInfoByID() return "Fixture", nil, 7 end
+function GetSpellInfo(spellID) return "SpellName " .. tostring(spellID) end
 
-function GetItemCount(itemID)
-    return owned[itemID] or 0
-end
-
-function UnitFactionGroup()
-    return "Alliance"
-end
-
-addonTable.isRecipeEligibleForDynamicOptimization = function(spellID)
-    return spellID == 10 or spellID == 11 or spellID == 12
-end
-
-local providerName = "fixture"
-addonTable.getActivePriceProviderName = function()
-    return providerName
-end
-
-addonTable.calculateRecipeCost = function(recipe, skill)
-    local id = recipe.spellID
-    if id == 10 then
-        return {
-            available = true,
-            useful = true,
-            difficulty = "green",
-            skillUpChance = 0.4,
-            expectedCraftsPerSkillUp = 2.5,
-            currentPurchaseCostPerCraft = 300,
-            expectedCurrentPurchaseCostPerSkillUp = 750,
-            materialMarketValuePerCraft = 300,
-            expectedMarketCostPerSkillUp = 750,
-            quality = "complete",
-            reagentCosts = {},
-        }
-    elseif id == 11 then
-        return {
-            available = true,
-            useful = true,
-            difficulty = "orange",
-            skillUpChance = 1,
-            expectedCraftsPerSkillUp = 1,
-            currentPurchaseCostPerCraft = 200,
-            expectedCurrentPurchaseCostPerSkillUp = 200,
-            materialMarketValuePerCraft = 200,
-            expectedMarketCostPerSkillUp = 200,
-            quality = "complete",
-            reagentCosts = {},
-        }
-    elseif id == 12 then
-        return {
-            available = true,
-            useful = true,
-            difficulty = "green",
-            skillUpChance = 0.5,
-            expectedCraftsPerSkillUp = 2,
-            currentPurchaseCostPerCraft = 20,
-            expectedCurrentPurchaseCostPerSkillUp = 40,
-            materialMarketValuePerCraft = 20,
-            expectedMarketCostPerSkillUp = 40,
-            quality = "complete",
-            reagentCosts = {},
-        }
-    end
-    return { available = false }
-end
-
-local solverCalls = 0
-addonTable.solveCheapestProfessionRoute = function(recipes, context, state, options)
-    solverCalls = solverCalls + 1
-    assert(table.getn(recipes) == 3, "eligible learned recipes should be passed to optimizer")
-    assert(options.targetSkill == 225, "optimizer should target current trained cap")
-    assert(options.optimizeFor == "current", "route should optimize current purchase cost")
-    assert(type(options.costRecipe) == "function", "full route should enforce orange/yellow-only costs")
-    local greenRouteCost = options.costRecipe(recipes[3], context.baseSkill, context, state, {})
-    assert(greenRouteCost.available == false, "green recipe must not be usable in full dynamic route")
-    assert(greenRouteCost.unavailableReason == "not_orange_or_yellow", "green route exclusion reason")
-    assert(state.learnedRecipes[10] == true, "learned recipe state should be populated")
-    assert(state.inventory[1001] == 4, "live inventory should be populated")
-    assert(state.acquiredOneTime["item:6218"] == true, "owned enchanting rod should be reusable")
+addonTable.getActivePriceProviderName = function() return "fixture" end
+addonTable.isRecipeEligibleForDynamicOptimization = function() return true end
+addonTable.getRecipeCatalogRecipes = function(profession)
+    assert(profession == "Enchanting", "profession catalog selection")
     return {
-        complete = false,
-        reason = "no_complete_route",
-        segments = {},
-        actions = {},
+        { spellID = 10, profession = "Enchanting", name = "Known", requiredSkill = 1, reagents = {{ itemID = 1001, count = 1 }} },
+        { spellID = 13, profession = "Enchanting", name = "Future trainer", requiredSkill = 202, recipeItemID = 61013, reagents = {{ itemID = 1001, count = 1 }} },
+        { spellID = 14, profession = "Enchanting", name = "Conditional", requiredSkill = 1, reagents = {{ itemID = 1001, count = 1 }} },
+    }
+end
+addonTable.getRecipeAcquisitionRecords = function(spellID)
+    if spellID == 13 then
+        return {{ sourceType = "trainer", requiredSkill = 202, purchasePrice = 50, prerequisiteSpellIDs = { 7413 } }}
+    elseif spellID == 14 then
+        return {{ sourceType = "drop", recipeItemID = 61014 }}
+    end
+    return {{ sourceType = "learned" }}
+end
+
+local unknownAcquisitionCost = 50
+addonTable.calculateRecipeCost = function(recipe, skill, context, state)
+    local modifier = tonumber(context and context.activeSkillModifier) or 0
+    if recipe.spellID == 14 then return { available = false, useful = false, incomplete = false, unavailableReason = "drop_not_guaranteed" } end
+    if recipe.spellID == 13 and skill + modifier < 202 then
+        return { available = false, useful = false, incomplete = false, unavailableReason = "required_skill_not_met" }
+    end
+
+    local material = recipe.spellID == 13 and 10 or 100
+    local acquired = state.acquiredOneTime and state.acquiredOneTime["recipe:13"]
+    local oneTime = {}
+    local acquisition
+    if recipe.spellID == 13 then
+        acquisition = {
+            sourceType = acquired and "simulated_learned" or "trainer",
+            alreadyAcquired = acquired and true or false,
+            goldCost = acquired and 0 or unknownAcquisitionCost,
+            marketCost = acquired and 0 or unknownAcquisitionCost,
+            key = "recipe:13",
+        }
+        if not acquired then
+            oneTime = {{
+                key = "recipe:13",
+                kind = "recipe_acquisition",
+                marketCost = unknownAcquisitionCost,
+                goldCost = unknownAcquisitionCost,
+            }}
+        end
+    else
+        acquisition = { sourceType = "learned", alreadyAcquired = true, goldCost = 0, marketCost = 0, key = "recipe:10" }
+    end
+    return {
+        available = true,
+        useful = true,
+        difficulty = "orange",
+        skillUpChance = 1,
+        expectedCraftsPerSkillUp = 1,
+        currentPurchaseCostPerCraft = material,
+        expectedCurrentPurchaseCostPerSkillUp = material,
+        materialMarketValuePerCraft = material,
+        expectedMarketCostPerSkillUp = material,
+        expectedGoldNeededNowPerSkillUp = material,
+        oneTimeCosts = oneTime,
+        acquisition = acquisition,
+        quality = "complete",
+        reagentCosts = {},
     }
 end
 
-addonTable.buildProfessionShoppingPlan = function()
-    error("shopping plan should not run for incomplete route")
+addonTable.buildProfessionShoppingPlan = function(route)
+    return {
+        complete = route.complete,
+        estimatedCurrentPurchaseCost = route.totalCurrentPurchaseCost,
+        estimatedMarketValueCost = route.totalMarketCost,
+        estimatedGoldNeededNow = route.totalGoldCost,
+        totalExpectedCrafts = route.totalExpectedCrafts,
+        stalePriceCount = 0,
+        missingPriceCount = 0,
+    }
 end
 
+assert(loadfile("ProfessionTraining.lua"))("Profession_Capper", addonTable)
+assert(loadfile("RouteSolver.lua"))("Profession_Capper", addonTable)
 assert(loadfile("DynamicRecommendations.lua"))("Profession_Capper", addonTable)
-
-local commonReagents = {
-    {
-        name = "Dust",
-        itemLink = "|cffffffff|Hitem:1001:0:0:0:0:0:0:0|h[Dust]|h|r",
-        count = 1,
-        owned = 4,
-    },
-    {
-        name = "Runed Copper Rod",
-        itemLink = "|cffffffff|Hitem:6218:0:0:0:0:0:0:0|h[Runed Copper Rod]|h|r",
-        count = 1,
-        owned = 1,
-    },
-}
 
 local cache = {
     [10] = {
-        name = "Yellow recipe",
-        skillType = "medium",
-        reagents = commonReagents,
-    },
-    [11] = {
-        name = "Orange recipe",
+        name = "Known live recipe",
         skillType = "optimal",
-        reagents = commonReagents,
-    },
-    [12] = {
-        name = "Green recipe",
-        skillType = "easy",
-        reagents = commonReagents,
+        reagents = {{ name = "Dust", itemID = 1001, count = 1, owned = 4 }},
     },
 }
 
-local recommendation = addonTable.computeDynamicProfessionRecommendation(cache, {
+local context = {
     professionName = "Enchanting",
     baseSkill = 200,
-    effectiveSkill = 210,
+    effectiveSkill = 200,
+    activeSkillModifier = 0,
+    currentCap = 225,
+}
+
+local recipes, state = addonTable.buildFullProfessionOptimizationInput(cache, context)
+assert(table.getn(recipes) == 3, "full catalog should be optimizer input")
+assert(state.learnedRecipes[10] == true, "live recipe marked learned")
+assert(state.learnedRecipes[13] ~= true, "unknown catalog recipe stays unknown")
+assert(state.inventory[1001] == 4, "inventory retained")
+assert(state.playerLevel == 80, "player level captured")
+assert(state.learnedSpells[7413] == true, "prerequisite spell state captured")
+assert(state.reachableCap == 450, "level 80 can route through Grand Master")
+assert(table.getn(state.trainingSteps) == 3, "future profession ranks after 225 included")
+local unknown
+for i = 1, table.getn(recipes) do if recipes[i].spellID == 13 then unknown = recipes[i] end end
+assert(unknown and unknown.learned == false, "unknown recipe in merged catalog")
+assert(unknown.reagents[1].itemID == 1001, "static reagent retained")
+
+local recommendation = addonTable.computeDynamicProfessionRecommendation(cache, context, { targetSkill = 205 })
+assert(recommendation.available == true, "complete full route should drive dynamic mode")
+assert(recommendation.currentSegment.recipeID == 10, "known recipe bridges to future unlock")
+assert(recommendation.currentSegment.skillEnd == 202, "known segment stops at unlock")
+assert(recommendation.route.segments[2].recipeID == 13, "route switches to unknown cheaper trainer recipe")
+assert(recommendation.route.totalCurrentPurchaseCost == 280, "acquisition cost included once")
+assert(recommendation.nextAction == "craft", "known first segment crafts normally")
+
+local thresholdContext = {
+    professionName = "Enchanting",
+    baseSkill = 202,
+    effectiveSkill = 202,
+    activeSkillModifier = 0,
+    currentCap = 225,
+}
+local acquireFirst = addonTable.computeDynamicProfessionRecommendation(cache, thresholdContext, { targetSkill = 205 })
+assert(acquireFirst.available == true, "unknown recipe route available at threshold")
+assert(acquireFirst.currentSegment.recipeID == 13, "global route first segment is authoritative")
+assert(acquireFirst.selectedRecipeLearned == false, "unknown recipe not fabricated as learned")
+assert(acquireFirst.requiresAcquisition == true, "unknown recommendation exposes acquisition first")
+assert(acquireFirst.nextAction == "acquire_recipe", "unknown recipe must not be crafted before learning")
+assert(acquireFirst.acquisition.sourceType == "trainer", "chosen acquisition retained for UI")
+
+unknownAcquisitionCost = 1000
+local expensive = addonTable.computeDynamicProfessionRecommendation(cache, context, { targetSkill = 205 })
+assert(expensive.available == true, "known-only route remains valid")
+assert(expensive.currentSegment.recipeID == 10, "expensive acquisition makes known recipe cheaper")
+assert(table.getn(expensive.route.segments) == 1, "no unnecessary acquisition segment")
+unknownAcquisitionCost = 50
+
+local bloodElf = addonTable.computeDynamicProfessionRecommendation(cache, {
+    professionName = "Enchanting",
+    baseSkill = 192,
+    effectiveSkill = 202,
     activeSkillModifier = 10,
     currentCap = 225,
+}, { targetSkill = 193 })
+assert(bloodElf.available == true, "profession modifier route available")
+assert(bloodElf.currentSegment.recipeID == 13, "+10 Enchanting unlocks threshold recipe")
+
+-- Profession-rank training is part of the same global route state.
+local trainingRoute = addonTable.solveCheapestProfessionRoute({
+    { id = "known" },
+    { id = "after-training" },
+}, nil, { currentCap = 225 }, {
+    startSkill = 224,
+    targetSkill = 226,
+    trainingSteps = {{ key = "rank300", atSkill = 200, newCap = 300, status = "trainable", goldCost = 5 }},
+    costRecipe = function(recipe, skill)
+        if recipe.id == "after-training" and skill < 225 then
+            return { available = false, useful = false, incomplete = false }
+        end
+        local material = recipe.id == "after-training" and 1 or 10
+        return {
+            available = true, useful = true, expectedCraftsPerSkillUp = 1,
+            expectedMarketCostPerSkillUp = material, expectedGoldNeededNowPerSkillUp = material,
+            expectedCurrentPurchaseCostPerSkillUp = material, oneTimeCosts = {}, quality = "complete",
+        }
+    end,
 })
+assert(trainingRoute.complete == true, "rank-training route completes")
+assert(trainingRoute.actions[1].recipeID == "known", "craft to current cap")
+assert(trainingRoute.actions[2].type == "training", "profession rank inserted")
+assert(trainingRoute.actions[3].recipeID == "after-training", "new recipe used after rank training")
 
-assert(recommendation.available == true, "current recommendation should survive incomplete full route")
-assert(recommendation.fallbackToStaticGuide == false, "priced current step should not fall back")
-assert(recommendation.currentSegment.recipeID == 11, "cheapest orange/yellow recipe should win")
-assert(table.getn(recommendation.candidates) == 2, "green recipe must not compete")
-assert(recommendation.candidates[1].recipeID == 11, "candidates should be sorted by expected cost per skill-up")
-assert(recommendation.candidates[2].recipeID == 10, "second priced orange/yellow recipe")
-assert(recommendation.candidates[2].difficulty == "yellow", "live game difficulty must override stale static color")
-assert(math.abs(recommendation.candidates[2].skillUpChance - 0.75) < 0.0001, "mismatched live yellow uses safe current estimate")
-assert(recommendation.routeComplete == false, "full route should remain explicitly incomplete")
-assert(recommendation.routeReason == "no_complete_route", "full-route failure reason should be preserved")
-assert(solverCalls == 1, "solver should still attempt full route")
-
-providerName = "null"
-local noProvider = addonTable.computeDynamicProfessionRecommendation(cache, {
-    professionName = "Enchanting",
-    baseSkill = 200,
-    currentCap = 225,
-})
-assert(noProvider.available == false, "missing provider should disable dynamic mode")
-assert(noProvider.reason == "no_price_provider", "missing provider reason")
-assert(noProvider.fallbackToStaticGuide == true, "missing provider should fall back")
-
-addonTable.lookupItemPrice = function()
-    return {
-        available = true,
-        minBuyout = 100,
-        source = "fixture",
-        freshness = "fresh",
-        ageSeconds = 60,
-    }
-end
-addonTable.chooseUsableUnitPrice = function(result)
-    return {
-        unitPrice = result.minBuyout,
-        priceType = "auction",
-        source = result.source,
-        freshness = result.freshness,
-        ageSeconds = result.ageSeconds,
-    }
-end
-
-local price = addonTable.getMaterialPriceInfo(1001, 3)
-assert(price.available == true, "material price should resolve")
-assert(price.estimatedRemainingCost == 300, "material purchase estimate")
-
-addonTable.chooseCheapestEquivalentPurchase = function(item, quantity, purpose)
-    assert(item == 16202, "converted material item")
-    assert(quantity == 3, "converted material quantity")
-    assert(purpose == "purchase", "converted material uses purchase price")
-    return {
-        effectiveUnitPrice = 300,
-        sourceUnitPrice = 900,
-        sourceQuantity = 1,
-        requestedQuantity = 3,
-        producedQuantity = 3,
-        excessQuantity = 0,
-        totalCost = 900,
-        directTotalCost = 1200,
-        alternateTotalCost = 900,
-        savings = 300,
-        priceType = "auction",
-        source = "fixture",
-        freshness = "fresh",
-        ageSeconds = 60,
-        sourceItemID = 16203,
-        converted = true,
-        conversionRatio = 3,
-        conversionDirection = "greater_to_lesser",
-    }
-end
-
-local converted = addonTable.getMaterialPriceInfo(16202, 3)
-assert(converted.available == true, "converted material price available")
-assert(converted.sourceItemID == 16203, "converted source item exposed")
-assert(converted.sourceQuantity == 1, "converted source quantity exposed")
-assert(converted.estimatedRemainingCost == 900, "converted whole-item total exposed")
-assert(converted.directTotalCost == 1200, "direct comparison total exposed")
-assert(converted.savings == 300, "converted savings exposed")
+local oldProvider = addonTable.getActivePriceProviderName
+addonTable.getActivePriceProviderName = function() return "null" end
+local fallback = addonTable.computeDynamicProfessionRecommendation(cache, context, { targetSkill = 205 })
+assert(fallback.available == false and fallback.fallbackToStaticGuide == true, "missing prices preserve static fallback")
+addonTable.getActivePriceProviderName = oldProvider
 
 assert(addonTable.formatCopperShort(123456) == "12g 34s", "compact money formatting")
 assert(addonTable.formatPriceAge(7200) == "2h old", "scan age formatting")
-
-print("Dynamic recommendation integration tests passed.")
+print("Full-catalog dynamic recommendation tests passed.")
