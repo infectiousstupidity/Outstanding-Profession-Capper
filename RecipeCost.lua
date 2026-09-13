@@ -417,9 +417,12 @@ function addonTable.chooseCheapestEquivalentPurchase(item, quantity, purpose, op
     return chosen
 end
 
-local function resolveAcquisition(recipe, state, skillContext, options)
+local function resolveAcquisition(recipe, state, skillContext, options, simulatedBaseSkill)
     if type(addonTable.resolveRecipeAcquisition) == "function" then
-        local modeled = addonTable.resolveRecipeAcquisition(recipe, state, skillContext, options)
+        local acquisitionOptions = {}
+        for key, value in pairs(options or {}) do acquisitionOptions[key] = value end
+        acquisitionOptions.baseSkill = simulatedBaseSkill
+        local modeled = addonTable.resolveRecipeAcquisition(recipe, state, skillContext, acquisitionOptions)
         if modeled and modeled.handled then
             return {
                 available = modeled.available == true,
@@ -600,7 +603,7 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
         return result
     end
 
-    local acquisition = resolveAcquisition(recipe, state, skillContext, options)
+    local acquisition = resolveAcquisition(recipe, state, skillContext, options, baseSkill)
     result.acquisition = acquisition
     if not acquisition.available then
         result.incomplete = acquisition.reason == "missing_acquisition_metadata" or acquisition.reason == "missing_acquisition_cost"

@@ -1,115 +1,49 @@
 # Task 22 — Multi-source acquisition and character eligibility engine
 
-Status: QUEUED  
+Status: DONE  
 Phase: 6 — Self-contained full recipe optimization  
 Depends on: Tasks 20 and 21
 
 ## Goal
 
-Resolve all acquisition paths for a recipe against the current character and route state, and expose the cheapest reliable way to acquire an unknown recipe.
+Resolve every acquisition path for a recipe against the current character and simulated route state, then select the cheapest reliable source without promoting conditional sources to guaranteed ones.
 
-## Core behavior
+## Implementation
 
-`RecipeAcquisition.lua` must support multiple candidate acquisition paths instead of one effective record per recipe.
+`RecipeAcquisition.lua` now evaluates all bundled records for a recipe. The resolver exposes `resolveRecipeAcquisitionPaths()` for the full candidate set and `resolveRecipeAcquisition()` for the cheapest currently reliable candidate.
 
-For each recipe, resolve every source into a normalized state such as:
+Reliable paths include:
 
-- already learned
-- recipe item already owned
-- trainable now
-- purchasable from an unlimited vendor now
-- purchasable from the Auction House now
-- reputation/faction gated
-- limited-stock/conditional
-- quest gated
-- drop/world-drop conditional
-- unknown/manual
+- already learned recipes,
+- recipe items already owned,
+- trainer and unlimited-vendor sources with satisfied requirements and a known non-zero cost,
+- reputation vendors after the required standing is satisfied,
+- current Auction House listings for recipe items.
 
-Then choose the cheapest currently reliable acquisition for optimization while retaining the other paths for UI/explanation.
+Limited-stock vendors, quests, drops/world drops without a current AH listing, manual sources, unmet reputation/faction requirements and ambiguous zero/missing prices remain conditional/unavailable. All alternatives are retained on the selected result for later UI explanation.
 
-## Dynamic acquisition sources
+## Character and route state
 
-Static source knowledge comes from Profession Capper's bundled database.
+Profession-skill gates use the route solver's simulated base skill plus the active profession modifier. Player level, faction, reputation, specialization/prerequisite spells and inventory use current character state.
 
-Dynamic state may come from:
+A recipe acquired earlier in a simulated route is recognized through the existing `recipe:<spellID>` one-time key. This prevents its learning cost from being charged again.
 
-- WoW APIs for learned recipes, inventory, player level, faction, reputation and other character prerequisites
-- the configured price provider for a tradeable recipe item's current Auction House price
+## Dynamic recipe-item handling
 
-TSM may supply current market prices. It must not supply static recipe/source knowledge.
+Static recipe/source knowledge remains bundled. The configured price provider is consulted only for the current AH price of a known recipe item. A drop/manual recipe can therefore become a reliable route candidate when its recipe item is actually listed on the AH.
 
-## Reliability policy
+## Validation
 
-The guaranteed cheapest route may use:
+The Lua 5.1 acquisition test covers:
 
-- already learned recipes
-- owned recipe items
-- verified trainer recipes with satisfied requirements and known cost
-- verified unlimited vendor recipes with satisfied requirements and known cost
-- tradeable recipe items with a current usable Auction House price
-- reputation/vendor recipes only when all requirements are satisfied and the source is deterministically obtainable
+- learned and owned recipe states,
+- trainer vs AH and vendor vs AH price choice,
+- limited-stock exclusion,
+- drop recipe made reliable by an AH listing,
+- reputation and faction gates,
+- active +profession skill and future simulated-skill unlocks,
+- ambiguous zero prices remaining unavailable,
+- one-time acquisition cost charged exactly once by the route solver,
+- all 3,552 catalog recipes retaining explicit acquisition coverage.
 
-The guaranteed route must not assume availability of:
-
-- random drops
-- world drops with no current AH listing
-- unfinished quest chains
-- unmet reputation requirements
-- limited-stock vendors
-- unknown/manual sources
-
-Those sources remain visible as conditional alternatives.
-
-## Simulated route skill fix
-
-Acquisition eligibility must use the skill value being simulated by the route solver.
-
-Example:
-
-- character is currently 290
-- route reaches 300
-- a trainer recipe requires 300
-
-When evaluating the node at 300, the recipe must become trainable even though the character was 290 when the route computation began.
-
-Use:
-
-`simulated base skill + active profession modifier`
-
-for profession-skill gates.
-
-Continue using current character state for player level, faction, reputation, specialization, inventory, and other non-route attributes.
-
-## One-time acquisition
-
-Learning/buying a recipe is a one-time route cost.
-
-The resolver/cost engine must expose enough acquisition metadata for the solver and UI to know:
-
-- which source was chosen
-- acquisition gold/market cost
-- whether the recipe must be learned before crafting
-- the acquisition key used to prevent charging the cost again
-
-## Automated validation
-
-Cover at minimum:
-
-- learned recipe wins with zero acquisition cost
-- owned recipe item is recognized
-- trainer vs AH chooses the cheaper reliable acquisition
-- vendor vs AH chooses the cheaper reliable acquisition
-- limited-stock source is not treated as guaranteed
-- drop source becomes usable when its tradeable recipe item is currently on the AH
-- reputation/faction requirements are enforced
-- active +profession skill affects profession requirement gates correctly
-- future simulated skill unlocks a trainer recipe
-- acquisition cost is charged once across multiple route steps
-- missing acquisition price never becomes zero
-
-## Acceptance criteria
-
-- Every recipe can expose multiple acquisition paths.
-- The optimizer can select the cheapest reliable path without pretending conditional sources are guaranteed.
-- Future skill unlocks are evaluated against simulated route skill.
-- Acquisition remains conservative when data or dynamic availability is incomplete.
+All acceptance criteria are deterministic and covered by CI.
