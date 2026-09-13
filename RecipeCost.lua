@@ -844,7 +844,7 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
             local neededPurchaseChoice
             local neededPurchaseReason
             local availabilityChoice
-            local availabilityReason
+            local availabilityIssueReason
             if purchaseQuantity > 0 then
                 neededPurchaseChoice, neededPurchaseReason = addonTable.chooseCheapestEquivalentPurchase(
                     item,
@@ -852,7 +852,7 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                     "purchase",
                     equivalentOptions
                 )
-                availabilityChoice, availabilityReason = chooseConfirmedAvailableEquivalentPurchase(
+                availabilityChoice, availabilityIssueReason = chooseConfirmedAvailableEquivalentPurchase(
                     item,
                     purchaseQuantity,
                     equivalentOptions
@@ -868,12 +868,12 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                 )
             else
                 local availabilityConfirmed = true
-                availabilityReason = alreadyAcquired and "owned_reusable" or "owned"
+                local availabilityReason = alreadyAcquired and "owned_reusable" or "owned"
                 if purchaseQuantity > 0 and not alreadyAcquired then
                     availabilityConfirmed = availabilityChoice ~= nil
                     availabilityReason = availabilityChoice
                         and availabilityChoice.availabilityReason
-                        or availabilityReason
+                        or availabilityIssueReason
                         or "no_confirmed_purchase_source"
                     if not availabilityConfirmed then
                         allPurchasesAvailableNow = false
