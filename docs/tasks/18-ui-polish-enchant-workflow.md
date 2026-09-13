@@ -1,6 +1,6 @@
 # Task 18 — Enchant repeat workflow presentation
 
-Status: IN PROGRESS  
+Status: DONE  
 Phase: 5 — UI/UX polish  
 Depends on: Task 12, Task 13, Task 15
 
@@ -89,6 +89,10 @@ Presentation changes:
 - Moved/replaced target visibly returns to target-selection state.
 - No new protected-action automation is introduced.
 - Auto-confirm behavior from Task 13 remains unchanged.
+
+## Manual acceptance
+
+Accepted in-game on 2026-09-13. The user reviewed the live Phase 5 UI and explicitly requested that the prior Phase 5 blockers be closed so remaining presentation issues can move into Task 19 cleanup.
 
 ## Commit
 

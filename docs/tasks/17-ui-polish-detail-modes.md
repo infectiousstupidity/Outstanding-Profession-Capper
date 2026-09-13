@@ -1,6 +1,6 @@
 # Task 17 — Compact and expanded detail modes
 
-Status: IN PROGRESS  
+Status: DONE  
 Phase: 5 — UI/UX polish  
 Depends on: Task 16
 
@@ -94,6 +94,10 @@ Implemented on master pending in-game acceptance.
 - Enchant repeat session survives toggling details.
 - Material rows remain in the same logical place in both modes.
 - No frame overlap at supported UI scales.
+
+## Manual acceptance
+
+Accepted in-game on 2026-09-13. The user reviewed the live Phase 5 UI and explicitly requested that the prior Phase 5 blockers be closed so remaining presentation issues can move into Task 19 cleanup.
 
 ## Commit
 

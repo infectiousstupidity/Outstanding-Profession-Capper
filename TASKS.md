@@ -66,11 +66,11 @@ Source of truth: [UI polish plan](docs/UI-POLISH-PLAN.md)
 
 | Task | Status | Purpose |
 | --- | --- | --- |
-| [15 Core UI hierarchy and material redesign](docs/tasks/15-ui-polish-core-hierarchy.md) | IN PROGRESS | Make the current recommendation, costs, and purchase actions visually clear at a glance. |
-| [16 Inline recipe comparison](docs/tasks/16-ui-polish-comparison.md) | IN PROGRESS | Show why the selected recipe is cheapest without relying on a tooltip. |
-| [17 Compact and expanded detail modes](docs/tasks/17-ui-polish-detail-modes.md) | IN PROGRESS | Keep the default panel focused while preserving deeper comparison/route detail. |
-| [18 Enchant repeat workflow presentation](docs/tasks/18-ui-polish-enchant-workflow.md) | IN PROGRESS | Make target, repeat mode, and progress obvious during repeated enchants. |
-| [19 Final visual QA and compatibility](docs/tasks/19-ui-polish-qa.md) | QUEUED | Verify layout, ElvUI compatibility, state handling, and remove obsolete presentation code. |
+| [15 Core UI hierarchy and material redesign](docs/tasks/15-ui-polish-core-hierarchy.md) | DONE | Make the current recommendation, costs, and purchase actions visually clear at a glance. |
+| [16 Inline recipe comparison](docs/tasks/16-ui-polish-comparison.md) | DONE | Show why the selected recipe is cheapest without relying on a tooltip. |
+| [17 Compact and expanded detail modes](docs/tasks/17-ui-polish-detail-modes.md) | DONE | Keep the default panel focused while preserving deeper comparison/route detail. |
+| [18 Enchant repeat workflow presentation](docs/tasks/18-ui-polish-enchant-workflow.md) | DONE | Make target, repeat mode, and progress obvious during repeated enchants. |
+| [19 Final visual QA and compatibility](docs/tasks/19-ui-polish-qa.md) | IN PROGRESS | Verify layout, ElvUI compatibility, state handling, and remove obsolete presentation code. |
 
 ### Phase 6 — Self-contained full recipe optimization
 
@@ -115,6 +115,6 @@ Do not start Task 19 until the preceding UI tasks have had their required in-gam
 
 Task 10 remains in manual acceptance. Tasks 12 and 13 are awaiting in-game Enchant repeat testing. Task 14 is implemented in code and awaiting in-game purchase-guidance checks: equivalent Greater/Lesser Essence pricing is quantity-aware, and converted material rows explicitly tell the player what form and quantity to buy, the direct-vs-recommended cost, and the savings.
 
-Phase 5 Tasks 15, 16, and 18 remain in manual acceptance. Task 17 is implemented in code and awaiting in-game acceptance: Compact is the default persisted view; Expanded adds inline route total, immediate gold need, expected crafts, route price coverage, and comparable-candidate count without duplicating the Task 16 Compare companion panel. Task 19 remains queued.
+Phase 5 Tasks 15–18 are accepted and complete. Task 19 is now in progress as the cleanup/compatibility pass. The current cleanup makes Compare rows interactive with per-recipe material tooltips, removes meaningless Static-guide route-detail UI, suppresses the redundant 1 / 1 recipe counter, and avoids showing fake zero/unknown route-price coverage when no complete route exists. Final in-game verification of these cleanup changes is still required before Task 19 is marked DONE.
 
 Phase 6 Task 20 is complete: Profession Capper now ships a generated 3,552-record WotLK recipe catalog with static reagents/output/recipe-item data and live-book overlays. Task 21 is complete with generated trainer/vendor/reputation/limited-stock coverage plus explicit conservative manual fallbacks; Ackis is no longer a runtime dependency. Task 22 is complete: all static acquisition paths are evaluated against simulated profession skill and current character state, dynamic AH/owned-item paths are included, and the cheapest reliable source is selected while conditional alternatives are retained. Tasks 23–25 remain queued. They replace the known-recipes-only optimizer input with complete bundled WotLK recipe/acquisition knowledge, remove Ackis from the runtime design, and add acquisition-aware cheapest-route recommendations.

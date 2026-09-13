@@ -1,6 +1,6 @@
 # Task 15 — Core UI hierarchy and material redesign
 
-Status: IN PROGRESS  
+Status: DONE  
 Phase: 5 — UI/UX polish  
 Depends on: Task 10, Task 14
 
@@ -149,6 +149,10 @@ Before marking DONE, capture:
 3. Missing-material state.
 4. Static guide mode.
 5. ElvUI enabled.
+
+## Manual acceptance
+
+Accepted in-game on 2026-09-13. The user reviewed the live Phase 5 UI and explicitly requested that the prior Phase 5 blockers be closed so remaining presentation issues can move into Task 19 cleanup.
 
 ## Commit
 
