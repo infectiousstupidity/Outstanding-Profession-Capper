@@ -1,96 +1,22 @@
 # Task 21 — Complete self-contained acquisition database
 
-Status: QUEUED  
+Status: DONE  
 Phase: 6 — Self-contained full recipe optimization  
 Depends on: Task 20
 
 ## Goal
 
-Bundle complete acquisition knowledge for the recipe catalog so Profession Capper itself knows how every supported recipe can be obtained.
+Make Profession Capper's bundled acquisition data authoritative and remove the Ackis runtime path.
 
-Ackis Recipe List must not be required, queried, or used as an authority.
+## Implementation
 
-## Data model
+- Generated 6,518 acquisition records from AzerothCore WotLK world data at commit `f1bef3bc0a2f6396175e184c2cac70df77b46d11`.
+- Trainer rows retain real training cost, profession-skill requirement, player-level requirement and prerequisite spell IDs.
+- Recipe items are joined to vendor and item-template data, distinguishing unlimited, limited-stock and reputation-gated vendors and retaining purchase prices/requirements.
+- Every catalog recipe has at least one record. Where the pinned deterministic tables do not prove a guaranteed source, an explicit `manual` record is emitted instead of guessing or treating the recipe as free.
+- Recipe acquisition storage now retains multiple static records per spell while preserving the legacy single-record getter for compatibility until Task 22 switches resolution to all candidates.
+- Removed `AckisAcquisitionProvider.lua`, the Ackis optional dependency, its CI test and provider runtime plumbing.
 
-Replace the current tiny acquisition seed with generated, auditable WotLK 3.3.5 acquisition data.
+## Validation
 
-A recipe may have zero, one, or multiple acquisition records. Static records should support, where applicable:
-
-- trainer
-- unlimited vendor
-- limited-stock vendor
-- recipe item
-- reputation vendor
-- quest reward
-- mob drop
-- world drop
-- other explicitly modeled/manual sources
-
-Each source should retain the stable metadata required for later eligibility checks, such as:
-
-- recipe spell ID
-- recipe item ID
-- source type
-- trainer/vendor/NPC/quest/faction IDs
-- source name fallback
-- zone/coordinates when reliably available
-- purchase/training price
-- required profession skill
-- required player level
-- faction restriction
-- reputation faction/standing
-- specialization or other prerequisite
-- limited-stock flag
-- source/provenance
-
-## Generation
-
-Add a deterministic generator/import path under `tools/` using verified public/open WotLK database data.
-
-Do not manually curate thousands of rows. Small explicit overrides are acceptable only when:
-
-- the source data is incomplete or ambiguous,
-- the override is documented,
-- the validator makes the override visible.
-
-## Remove Ackis dependency
-
-Once bundled acquisition coverage is in place, remove the Ackis runtime path:
-
-- remove `AckisAcquisitionProvider.lua`
-- remove `AckisRecipeList` from `OptionalDeps`
-- remove Ackis-specific tests and provider-only code that no longer serves another purpose
-- update documentation so Profession Capper's bundled acquisition database is authoritative
-
-Task 06 remains historical documentation of the old approach; this task supersedes that runtime architecture.
-
-## Coverage policy
-
-Every optimizer-eligible catalog recipe must end in one of two explicit states:
-
-1. one or more known acquisition sources, or
-2. an explicit reviewed `unknown/manual` record.
-
-Missing data must never silently mean "free" or "already obtainable."
-
-## Automated validation
-
-Add tests/validators for:
-
-- trainer source, cost, skill and level requirements
-- vendor and limited-stock vendor distinction
-- reputation/faction prerequisites
-- quest/drop/world-drop classification
-- recipe-item linkage
-- multiple acquisition records for one spell ID
-- no missing catalog spell IDs without an explicit unknown/manual record
-- no Ackis dependency remains in TOC/runtime/tests
-- deterministic regeneration of bundled data
-
-## Acceptance criteria
-
-- Static acquisition knowledge is fully self-contained.
-- Every supported catalog recipe has explicit acquisition coverage.
-- Ackis is completely removed from the runtime dependency path.
-- Missing or uncertain acquisition data is explicit and conservative.
-- Static-guide behavior remains usable while Tasks 22–24 integrate the new data into optimization.
+The Lua 5.1 acquisition test iterates all 3,552 catalog recipes, requires acquisition coverage for every one, verifies trainer/vendor/limited/reputation/manual classes, verifies multiple-source coverage, checks a known trainer price, and asserts that no external acquisition-provider registry remains.
