@@ -37,6 +37,8 @@ addonTable.calculateRecipeCost = function(recipe, skill)
             expectedMarketCostPerSkillUp = 750,
             quality = "complete",
             reagentCosts = {},
+            availableNow = true,
+            availabilityConfidence = "fresh_listing",
         }
     elseif id == 11 then
         return {
@@ -51,6 +53,8 @@ addonTable.calculateRecipeCost = function(recipe, skill)
             expectedMarketCostPerSkillUp = 200,
             quality = "complete",
             reagentCosts = {},
+            availableNow = false,
+            availabilityConfidence = "unavailable",
         }
     elseif id == 12 then
         return {
@@ -65,6 +69,8 @@ addonTable.calculateRecipeCost = function(recipe, skill)
             expectedMarketCostPerSkillUp = 40,
             quality = "complete",
             reagentCosts = {},
+            availableNow = true,
+            availabilityConfidence = "fresh_listing",
         }
     end
     return { available = false }
@@ -77,9 +83,20 @@ addonTable.solveCheapestProfessionRoute = function(recipes, context, state, opti
     assert(options.targetSkill == 225, "optimizer should target current trained cap")
     assert(options.optimizeFor == "current", "route should optimize current purchase cost")
     assert(type(options.costRecipe) == "function", "full route should enforce orange/yellow-only costs")
-    local greenRouteCost = options.costRecipe(recipes[3], context.baseSkill, context, state, {})
+    local greenRouteCost = options.costRecipe(recipes[3], context.baseSkill, context, state, options.costOptions or {})
     assert(greenRouteCost.available == false, "green recipe must not be usable in full dynamic route")
     assert(greenRouteCost.unavailableReason == "not_orange_or_yellow", "green route exclusion reason")
+    if options.costOptions and options.costOptions.requireAvailableNow then
+        local unavailableRouteCost = options.costRecipe(
+            recipes[2],
+            context.baseSkill,
+            context,
+            state,
+            options.costOptions
+        )
+        assert(unavailableRouteCost.available == false, "available route must reject stale/unavailable materials")
+        assert(unavailableRouteCost.unavailableReason == "materials_not_available_now", "available route exclusion reason")
+    end
     assert(state.learnedRecipes[10] == true, "learned recipe state should be populated")
     assert(state.inventory[1001] == 4, "live inventory should be populated")
     assert(state.acquiredOneTime["item:6218"] == true, "owned enchanting rod should be reusable")
@@ -149,6 +166,21 @@ assert(math.abs(recommendation.candidates[2].skillUpChance - 0.75) < 0.0001, "mi
 assert(recommendation.routeComplete == false, "full route should remain explicitly incomplete")
 assert(recommendation.routeReason == "no_complete_route", "full-route failure reason should be preserved")
 assert(solverCalls == 1, "solver should still attempt full route")
+
+local availableRecommendation = addonTable.computeDynamicProfessionRecommendation(cache, {
+    professionName = "Enchanting",
+    baseSkill = 200,
+    effectiveSkill = 210,
+    activeSkillModifier = 10,
+    currentCap = 225,
+}, {
+    requireAvailableNow = true,
+})
+assert(availableRecommendation.available == true, "available mode should find a fresh purchasable alternative")
+assert(availableRecommendation.currentSegment.recipeID == 10, "available mode should skip the cheaper unavailable recipe")
+assert(table.getn(availableRecommendation.availableCandidates) == 1, "only one orange/yellow candidate is available now")
+assert(availableRecommendation.availableCandidates[1].recipeID == 10, "freshly available candidate should be exposed")
+assert(solverCalls == 2, "available mode should also attempt an availability-constrained route")
 
 providerName = "null"
 local noProvider = addonTable.computeDynamicProfessionRecommendation(cache, {

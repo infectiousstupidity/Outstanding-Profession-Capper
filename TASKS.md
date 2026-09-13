@@ -59,6 +59,7 @@ This file governs implementation work. Keep it current as work progresses.
 | [12 Targeted Enchant repeat workflow](docs/tasks/12-targeted-enchant-repeat.md) | IN PROGRESS | Repeat item-targeted enchants without fake batch state; remember the target and support until-change/fixed counts. |
 | [13 Auto-confirm Enchant replacement](docs/tasks/13-auto-confirm-enchant-replacement.md) | IN PROGRESS | Skip the replace-enchant confirmation during Profession Capper repeat clicks without calling the protected API prematurely. |
 | [14 Equivalent reagent purchase guidance](docs/tasks/14-equivalent-reagent-purchase-guidance.md) | IN PROGRESS | Show the exact cheaper Greater/Lesser Essence purchase, quantity, conversion, and savings instead of only using it internally for pricing. |
+| [26 Available-now recipe recommendation](docs/tasks/26-available-now-recommendation.md) | IN PROGRESS | Offer the cheapest orange/yellow recipe whose missing materials have fresh current purchase sources. |
 
 ### Phase 5 — UI/UX polish
 
@@ -101,6 +102,10 @@ Phase 5 UI order:
 
 `15 + 16 + 17 + 18 -> 19`
 
+Availability path:
+
+`03 + 07 + 10 -> 26`
+
 Phase 6 full-recipe optimization order:
 
 `04 -> 20 -> 21 -> 22`
@@ -114,6 +119,8 @@ Do not start Task 19 until the preceding UI tasks have had their required in-gam
 ## Current task
 
 Task 10 remains in manual acceptance. Tasks 12 and 13 are awaiting in-game Enchant repeat testing. Task 14 is implemented in code and awaiting in-game purchase-guidance checks: equivalent Greater/Lesser Essence pricing is quantity-aware, and converted material rows explicitly tell the player what form and quantity to buy, the direct-vs-recommended cost, and the savings.
+
+Task 26 is now in implementation/manual acceptance: Available mode chooses the cheapest orange/yellow recipe whose missing materials resolve to a fresh AH listing or vendor source. Stale AH listings remain valid for Cheapest mode but are rejected by Available mode. Because the current WotLK TSM AuctionDB schema stores listing price/count but not total stack quantity, a fresh listing proves presence, not necessarily that the AH contains every unit required for a large multi-craft segment; exact quantity is used when a provider exposes it.
 
 Phase 5 Tasks 15–18 are accepted and complete. Task 19 is now in progress as the cleanup/compatibility pass. The current cleanup makes Compare rows interactive with per-recipe material tooltips, removes meaningless Static-guide route-detail UI, suppresses the redundant 1 / 1 recipe counter, and avoids showing fake zero/unknown route-price coverage when no complete route exists. Final in-game verification of these cleanup changes is still required before Task 19 is marked DONE.
 

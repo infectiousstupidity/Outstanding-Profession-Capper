@@ -389,6 +389,9 @@ local function rankCurrentRecipes(recipes, skillContext, state, skill, options)
                     difficulty = cost.difficulty,
                     liveSkillType = recipe.liveSkillType,
                     skillUpChance = cost.skillUpChance,
+                    availableNow = cost.availableNow == true,
+                    availabilityConfidence = cost.availabilityConfidence,
+                    availabilityIssues = cost.availabilityIssues,
                 })
             end
         end
@@ -407,10 +410,20 @@ local function rankCurrentRecipes(recipes, skillContext, state, skill, options)
     return ranked
 end
 
-local function buildCurrentCheapestSegment(recipes, skillContext, state, targetSkill, options)
+local function firstRankedCandidate(ranking, requireAvailableNow)
+    for i = 1, table.getn(ranking or {}) do
+        local candidate = ranking[i]
+        if not requireAvailableNow or candidate.availableNow then
+            return candidate
+        end
+    end
+    return nil
+end
+
+local function buildCurrentCheapestSegment(recipes, skillContext, state, targetSkill, options, requireAvailableNow)
     local startSkill = tonumber(skillContext and skillContext.baseSkill) or 0
     local firstRanking = rankCurrentRecipes(recipes, skillContext, state, startSkill, options)
-    local first = firstRanking[1]
+    local first = firstRankedCandidate(firstRanking, requireAvailableNow)
     if not first then
         return nil, firstRanking
     end
@@ -438,7 +451,7 @@ local function buildCurrentCheapestSegment(recipes, skillContext, state, targetS
             ranking = rankCurrentRecipes(recipes, skillContext, state, skill, options)
         end
 
-        local best = ranking[1]
+        local best = firstRankedCandidate(ranking, requireAvailableNow)
         if not best or best.recipeID ~= selectedID then
             break
         end
@@ -475,6 +488,14 @@ local function orangeYellowRouteCost(recipe, skill, skillContext, state, options
         return cost
     end
 
+    if options and options.requireAvailableNow and cost.availableNow ~= true then
+        cost.available = false
+        cost.useful = false
+        cost.incomplete = false
+        cost.unavailableReason = "materials_not_available_now"
+        return cost
+    end
+
     if cost.difficulty ~= "orange" and cost.difficulty ~= "yellow" then
         cost.available = false
         cost.useful = false
@@ -500,6 +521,8 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         currentSegment = nil,
         currentCost = nil,
         candidates = {},
+        availableCandidates = {},
+        requireAvailableNow = options.requireAvailableNow == true,
         routeComplete = false,
         routeReason = nil,
     }
@@ -546,12 +569,18 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         skillContext,
         state,
         targetSkill,
-        options.costOptions
+        options.costOptions,
+        result.requireAvailableNow
     )
     result.candidates = candidates or {}
+    for i = 1, table.getn(result.candidates) do
+        if result.candidates[i].availableNow then
+            table.insert(result.availableCandidates, result.candidates[i])
+        end
+    end
 
     if not segment or not segment.recipeID then
-        result.reason = "no_current_priced_recipe"
+        result.reason = result.requireAvailableNow and "no_available_recipe" or "no_current_priced_recipe"
         return result
     end
 
@@ -561,13 +590,19 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     result.fallbackToStaticGuide = false
     result.reason = nil
 
+    local routeCostOptions = {}
+    for key, value in pairs(options.costOptions or {}) do
+        routeCostOptions[key] = value
+    end
+    routeCostOptions.requireAvailableNow = result.requireAvailableNow
+
     local route = addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, {
         startSkill = skillContext.baseSkill,
         targetSkill = targetSkill,
         optimizeFor = options.optimizeFor or "current",
         maxStates = options.maxStates,
         costRecipe = orangeYellowRouteCost,
-        costOptions = options.costOptions,
+        costOptions = routeCostOptions,
     })
     result.route = route
 

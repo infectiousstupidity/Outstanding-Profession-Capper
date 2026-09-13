@@ -549,6 +549,39 @@ local function addMissingFlag(flags, item, reason)
     })
 end
 
+local function classifyPurchaseAvailability(choice, requiredQuantity)
+    if not choice then
+        return false, "no_purchase_source"
+    end
+
+    if choice.priceType == "vendor" then
+        return true, "vendor"
+    end
+
+    if choice.priceType ~= "auction" then
+        return false, "not_current_purchase_source"
+    end
+
+    if not choice.isFresh then
+        return false, "auction_scan_stale"
+    end
+
+    local availableQuantity = tonumber(choice.availableQuantity)
+    local needed = math.max(0, tonumber(requiredQuantity) or 0)
+    if availableQuantity and availableQuantity < needed then
+        return false, "insufficient_auction_quantity"
+    end
+
+    if availableQuantity then
+        return true, "confirmed_quantity"
+    end
+
+    -- The current WotLK TSM AuctionDB backport confirms that a listing existed
+    -- at scan time but does not persist total stack quantity. Treat a fresh
+    -- listing as available, but expose the weaker confidence explicitly.
+    return true, "fresh_listing"
+end
+
 function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, options)
     state = state or {}
     options = options or {}
@@ -579,6 +612,9 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
         missingPrices = {},
         stalePrices = {},
         oneTimeCosts = {},
+        availabilityIssues = {},
+        availableNow = false,
+        availabilityConfidence = "unavailable",
         available = false,
         useful = false,
         incomplete = false,
@@ -640,6 +676,8 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
     local currentPurchasePerCraft = 0
     local expectedCurrentPurchase = 0
     local hasStale = false
+    local allPurchasesAvailableNow = true
+    local listingOnlyAvailability = false
     local inventoryRemaining = copyMap(state.inventory)
     local acquiredOneTime = state.acquiredOneTime or state.acquiredReusable or {}
 
@@ -695,6 +733,24 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                     marketReason or purchaseReason or neededPurchaseReason or "price_unavailable"
                 )
             else
+                local availabilityConfirmed = true
+                local availabilityReason = alreadyAcquired and "owned_reusable" or "owned"
+                if purchaseQuantity > 0 and not alreadyAcquired then
+                    availabilityConfirmed, availabilityReason = classifyPurchaseAvailability(
+                        neededPurchaseChoice,
+                        neededPurchaseChoice and neededPurchaseChoice.sourceQuantity or purchaseQuantity
+                    )
+                    if not availabilityConfirmed then
+                        allPurchasesAvailableNow = false
+                        table.insert(result.availabilityIssues, {
+                            item = item,
+                            reason = availabilityReason,
+                        })
+                    elseif availabilityReason == "fresh_listing" then
+                        listingOnlyAvailability = true
+                    end
+                end
+
                 local itemKey = reagent.itemID or reagent.item or reagent.itemLink
                 if itemKey ~= nil then
                     inventoryRemaining[itemKey] = math.max(0, owned - ownedUsed)
@@ -773,6 +829,13 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                     converted = purchaseChoice.converted and true or false,
                     conversionRatio = purchaseChoice.conversionRatio,
                     conversionDirection = purchaseChoice.conversionDirection,
+                    availableNow = availabilityConfirmed,
+                    availabilityReason = availabilityReason,
+                    availabilityPriceType = neededPurchaseChoice and neededPurchaseChoice.priceType or nil,
+                    availabilityAgeSeconds = neededPurchaseChoice and neededPurchaseChoice.ageSeconds or nil,
+                    availabilitySourceItemID = neededPurchaseChoice and neededPurchaseChoice.sourceItemID or nil,
+                    availabilitySourceQuantity = neededPurchaseChoice and neededPurchaseChoice.sourceQuantity or 0,
+                    availabilityQuantity = neededPurchaseChoice and neededPurchaseChoice.availableQuantity or nil,
                 })
             end
         end
@@ -791,6 +854,10 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
     result.expectedMarketCostPerSkillUp = expectedMarket
     result.expectedGoldNeededNowPerSkillUp = expectedGold
     result.expectedCurrentPurchaseCostPerSkillUp = expectedCurrentPurchase
+    result.availableNow = allPurchasesAvailableNow
+    result.availabilityConfidence = allPurchasesAvailableNow
+        and (listingOnlyAvailability and "fresh_listing" or "confirmed")
+        or "unavailable"
     result.available = true
     result.useful = true
     result.quality = hasStale and "stale" or "complete"
