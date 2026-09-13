@@ -131,7 +131,8 @@ function addonTable.formatPriceAge(ageSeconds)
     return tostring(math.floor(hours / 24)) .. "d old"
 end
 
-function addonTable.getMaterialPriceInfo(item, neededQuantity, now)
+function addonTable.getMaterialPriceInfo(item, neededQuantity, now, options)
+    options = options or {}
     local quantity = math.max(0, tonumber(neededQuantity) or 0)
     if quantity <= 0 then
         return {
@@ -141,8 +142,10 @@ function addonTable.getMaterialPriceInfo(item, neededQuantity, now)
         }
     end
 
-    if type(addonTable.lookupItemPrice) ~= "function"
-        or type(addonTable.chooseUsableUnitPrice) ~= "function"
+    local priceLookup = options.priceLookup or addonTable.lookupItemPrice
+    local priceChooser = options.unitPriceChooser or addonTable.chooseUsableUnitPrice
+    if type(priceLookup) ~= "function"
+        or type(priceChooser) ~= "function"
     then
         return {
             available = false,
@@ -156,10 +159,14 @@ function addonTable.getMaterialPriceInfo(item, neededQuantity, now)
     if type(addonTable.chooseCheapestEquivalentPurchase) == "function" then
         choice, reason = addonTable.chooseCheapestEquivalentPurchase(item, quantity, "purchase", {
             now = now,
+            priceLookup = priceLookup,
+            unitPriceChooser = priceChooser,
         })
     elseif type(addonTable.chooseCheapestEquivalentUnitPrice) == "function" then
         choice, reason = addonTable.chooseCheapestEquivalentUnitPrice(item, "purchase", {
             now = now,
+            priceLookup = priceLookup,
+            unitPriceChooser = priceChooser,
         })
         if choice then
             choice.requestedQuantity = quantity
@@ -171,8 +178,8 @@ function addonTable.getMaterialPriceInfo(item, neededQuantity, now)
             choice.excessQuantity = 0
         end
     else
-        local result = addonTable.lookupItemPrice(item, now)
-        choice, reason = addonTable.chooseUsableUnitPrice(result, "spend")
+        local result = priceLookup(item, now)
+        choice, reason = priceChooser(result, "spend")
         if choice then
             choice.requestedQuantity = quantity
             choice.sourceQuantity = quantity
@@ -302,6 +309,87 @@ local function getRecipeID(recipe)
     return recipe and (recipe.spellID or recipe.recipeID or recipe.id) or nil
 end
 
+local function shallowCopy(source)
+    if type(source) ~= "table" then
+        return source
+    end
+
+    local result = {}
+    for key, value in pairs(source) do
+        result[key] = value
+    end
+    return result
+end
+
+local function createCachedPriceLookup(baseLookup)
+    local cache = {}
+    local cached = {}
+
+    return function(item, now)
+        local itemID = parseItemID(item)
+        local key = itemID and ("item:" .. tostring(itemID)) or tostring(item)
+
+        if cached[key] then
+            return cache[key]
+        end
+
+        local result = baseLookup(item, now)
+        cached[key] = true
+        cache[key] = result
+        return result
+    end
+end
+
+local function createCachedRecipeCost(baseCostRecipe)
+    local cache = {}
+    local acquiredSignatureCache = setmetatable({}, { __mode = "k" })
+
+    local function acquiredSignature(state)
+        local acquired = state and (state.acquiredOneTime or state.acquiredReusable)
+        if type(acquired) ~= "table" then
+            return ""
+        end
+
+        local cachedSignature = acquiredSignatureCache[acquired]
+        if cachedSignature then
+            return cachedSignature
+        end
+
+        local parts = {}
+        for key, value in pairs(acquired) do
+            if value then
+                table.insert(parts, tostring(key))
+            end
+        end
+        table.sort(parts)
+
+        local signature = table.concat(parts, "\031")
+        acquiredSignatureCache[acquired] = signature
+        return signature
+    end
+
+    return function(recipe, skill, skillContext, state, options)
+        local recipeID = getRecipeID(recipe) or tostring(recipe)
+        local key = table.concat({
+            tostring(recipeID),
+            tostring(tonumber(skill) or 0),
+            acquiredSignature(state),
+        }, "|")
+
+        local cachedCost = cache[key]
+        if cachedCost ~= nil then
+            return shallowCopy(cachedCost)
+        end
+
+        local cost = baseCostRecipe(recipe, skill, skillContext, state, options or {})
+        if cost ~= nil then
+            cache[key] = shallowCopy(cost)
+            return shallowCopy(cost)
+        end
+        return nil
+    end
+end
+
 local LIVE_SKILL_TYPE = {
     optimal = { difficulty = "orange", defaultChance = 1 },
     medium = { difficulty = "yellow", defaultChance = 0.75 },
@@ -352,13 +440,14 @@ end
 local function rankCurrentRecipes(recipes, skillContext, state, skill, options)
     local ranked = {}
     local currentSkill = tonumber(skillContext and skillContext.baseSkill) or 0
-    if type(addonTable.calculateRecipeCost) ~= "function" then
+    local costRecipe = options and options.costRecipe or addonTable.calculateRecipeCost
+    if type(costRecipe) ~= "function" then
         return ranked
     end
 
     for i = 1, table.getn(recipes or {}) do
         local recipe = recipes[i]
-        local cost = addonTable.calculateRecipeCost(recipe, skill, skillContext, state, options or {})
+        local cost = costRecipe(recipe, skill, skillContext, state, options or {})
         cost = applyLiveSkillType(cost, recipe, skill, currentSkill)
         local eligibleColor
         if skill == currentSkill and recipe.liveSkillType then
@@ -477,11 +566,12 @@ local function buildCurrentCheapestSegment(recipes, skillContext, state, targetS
 end
 
 local function orangeYellowRouteCost(recipe, skill, skillContext, state, options)
-    if type(addonTable.calculateRecipeCost) ~= "function" then
+    local costRecipe = options and options.baseCostRecipe or addonTable.calculateRecipeCost
+    if type(costRecipe) ~= "function" then
         return nil
     end
 
-    local cost = addonTable.calculateRecipeCost(recipe, skill, skillContext, state, options or {})
+    local cost = costRecipe(recipe, skill, skillContext, state, options or {})
     local currentSkill = tonumber(skillContext and skillContext.baseSkill) or 0
     cost = applyLiveSkillType(cost, recipe, skill, currentSkill)
     if not cost or not cost.available then
@@ -523,6 +613,7 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         candidates = {},
         availableCandidates = {},
         requireAvailableNow = options.requireAvailableNow == true,
+        priceLookup = nil,
         routeComplete = false,
         routeReason = nil,
     }
@@ -542,10 +633,24 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
 
     if type(addonTable.solveCheapestProfessionRoute) ~= "function"
         or type(addonTable.buildProfessionShoppingPlan) ~= "function"
+        or type(addonTable.calculateRecipeCost) ~= "function"
     then
         result.reason = "optimizer_unavailable"
         return result
     end
+
+    local cachedPriceLookup = type(addonTable.lookupItemPrice) == "function"
+        and createCachedPriceLookup(addonTable.lookupItemPrice)
+        or nil
+    local cachedRecipeCost = createCachedRecipeCost(addonTable.calculateRecipeCost)
+    local costOptions = {}
+    for key, value in pairs(options.costOptions or {}) do
+        costOptions[key] = value
+    end
+    costOptions.priceLookup = cachedPriceLookup or costOptions.priceLookup
+    costOptions.unitPriceChooser = costOptions.unitPriceChooser or addonTable.chooseUsableUnitPrice
+    costOptions.costRecipe = cachedRecipeCost
+    result.priceLookup = cachedPriceLookup
 
     local recipes, state = addonTable.buildLiveProfessionOptimizationInput(recipeCache, skillContext)
     result.recipes = recipes
@@ -569,7 +674,7 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         skillContext,
         state,
         targetSkill,
-        options.costOptions,
+        costOptions,
         result.requireAvailableNow
     )
     result.candidates = candidates or {}
@@ -591,10 +696,11 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     result.reason = nil
 
     local routeCostOptions = {}
-    for key, value in pairs(options.costOptions or {}) do
+    for key, value in pairs(costOptions) do
         routeCostOptions[key] = value
     end
     routeCostOptions.requireAvailableNow = result.requireAvailableNow
+    routeCostOptions.baseCostRecipe = cachedRecipeCost
 
     local route = addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, {
         startSkill = skillContext.baseSkill,
@@ -613,6 +719,8 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
 
     result.routeComplete = true
     local plan = addonTable.buildProfessionShoppingPlan(route, state, {
+        priceLookup = cachedPriceLookup,
+        unitPriceChooser = costOptions.unitPriceChooser,
         priceRevision = options.priceRevision,
         recipeRevision = options.recipeRevision,
         acquisitionRevision = options.acquisitionRevision

@@ -22,7 +22,22 @@ addonTable.getActivePriceProviderName = function()
     return providerName
 end
 
+local priceLookupCalls = 0
+addonTable.lookupItemPrice = function(item)
+    priceLookupCalls = priceLookupCalls + 1
+    return {
+        item = item,
+        available = true,
+        minBuyout = 100,
+        source = "fixture",
+        freshness = "fresh",
+        ageSeconds = 60,
+    }
+end
+
+local recipeCostCalls = 0
 addonTable.calculateRecipeCost = function(recipe, skill)
+    recipeCostCalls = recipeCostCalls + 1
     local id = recipe.spellID
     if id == 10 then
         return {
@@ -83,9 +98,11 @@ addonTable.solveCheapestProfessionRoute = function(recipes, context, state, opti
     assert(options.targetSkill == 225, "optimizer should target current trained cap")
     assert(options.optimizeFor == "current", "route should optimize current purchase cost")
     assert(type(options.costRecipe) == "function", "full route should enforce orange/yellow-only costs")
+    local callsBeforeRouteCost = recipeCostCalls
     local greenRouteCost = options.costRecipe(recipes[3], context.baseSkill, context, state, options.costOptions or {})
     assert(greenRouteCost.available == false, "green recipe must not be usable in full dynamic route")
     assert(greenRouteCost.unavailableReason == "not_orange_or_yellow", "green route exclusion reason")
+    assert(recipeCostCalls == callsBeforeRouteCost, "route should reuse cached current-skill recipe costs")
     if options.costOptions and options.costOptions.requireAvailableNow then
         local unavailableRouteCost = options.costRecipe(
             recipes[2],
@@ -166,6 +183,10 @@ assert(math.abs(recommendation.candidates[2].skillUpChance - 0.75) < 0.0001, "mi
 assert(recommendation.routeComplete == false, "full route should remain explicitly incomplete")
 assert(recommendation.routeReason == "no_complete_route", "full-route failure reason should be preserved")
 assert(solverCalls == 1, "solver should still attempt full route")
+assert(type(recommendation.priceLookup) == "function", "recommendation should expose its pass-local price cache")
+recommendation.priceLookup(1001)
+recommendation.priceLookup(1001)
+assert(priceLookupCalls == 1, "pass-local price cache should query each item once")
 
 local availableRecommendation = addonTable.computeDynamicProfessionRecommendation(cache, {
     professionName = "Enchanting",
