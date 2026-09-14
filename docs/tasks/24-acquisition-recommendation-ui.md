@@ -1,6 +1,6 @@
 # Task 24 — Learn/buy-first recommendation UI
 
-Status: QUEUED  
+Status: IN PROGRESS  
 Phase: 6 — Self-contained full recipe optimization  
 Depends on: Task 23
 
@@ -109,3 +109,19 @@ Verify at least:
 - Unknown recipes cannot expose broken craft controls.
 - Compare/route views explain why an unknown recipe won or lost.
 - Learning the recipe transitions automatically into the existing crafting workflow.
+
+
+## Implementation status
+
+Code implementation is complete and automated validation is required before this task can be marked DONE.
+
+Implemented behavior:
+
+- the optimizer-selected acquisition source is now the UI source of truth instead of re-resolving a potentially different source,
+- unknown selected recipes render as an explicit acquire-first state with source/location/cost guidance and no enabled craft action,
+- comparison rows expose trainer/vendor/AH acquisition state and one-time cost,
+- the Full route view inserts an acquisition row before the affected craft segment and does not duplicate the one-time cost on the craft row,
+- shopping-plan segments retain acquisition metadata needed by the route UI,
+- learning a recipe continues to transition automatically through the existing `LEARNED_SPELL_IN_TAB` / `TRADE_SKILL_UPDATE` refresh path.
+
+Manual in-game acceptance from the task remains pending, so status stays IN PROGRESS.
