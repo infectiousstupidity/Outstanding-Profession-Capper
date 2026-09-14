@@ -281,6 +281,16 @@ end
 
 local function resultBase(entry, spellID)
     entry = entry or {}
+
+    local locations = entry.locations
+    if type(locations) ~= "table"
+        and type(addonTable.getRecipeSourceLocations) == "function"
+    then
+        locations = addonTable.getRecipeSourceLocations(entry)
+    end
+    locations = type(locations) == "table" and locations or {}
+    local primaryLocation = locations[1]
+
     return {
         handled = true,
         record = entry,
@@ -290,8 +300,9 @@ local function resultBase(entry, spellID)
         source = entry.sourceType or "unknown",
         sourceName = entry.sourceName,
         sourceID = entry.sourceID or entry.trainerID or entry.vendorID,
-        zone = entry.zone,
-        coordinates = entry.coordinates,
+        zone = entry.zone or (primaryLocation and primaryLocation.zone),
+        coordinates = entry.coordinates or (primaryLocation and primaryLocation.coordinates),
+        locations = locations,
         faction = entry.faction,
         reputation = entry.reputation,
         recipeItemID = entry.recipeItemID or entry.itemID,
@@ -642,6 +653,7 @@ function addonTable.explainRecipeAcquisition(recipeOrSpellID, state, skillContex
         sourceID = result.sourceID,
         zone = result.zone,
         coordinates = result.coordinates,
+        locations = result.locations,
         faction = result.faction,
         reputation = result.reputation,
         recipeItemID = result.recipeItemID,
