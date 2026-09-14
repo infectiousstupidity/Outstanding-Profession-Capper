@@ -186,6 +186,18 @@ function provider:isAvailable()
     return hasPublicPriceAPI() or hasRawAuctionDB()
 end
 
+function provider:getRevision()
+    local realmData = getRealmData()
+    if type(realmData) ~= "table" then return nil end
+    local revision = realmData.lastScan
+        or realmData.lastScanTime
+        or realmData.updatedAt
+        or realmData.scanTime
+        or realmData.lastUpdate
+    if type(revision) == "number" or type(revision) == "string" then return revision end
+    return nil
+end
+
 function provider:getItemPrice(item)
     local itemString, itemID = toTSMItemString(item)
     if not itemString or not itemID then

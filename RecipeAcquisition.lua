@@ -220,8 +220,16 @@ local function acquiredInRoute(spellID, state)
 end
 
 local function inventoryCount(itemID, state)
-    if not itemID or type(state) ~= "table" or type(state.inventory) ~= "table" then return 0 end
-    return math.max(0, tonumber(state.inventory[itemID] or state.inventory[tostring(itemID)]) or 0)
+    if not itemID or type(state) ~= "table" then return 0 end
+    local value
+    if type(state.inventory) == "table" then
+        value = state.inventory[itemID] or state.inventory[tostring(itemID)]
+    end
+    if value == nil and type(state.getInventoryCount) == "function" then
+        local ok, count = pcall(state.getInventoryCount, itemID, 0)
+        if ok then value = count end
+    end
+    return math.max(0, tonumber(value) or 0)
 end
 
 local function standingValue(value)
@@ -242,6 +250,10 @@ local function knowsSpell(spellID, state, options)
         if known ~= nil then return known == true end
     end
     if learnedInState(spellID, state) then return true end
+    if type(state.isSpellKnown) == "function" then
+        local ok, known = pcall(state.isSpellKnown, spellID)
+        if ok and known ~= nil then return known == true end
+    end
     if options and type(options.isSpellKnown) == "function" then
         local ok, known = pcall(options.isSpellKnown, spellID)
         if ok then return known == true end
@@ -355,6 +367,10 @@ local function passesRequirements(entry, result, state, skillContext, options)
         if type(standings) ~= "table" then return false, "reputation_state_unknown" end
         local current = standings[rep.factionID] or standings[tostring(rep.factionID or "")] or standings[rep.faction]
         current = standingValue(current)
+        if current == nil and type(state.getReputationStanding) == "function" and rep.factionID then
+            local ok, value = pcall(state.getReputationStanding, rep.factionID)
+            if ok then current = standingValue(value) end
+        end
         if current == nil then return false, "reputation_state_unknown" end
         if required ~= nil and current < required then return false, "reputation_requirement_not_met" end
     end

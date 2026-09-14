@@ -35,6 +35,7 @@ end
 
 TSM_AuctionDB_GetRealmData = function()
     return {
+        lastScan = 99000,
         ["i:34054"] = {
             mb = 100,
             mv = 110,
@@ -47,6 +48,7 @@ TSM_AuctionDB_GetRealmData = function()
 end
 
 assertEqual(addonTable.getActivePriceProviderName(), "tsm-auctiondb", "raw AuctionDB provider selected")
+assertEqual(addonTable.getActivePriceProviderRevision(), "99000", "realm scan revision exposed")
 local raw = addonTable.lookupItemPrice(34054, 100000)
 assertEqual(raw.available, true, "raw price available")
 assertEqual(raw.minBuyout, 100, "raw min buyout")

@@ -187,6 +187,15 @@ assert(math.abs(recommendation.candidates[2].skillUpChance - 0.75) < 0.0001, "mi
 assert(recommendation.routeComplete == false, "full route should remain explicitly incomplete")
 assert(recommendation.routeReason == "no_complete_route", "full-route failure reason should be preserved")
 assert(solverCalls == 1, "solver should still attempt full route")
+local cachedRecommendation = addonTable.computeDynamicProfessionRecommendation(cache, {
+    professionName = "Enchanting",
+    baseSkill = 200,
+    effectiveSkill = 210,
+    activeSkillModifier = 10,
+    currentCap = 225,
+})
+assert(cachedRecommendation == recommendation, "identical profession state should reuse cached recommendation")
+assert(solverCalls == 1, "cached reopen must not rerun the route solver")
 assert(type(recommendation.priceLookup) == "function", "recommendation should expose its pass-local price cache")
 recommendation.priceLookup(1001)
 recommendation.priceLookup(1001)
