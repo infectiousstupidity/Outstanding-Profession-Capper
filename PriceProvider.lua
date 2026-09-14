@@ -322,6 +322,15 @@ function addonTable.getActivePriceProviderName()
     return selectedProviderName
 end
 
+function addonTable.getActivePriceProviderRevision()
+    local entry = refreshSelection()
+    local provider = entry and entry.provider
+    if not provider or type(provider.getRevision) ~= "function" then return nil end
+    local ok, revision = pcall(provider.getRevision, provider)
+    if not ok or revision == nil then return nil end
+    return tostring(revision)
+end
+
 function addonTable.getRegisteredPriceProviders()
     local names = {}
     for name in pairs(providers) do

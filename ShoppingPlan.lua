@@ -29,20 +29,18 @@ local function reusableKey(reagent)
     return itemKey(reagent.itemID, reagent.item or reagent.itemLink)
 end
 
-local function getInventoryCount(inventory, entry)
-    if type(inventory) ~= "table" then
-        return 0
-    end
-
+local function getInventoryCount(inventory, entry, state)
     local value
-    if entry.itemID then
-        value = inventory[entry.itemID]
-        if value == nil then
-            value = inventory[tostring(entry.itemID)]
+    if type(inventory) == "table" then
+        if entry.itemID then
+            value = inventory[entry.itemID]
+            if value == nil then value = inventory[tostring(entry.itemID)] end
         end
+        if value == nil and entry.item ~= nil then value = inventory[entry.item] end
     end
-    if value == nil and entry.item ~= nil then
-        value = inventory[entry.item]
+    if value == nil and state and type(state.getInventoryCount) == "function" then
+        local ok, count = pcall(state.getInventoryCount, entry.itemID or entry.item, 0)
+        if ok and tonumber(count) then value = count end
     end
     return math.max(0, tonumber(value) or 0)
 end
@@ -431,7 +429,7 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
     for i = 1, table.getn(materialList) do
         local entry = materialList[i]
         entry.externallyRequiredQuantity = math.max(0, entry.totalExpectedQuantity - entry.routeProducedQuantity)
-        entry.quantityCurrentlyOwned = getInventoryCount(state.inventory, entry)
+        entry.quantityCurrentlyOwned = getInventoryCount(state.inventory, entry, state)
         entry.ownedAppliedQuantity = math.min(entry.quantityCurrentlyOwned, entry.externallyRequiredQuantity)
         entry.quantityStillNeeded = math.max(0, entry.externallyRequiredQuantity - entry.ownedAppliedQuantity)
 

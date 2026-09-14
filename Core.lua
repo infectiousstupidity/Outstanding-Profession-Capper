@@ -2932,7 +2932,6 @@ function GetCraftingToDo()
     dynamicRecommendation = nil
     local scanned = withUnfilteredTradeSkill(function()
         buildRecipeCache()
-        cacheAllRecipeReagents()
 
         local recommendationMode = getRecommendationMode()
         if isOptimizedMode(recommendationMode)
@@ -3329,6 +3328,9 @@ function fnOnEvent()
     end
 
     if event == "BAG_UPDATE" then
+        if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
+            addonTable.invalidateDynamicRecommendationCache()
+        end
         local session = addonTable.getCraftSession()
         if not session or not session.active then
             scheduleProfessionRefresh(PROFESSION_REFRESH_DEBOUNCE)
@@ -3337,17 +3339,26 @@ function fnOnEvent()
     end
 
     if event == "LEARNED_SPELL_IN_TAB" then
+        if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
+            addonTable.invalidateDynamicRecommendationCache()
+        end
         scheduleProfessionRefresh(0.05)
         return
     end
 
     if event == "PLAYER_EQUIPMENT_CHANGED" then
+        if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
+            addonTable.invalidateDynamicRecommendationCache()
+        end
         refreshProfessionState(false)
         return
     end
 
     if event == "UNIT_AURA" then
         if arg1 == "player" then
+            if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
+                addonTable.invalidateDynamicRecommendationCache()
+            end
             refreshProfessionState(false)
         end
         return

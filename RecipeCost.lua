@@ -516,15 +516,18 @@ local function resolveAcquisition(recipe, state, skillContext, options, simulate
     }
 end
 
-local function getInventoryCount(inventory, reagent)
-    if type(inventory) ~= "table" then
-        return 0
-    end
-
+local function getInventoryCount(inventory, reagent, state)
     local key = reagent.itemID or reagent.item or reagent.itemLink
-    local value = inventory[key]
-    if value == nil and reagent.itemID then
-        value = inventory[tostring(reagent.itemID)]
+    local value
+    if type(inventory) == "table" then
+        value = inventory[key]
+        if value == nil and reagent.itemID then
+            value = inventory[tostring(reagent.itemID)]
+        end
+    end
+    if value == nil and state and type(state.getInventoryCount) == "function" then
+        local ok, count = pcall(state.getInventoryCount, reagent.itemID or key, 0)
+        if ok and tonumber(count) then value = count end
     end
     return math.max(0, tonumber(value) or 0)
 end
@@ -821,7 +824,7 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
             local reusable = reagent.reusable and true or false
             local reusableKey = reusable and getReagentKey(reagent) or nil
             local alreadyAcquired = reusableKey and acquiredOneTime[reusableKey]
-            local owned = getInventoryCount(inventoryRemaining, reagent)
+            local owned = getInventoryCount(inventoryRemaining, reagent, state)
             local ownedUsed = math.min(quantity, owned)
             local purchaseQuantity = math.max(0, quantity - ownedUsed)
             local equivalentOptions = {
