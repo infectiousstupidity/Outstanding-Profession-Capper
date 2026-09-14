@@ -1009,6 +1009,7 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         costOptions = routeCostOptions,
         trainingSteps = state.trainingSteps,
         candidateRecipesBySkill = candidateRecipesBySkill,
+        pruneDominatedRecipeSwitches = true,
     })
     result.route = route
 
