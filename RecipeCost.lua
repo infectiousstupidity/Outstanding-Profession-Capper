@@ -713,6 +713,23 @@ local function chooseConfirmedAvailableEquivalentPurchase(item, quantity, option
         or "no_confirmed_purchase_source"
 end
 
+local function materialCostCacheKey(recipe, state, options)
+    local acquired = state and (state.acquiredOneTime or state.acquiredReusable) or {}
+    local parts = {}
+    for key, value in pairs(acquired or {}) do
+        if value and string.sub(tostring(key), 1, 7) ~= "recipe:" then
+            table.insert(parts, tostring(key))
+        end
+    end
+    table.sort(parts)
+
+    return table.concat({
+        tostring(recipe and (recipe.spellID or recipe.recipeID or recipe.id) or recipe),
+        options and options.requireAvailableNow and "available" or "priced",
+        table.concat(parts, "\031"),
+    }, "|")
+end
+
 function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, options)
     state = state or {}
     options = options or {}
@@ -800,12 +817,58 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
     end
 
     local expectedCrafts = 1 / chance
+    local materialCache = type(options.materialCostCache) == "table"
+        and options.materialCostCache
+        or nil
+    local materialKey = materialCache and materialCostCacheKey(recipe, state, options) or nil
+    local cachedMaterial = materialKey and materialCache[materialKey] or nil
+
+    if cachedMaterial then
+        result.reagentCosts = cachedMaterial.reagentCosts
+        result.missingPrices = cachedMaterial.missingPrices
+        result.stalePrices = cachedMaterial.stalePrices
+        result.availabilityIssues = cachedMaterial.availabilityIssues
+        for oneTimeIndex = 1, table.getn(cachedMaterial.oneTimeCosts or {}) do
+            table.insert(result.oneTimeCosts, cachedMaterial.oneTimeCosts[oneTimeIndex])
+        end
+
+        if cachedMaterial.incomplete then
+            result.incomplete = true
+            result.quality = "incomplete"
+            result.unavailableReason = cachedMaterial.unavailableReason or "incomplete_price_data"
+            return result
+        end
+
+        result.expectedCraftsPerSkillUp = expectedCrafts
+        result.materialMarketValuePerCraft = cachedMaterial.marketPerCraft
+        result.goldNeededNowPerCraft = cachedMaterial.goldPerCraft
+        result.currentPurchaseCostPerCraft = cachedMaterial.currentPurchasePerCraft
+        result.expectedMarketCostPerSkillUp =
+            cachedMaterial.variableMarket * expectedCrafts + cachedMaterial.fixedMarket
+        result.expectedGoldNeededNowPerSkillUp =
+            cachedMaterial.variableGold * expectedCrafts + cachedMaterial.fixedGold
+        result.expectedCurrentPurchaseCostPerSkillUp =
+            cachedMaterial.variableCurrent * expectedCrafts + cachedMaterial.fixedCurrent
+        result.availableNow = cachedMaterial.allPurchasesAvailableNow
+        result.availabilityConfidence = result.availableNow and "confirmed" or "unavailable"
+        result.available = true
+        result.useful = true
+        result.quality = cachedMaterial.hasStale and "stale" or "complete"
+        return result
+    end
     local marketPerCraft = 0
     local goldPerCraft = 0
     local expectedMarket = 0
     local expectedGold = 0
     local currentPurchasePerCraft = 0
     local expectedCurrentPurchase = 0
+    local variableMarket = 0
+    local variableGold = 0
+    local variableCurrent = 0
+    local fixedMarket = 0
+    local fixedGold = 0
+    local fixedCurrent = 0
+    local materialOneTimeCosts = {}
     local hasStale = false
     local allPurchasesAvailableNow = true
     local inventoryRemaining = copyMap(state.inventory)
@@ -917,14 +980,26 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                 expectedGold = expectedGold + (craftGold * multiplier)
                 expectedCurrentPurchase = expectedCurrentPurchase + (craftCurrentPurchase * multiplier)
 
+                if reusable then
+                    fixedMarket = fixedMarket + craftMarket
+                    fixedGold = fixedGold + craftGold
+                    fixedCurrent = fixedCurrent + craftCurrentPurchase
+                else
+                    variableMarket = variableMarket + craftMarket
+                    variableGold = variableGold + craftGold
+                    variableCurrent = variableCurrent + craftCurrentPurchase
+                end
+
                 if reusable and not alreadyAcquired and reusableKey then
-                    table.insert(result.oneTimeCosts, {
+                    local oneTime = {
                         key = reusableKey,
                         kind = "reusable_reagent",
                         item = item,
                         marketCost = craftMarket,
                         goldCost = craftGold,
-                    })
+                    }
+                    table.insert(result.oneTimeCosts, oneTime)
+                    table.insert(materialOneTimeCosts, oneTime)
                 end
 
                 if marketChoice.isStale or purchaseChoice.isStale
@@ -980,6 +1055,29 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                 })
             end
         end
+    end
+
+    if materialCache and materialKey then
+        materialCache[materialKey] = {
+            incomplete = result.incomplete,
+            unavailableReason = result.incomplete and "incomplete_price_data" or nil,
+            reagentCosts = result.reagentCosts,
+            missingPrices = result.missingPrices,
+            stalePrices = result.stalePrices,
+            availabilityIssues = result.availabilityIssues,
+            oneTimeCosts = materialOneTimeCosts,
+            marketPerCraft = marketPerCraft,
+            goldPerCraft = goldPerCraft,
+            currentPurchasePerCraft = currentPurchasePerCraft,
+            variableMarket = variableMarket,
+            variableGold = variableGold,
+            variableCurrent = variableCurrent,
+            fixedMarket = fixedMarket,
+            fixedGold = fixedGold,
+            fixedCurrent = fixedCurrent,
+            hasStale = hasStale,
+            allPurchasesAvailableNow = allPurchasesAvailableNow,
+        }
     end
 
     if result.incomplete then

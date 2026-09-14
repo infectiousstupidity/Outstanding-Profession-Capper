@@ -1038,6 +1038,7 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     costOptions.unitPriceChooser = costOptions.unitPriceChooser or addonTable.chooseUsableUnitPrice
     costOptions.costRecipe = cachedRecipeCost
     costOptions.requireAvailableNow = result.requireAvailableNow
+    costOptions.materialCostCache = {}
     result.priceLookup = cachedPriceLookup
 
     local recipes, state = addonTable.buildFullProfessionOptimizationInput(recipeCache, skillContext)
