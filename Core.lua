@@ -45,6 +45,7 @@ local suppressTradeSkillUpdatesUntil = 0
 local pendingProfessionRefresh = false
 local professionRefreshDeadline = 0
 local professionRefreshDriver
+local recommendationTooltipTarget
 local PROFESSION_REFRESH_DEBOUNCE = 0.20
 
 local UNKNOWN_ICON = "Interface\\InventoryItems\\WoWUnknownItem01"
@@ -465,6 +466,93 @@ local function cacheRecommendedRecipeDetails()
     for i = 1, table.getn(shouldCraft) do
         cacheRecipeReagents(shouldCraft[i])
     end
+end
+
+local function getRecipeOutputItem(recipe, recipeID)
+    local live = recipeID and recipeCache[recipeID] or nil
+    if live and live.outputItemLink then
+        local itemID = addonTable.getItemIDFromLink
+            and addonTable.getItemIDFromLink(live.outputItemLink)
+            or nil
+        return live.outputItemLink, itemID
+    end
+
+    if type(recipe) == "table" then
+        local outputs = recipe.outputs or {}
+        local output = outputs[1]
+        if output then
+            local itemLink = output.itemLink
+            local itemID = tonumber(output.itemID or output.item)
+            if itemLink or itemID then
+                return itemLink, itemID
+            end
+        end
+
+        local itemID = tonumber(recipe.outputItemID)
+        if itemID then
+            return nil, itemID
+        end
+    end
+
+    if recipeID and type(addonTable.getRecipeCatalogRecord) == "function" then
+        local catalog = addonTable.getRecipeCatalogRecord(recipeID)
+        if catalog and tonumber(catalog.outputItemID) then
+            return nil, tonumber(catalog.outputItemID)
+        end
+    end
+
+    return nil, nil
+end
+
+local function showRecipeOutputTooltip(owner, recipe, recipeID, fallbackName)
+    local itemLink, itemID = getRecipeOutputItem(recipe, recipeID)
+    if not itemLink and itemID and type(GetItemInfo) == "function" then
+        local _, cachedLink = GetItemInfo(itemID)
+        itemLink = cachedLink
+    end
+
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    if itemLink then
+        GameTooltip:SetHyperlink(itemLink)
+        return true
+    elseif itemID then
+        local ok = pcall(GameTooltip.SetHyperlink, GameTooltip, "item:" .. tostring(itemID))
+        if ok then
+            return true
+        end
+    end
+
+    GameTooltip:SetText(fallbackName or tostring(recipeID or ""))
+    return false
+end
+
+local function recommendationTooltipOnEnter(self)
+    if not self.recipeID then
+        return
+    end
+    showRecipeOutputTooltip(self, self.recipe, self.recipeID, self.recipeName)
+    GameTooltip:Show()
+end
+
+local function recommendationTooltipOnLeave()
+    GameTooltip:Hide()
+end
+
+local function updateRecommendationTooltipTarget(recipeID, recipe, recipeName)
+    if not recommendationTooltipTarget then
+        recommendationTooltipTarget = CreateFrame("Button", nil, MainFrameCore)
+        recommendationTooltipTarget:SetWidth(500)
+        recommendationTooltipTarget:SetHeight(58)
+        recommendationTooltipTarget:SetPoint("TOPLEFT", MainFrameCore, "TOPLEFT", 28, -150)
+        recommendationTooltipTarget:SetFrameLevel(MainFrameCore:GetFrameLevel() + 4)
+        recommendationTooltipTarget:SetScript("OnEnter", recommendationTooltipOnEnter)
+        recommendationTooltipTarget:SetScript("OnLeave", recommendationTooltipOnLeave)
+    end
+
+    recommendationTooltipTarget.recipeID = recipeID
+    recommendationTooltipTarget.recipe = recipe
+    recommendationTooltipTarget.recipeName = recipeName
+    recommendationTooltipTarget:Show()
 end
 
 local function getNumAvailableForSpell(spellID)
@@ -1866,6 +1954,8 @@ end
 
 local function hideRouteRows()
     for i = 1, table.getn(routeRows) do
+        routeRows[i].segment = nil
+        routeRows[i].rowType = nil
         routeRows[i]:Hide()
     end
 end
@@ -1902,8 +1992,19 @@ local function compareRowOnEnter(self)
     local recipeName = recipe.name or tostring(candidate.recipeID or "?")
     local difficulty = compareDifficultyLabel(candidate.difficulty)
 
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText(recipeName, 1, 0.82, 0.12)
+    local hasNativeItem = showRecipeOutputTooltip(
+        self,
+        recipe,
+        candidate.recipeID,
+        recipeName
+    )
+    if hasNativeItem then
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(
+            string.format(addonTable.L["recipe_tooltip_source"], recipeName),
+            1, 0.82, 0.12, true
+        )
+    end
     GameTooltip:AddLine(string.format(
         addonTable.L["compare_material_costs"],
         difficulty,
@@ -2037,14 +2138,58 @@ local function getCompareRow(index)
     return row
 end
 
+local function routeRowOnEnter(self)
+    local segment = self.segment
+    if not segment or self.rowType == "training" then
+        return
+    end
+
+    local recipe = segment.recipe or {}
+    local recipeName = recipe.name or tostring(segment.recipeID or "?")
+    local hasNativeItem = showRecipeOutputTooltip(
+        self,
+        recipe,
+        segment.recipeID,
+        recipeName
+    )
+
+    if hasNativeItem then
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(
+            string.format(addonTable.L["recipe_tooltip_source"], recipeName),
+            1, 0.82, 0.12, true
+        )
+    end
+
+    if self.rowType == "acquisition" and segment.acquisition then
+        GameTooltip:AddLine(
+            getAcquisitionGuidance(segment.recipeID, segment.acquisition),
+            0.95, 0.82, 0.42, true
+        )
+    else
+        GameTooltip:AddLine(string.format(
+            addonTable.L["recipe_tooltip_route_range"],
+            tonumber(segment.skillStart) or 0,
+            tonumber(segment.skillEnd) or 0
+        ), 0.82, 0.82, 0.82, true)
+    end
+    GameTooltip:Show()
+end
+
+local function routeRowOnLeave()
+    GameTooltip:Hide()
+end
+
 local function getRouteRow(index)
     if routeRows[index] then
         return routeRows[index]
     end
 
-    local row = CreateFrame("Frame", nil, MainFrameCoreCompareContent)
+    local row = CreateFrame("Button", nil, MainFrameCoreCompareContent)
     row:SetWidth(608)
     row:SetHeight(ROUTE_ROW_HEIGHT)
+    row:SetScript("OnEnter", routeRowOnEnter)
+    row:SetScript("OnLeave", routeRowOnLeave)
 
     row.background = row:CreateTexture(nil, "BACKGROUND")
     row.background:SetAllPoints(row)
@@ -2300,6 +2445,8 @@ local function renderRouteView()
         local display = displayRows[i]
         local segment = display.segment
         local row = getRouteRow(i)
+        row.segment = segment
+        row.rowType = display.type
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", MainFrameCoreCompareContent, "TOPLEFT", 0, -((i - 1) * ROUTE_ROW_HEIGHT))
 
@@ -3178,6 +3325,20 @@ function displayRecipe()
     end
 
     MainFrameCoreCraft:Show()
+
+    local tooltipRecipe = usingDynamic
+        and dynamicRecommendation.currentSegment
+        and dynamicRecommendation.currentSegment.recipe
+        or (type(addonTable.getRecipeCatalogRecord) == "function"
+            and addonTable.getRecipeCatalogRecord(currentID)
+            or nil)
+    updateRecommendationTooltipTarget(
+        currentID,
+        tooltipRecipe,
+        shouldCraftRecipe[craftRecipeOptionsIndex]
+            or (data and data.name)
+            or tostring(currentID)
+    )
 
     updatePanelHeight(renderedMaterialHeight, targetedEnchant, detailsVisible)
 

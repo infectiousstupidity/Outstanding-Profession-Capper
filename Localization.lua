@@ -91,6 +91,8 @@ local function applyEnglish()
     L["compare_material_have"] = "Have %d"
     L["compare_material_none"] = "No material data is available for this recipe."
     L["compare_material_unknown"] = "Unknown material"
+    L["recipe_tooltip_source"] = "Recipe: %s"
+    L["recipe_tooltip_route_range"] = "Route step: skill %d -> %d"
     L["compare_show_more"] = "Show %d more"
     L["compare_top_only"] = "Showing top %d of %d usable recipes"
     L["compare_ranking_note"] = "Orange/yellow usable recipes only"
