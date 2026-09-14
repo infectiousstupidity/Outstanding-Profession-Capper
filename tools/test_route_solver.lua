@@ -36,7 +36,8 @@ local function globalFixture(recipe, skill, context, state)
     end
 
     local oneTime = {}
-    if not (state.acquiredOneTime and state.acquiredOneTime["recipe:B"]) then
+    local continuing = state.routeActiveRecipeID == "B"
+    if not continuing and not (state.acquiredOneTime and state.acquiredOneTime["recipe:B"]) then
         oneTime = {
             {
                 key = "recipe:B",
@@ -288,5 +289,65 @@ local bounded = addonTable.solveCheapestProfessionRoute({
 })
 assertEqual(bounded.complete, false, "state limit returns incomplete")
 assertEqual(bounded.reason, "state_limit_exceeded", "state limit reason")
+
+local manyRecipes = {}
+for i = 1, 40 do
+    manyRecipes[i] = { id = "recipe-" .. tostring(i), rank = i }
+end
+
+local manyCostCalls = 0
+local function manyRecipeFixture(recipe, skill, context, state)
+    manyCostCalls = manyCostCalls + 1
+    local continuing = state.routeActiveRecipeID == recipe.id
+    local acquisition = continuing and {} or {
+        {
+            key = "recipe:" .. recipe.id,
+            kind = "recipe_acquisition",
+            marketCost = recipe.rank,
+            goldCost = recipe.rank,
+        },
+    }
+    return {
+        available = true,
+        useful = true,
+        expectedCraftsPerSkillUp = 1,
+        expectedMarketCostPerSkillUp = recipe.rank,
+        expectedGoldNeededNowPerSkillUp = recipe.rank,
+        expectedCurrentPurchaseCostPerSkillUp = recipe.rank,
+        oneTimeCosts = acquisition,
+        quality = "complete",
+        skillUpChance = 1,
+    }
+end
+
+local indexedCandidates = {}
+for skill = 0, 29 do
+    indexedCandidates[skill] = {
+        manyRecipes[1],
+        manyRecipes[2],
+        manyRecipes[3],
+        manyRecipes[4],
+        manyRecipes[5],
+    }
+end
+
+local scalable = addonTable.solveCheapestProfessionRoute(
+    manyRecipes,
+    nil,
+    { currentCap = 30 },
+    {
+        startSkill = 0,
+        targetSkill = 30,
+        maxStates = 2000,
+        optimizeFor = "current",
+        costRecipe = manyRecipeFixture,
+        candidateRecipesBySkill = indexedCandidates,
+    }
+)
+assertEqual(scalable.complete, true, "full-catalog style route completes within bounded state space")
+assertEqual(scalable.actions[1].recipeID, "recipe-1", "cheapest activation wins")
+assertEqual(scalable.totalCurrentPurchaseCost, 31, "recipe acquisition is charged once for a continuous segment")
+assert(scalable.exploredStates < 500, "indexed route should not explode state count")
+assert(manyCostCalls < 2500, "candidate index should bound recipe-cost evaluations")
 
 print("Cheapest route solver tests passed.")

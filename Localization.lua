@@ -139,6 +139,7 @@ local function applyEnglish()
     L["dynamic_reason_no_route"] = "no complete priced route"
     L["dynamic_reason_missing_prices"] = "missing material prices"
     L["dynamic_reason_no_available_recipe"] = "no orange/yellow recipe has all missing materials in a fresh AH scan"
+    L["dynamic_reason_optimizer_error"] = "optimizer failed; using Static guide"
     L["dynamic_reason_unknown"] = "insufficient data"
     L["craft_toward"] = "Craft toward %d"
     L["material_no_price"] = "No price"

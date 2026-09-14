@@ -265,7 +265,7 @@ local function acquisitionFixture(recipe, skill, context, state)
         skillUpChance = 1,
     }
 end
-local route = addonTable.solveCheapestProfessionRoute({{ id = "acquisition-once" }}, nil, {
+local route = addonTable.solveCheapestProfessionRoute({{ spellID = 910011 }}, nil, {
     currentCap = 3,
     playerLevel = 80,
 }, {
@@ -283,6 +283,13 @@ local simulatedLearned = addonTable.resolveRecipeAcquisition(910011, {
 }, { baseSkill = 2 }, {})
 eq(simulatedLearned.sourceType, "simulated_learned", "route remembers acquired recipe")
 eq(simulatedLearned.goldCost, 0, "simulated learned zero repeat cost")
+
+local activeSegmentLearned = addonTable.resolveRecipeAcquisition(910011, {
+    routeActiveRecipeID = 910011,
+    playerLevel = 80,
+}, { baseSkill = 2 }, {})
+eq(activeSegmentLearned.sourceType, "simulated_learned", "continuous route segment remains acquired")
+eq(activeSegmentLearned.goldCost, 0, "continuous segment does not repay recipe acquisition")
 
 local valid, reason = addonTable.validateRecipeAcquisitionEntry({
     spellID = 920001,

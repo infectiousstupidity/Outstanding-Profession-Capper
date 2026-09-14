@@ -199,7 +199,23 @@ local function learnedInState(spellID, state)
 end
 
 local function acquiredInRoute(spellID, state)
-    if not spellID or type(state) ~= "table" or type(state.acquiredOneTime) ~= "table" then return false end
+    if not spellID or type(state) ~= "table" then
+        return false
+    end
+
+    -- The optimizer models recipe learning as a segment activation rather than
+    -- carrying every learned recipe in the route-state key. Continuing the same
+    -- recipe therefore remains acquired without creating an exponential set of
+    -- recipe-acquisition states.
+    if state.routeActiveRecipeID ~= nil
+        and tostring(state.routeActiveRecipeID) == tostring(spellID)
+    then
+        return true
+    end
+
+    if type(state.acquiredOneTime) ~= "table" then
+        return false
+    end
     return state.acquiredOneTime["recipe:" .. tostring(spellID)] == true
 end
 

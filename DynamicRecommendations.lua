@@ -508,6 +508,54 @@ local function getRecipeID(recipe)
     return recipe and (recipe.spellID or recipe.recipeID or recipe.id) or nil
 end
 
+local function buildRouteCandidateIndex(recipes, skillContext, startSkill, targetSkill)
+    if type(addonTable.getRecipeDifficultyMetadata) ~= "function" then
+        return nil
+    end
+
+    local modifier = tonumber(skillContext and skillContext.activeSkillModifier) or 0
+    local firstSkill = math.max(0, tonumber(startSkill) or 0)
+    local finalSkill = math.max(firstSkill, tonumber(targetSkill) or firstSkill)
+    local index = {}
+    local seen = {}
+
+    local function add(skill, recipe)
+        index[skill] = index[skill] or {}
+        seen[skill] = seen[skill] or {}
+        local recipeID = getRecipeID(recipe)
+        local key = tostring(recipeID or recipe)
+        if not seen[skill][key] then
+            seen[skill][key] = true
+            table.insert(index[skill], recipe)
+        end
+    end
+
+    for recipeIndex = 1, table.getn(recipes or {}) do
+        local recipe = recipes[recipeIndex]
+        local metadata = addonTable.getRecipeDifficultyMetadata(recipe)
+        if metadata then
+            local requiredSkill = tonumber(metadata.requiredSkill) or 0
+            local graySkill = tonumber(metadata.graySkill)
+            if graySkill then
+                local usableFrom = math.max(firstSkill, math.ceil(requiredSkill - modifier))
+                local usableTo = math.min(finalSkill - 1, math.ceil(graySkill) - 1)
+                for skill = usableFrom, usableTo do
+                    add(skill, recipe)
+                end
+            end
+        end
+
+        -- The live profession book is authoritative for the current displayed
+        -- color. Keep a current live recipe available even if bundled metadata
+        -- disagrees, without widening its future route range.
+        if recipe.liveSkillType and firstSkill < finalSkill then
+            add(firstSkill, recipe)
+        end
+    end
+
+    return index
+end
+
 local function shallowCopy(source)
     if type(source) ~= "table" then
         return source
@@ -541,6 +589,8 @@ end
 
 local function createCachedRecipeCost(baseCostRecipe)
     local cache = {}
+    local cacheEntries = 0
+    local maxEntries = 4096
     local acquiredSignatureCache = setmetatable({}, { __mode = "k" })
 
     local function acquiredSignature(state)
@@ -556,7 +606,7 @@ local function createCachedRecipeCost(baseCostRecipe)
 
         local parts = {}
         for key, value in pairs(acquired) do
-            if value then
+            if value and string.sub(tostring(key), 1, 7) ~= "recipe:" then
                 table.insert(parts, tostring(key))
             end
         end
@@ -569,10 +619,14 @@ local function createCachedRecipeCost(baseCostRecipe)
 
     return function(recipe, skill, skillContext, state, options)
         local recipeID = getRecipeID(recipe) or tostring(recipe)
+        local continuingRecipe = state
+            and state.routeActiveRecipeID ~= nil
+            and tostring(state.routeActiveRecipeID) == tostring(recipeID)
         local key = table.concat({
             tostring(recipeID),
             tostring(tonumber(skill) or 0),
             acquiredSignature(state),
+            continuingRecipe and "continue" or "new",
         }, "|")
 
         local cachedCost = cache[key]
@@ -582,7 +636,13 @@ local function createCachedRecipeCost(baseCostRecipe)
 
         local cost = baseCostRecipe(recipe, skill, skillContext, state, options or {})
         if cost ~= nil then
-            cache[key] = shallowCopy(cost)
+            -- Full-catalog routes can touch thousands of recipe/skill states.
+            -- Keep the hot cache bounded so the 3.3.5 Lua allocator cannot be
+            -- exhausted merely by opening a profession window.
+            if cacheEntries < maxEntries then
+                cache[key] = shallowCopy(cost)
+                cacheEntries = cacheEntries + 1
+            end
             return shallowCopy(cost)
         end
         return nil
@@ -644,8 +704,13 @@ local function rankCurrentRecipes(recipes, skillContext, state, skill, options)
         return ranked
     end
 
-    for i = 1, table.getn(recipes or {}) do
-        local recipe = recipes[i]
+    local candidates = recipes or {}
+    if options and type(options.candidateRecipesBySkill) == "table" then
+        candidates = options.candidateRecipesBySkill[skill] or {}
+    end
+
+    for i = 1, table.getn(candidates) do
+        local recipe = candidates[i]
         local cost = costRecipe(recipe, skill, skillContext, state, options or {})
         cost = applyLiveSkillType(cost, recipe, skill, currentSkill)
         local eligibleColor
@@ -896,6 +961,14 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         return result
     end
 
+    local candidateRecipesBySkill = buildRouteCandidateIndex(
+        recipes,
+        skillContext,
+        skillContext.baseSkill,
+        targetSkill
+    )
+    costOptions.candidateRecipesBySkill = candidateRecipesBySkill
+
     local fallbackSegment, candidates = buildCurrentCheapestSegment(
         recipes,
         skillContext,
@@ -935,6 +1008,7 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         costRecipe = adaptiveRouteCost,
         costOptions = routeCostOptions,
         trainingSteps = state.trainingSteps,
+        candidateRecipesBySkill = candidateRecipesBySkill,
     })
     result.route = route
 
