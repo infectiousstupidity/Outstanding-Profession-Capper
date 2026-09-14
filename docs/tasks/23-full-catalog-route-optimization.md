@@ -1,6 +1,6 @@
 # Task 23 — Full-catalog cheapest-route optimization
 
-Status: QUEUED  
+Status: DONE  
 Phase: 6 — Self-contained full recipe optimization  
 Depends on: Tasks 07, 08, 09, 20, 21, and 22
 
@@ -98,3 +98,19 @@ Add integration tests for:
 - Recipe acquisition cost can change which route wins.
 - The route's first action/segment is the source of truth for the main recommendation.
 - No Ackis installation changes optimizer coverage.
+
+
+## Implementation result
+
+Implemented on master with the post-freeze performance protections preserved.
+
+- Optimizer input now merges the bundled profession catalog with the live profession book.
+- Unknown but reliably obtainable recipes participate before they are learned.
+- The full route may cross profession-rank training boundaries up to the highest cap the character's level can currently reach.
+- A complete global route overrides the greedy current-step recommendation, so future unlocks can make the addon tell the player to stop and acquire a better recipe.
+- Recipe acquisition is charged once in route state and exposed on the selected segment for Task 24.
+- Available mode constrains the immediate action only; it does not require every future material through 450 to be on the Auction House at the same time.
+- The pass-local recipe and price caches from the performance fix remain in use.
+- If the complete route cannot be proven, the existing immediate dynamic recommendation remains available with an explicit incomplete-route reason rather than freezing or becoming unusable.
+
+Automated regression coverage is in `tools/test_full_catalog_routes.lua`.
