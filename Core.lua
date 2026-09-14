@@ -1883,8 +1883,14 @@ local function formatAcquisitionGuidanceInfo(info)
     return table.concat(parts, " · ")
 end
 
-local function getAcquisitionGuidance(spellID, acquisition)
+local function getAcquisitionGuidance(spellID, acquisition, compact)
     if type(acquisition) == "table" then
+        if compact then
+            local short = shortAcquisitionLabel(acquisition)
+            return short
+                and (addonTable.L["acquisition_prefix"] .. short)
+                or addonTable.L["acquisition_unknown"]
+        end
         return formatAcquisitionGuidanceInfo(acquisitionDisplayInfo(acquisition))
     end
 
@@ -1903,6 +1909,13 @@ local function getAcquisitionGuidance(spellID, acquisition)
     local info = addonTable.explainRecipeAcquisition(spellID, state, professionContext, {})
     if not info or info.sourceType == "unknown" then
         return addonTable.L["acquisition_unknown"]
+    end
+
+    if compact then
+        local short = shortAcquisitionLabel(info)
+        return short
+            and (addonTable.L["acquisition_prefix"] .. short)
+            or addonTable.L["acquisition_unknown"]
     end
 
     return formatAcquisitionGuidanceInfo(info)
@@ -3549,7 +3562,7 @@ function displayRecipe()
             updateRecommendationMeta({ skillType = skillType }, professionContext.effectiveSkill, displayedTarget)
 
             txtRecipeStatus:SetText(
-                getAcquisitionGuidance(currentID, dynamicRecommendation.acquisition)
+                getAcquisitionGuidance(currentID, dynamicRecommendation.acquisition, true)
             )
             txtRecipeStatus:SetTextColor(0.95, 0.82, 0.42)
             txtCraftStats:SetText(string.format(
@@ -3561,7 +3574,7 @@ function displayRecipe()
             updateAvailabilityMetrics(0, 0, false)
             MainFrameCoreCraft:SetText(L["acquisition_button"])
         else
-            txtRecipeStatus:SetText(getAcquisitionGuidance(currentID) or L["recipe_not_learned"])
+            txtRecipeStatus:SetText(getAcquisitionGuidance(currentID, nil, true) or L["recipe_not_learned"])
             txtRecipeStatus:SetTextColor(1, 0.72, 0.22)
             txtCraftStats:SetText(string.format(L["stats_unlearned"], formatSkillUps(skillUpsNeeded)))
             txtCraftEta:SetText("")

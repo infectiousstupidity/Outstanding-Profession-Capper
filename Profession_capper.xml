@@ -55,11 +55,11 @@
         </Texture>
 
         <FontString name="txtRecommendationLabel" inherits="GameFontNormal" justifyH="LEFT">
-          <Size><AbsDimension x="240" y="20"/></Size>
+          <Size><AbsDimension x="180" y="20"/></Size>
           <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="30" y="-125"/></Offset></Anchor></Anchors>
         </FontString>
         <FontString name="txtRecipeStatus" inherits="GameFontNormalSmall" justifyH="RIGHT">
-          <Size><AbsDimension x="220" y="18"/></Size>
+          <Size><AbsDimension x="310" y="18"/></Size>
           <Anchors><Anchor point="TOPRIGHT"><Offset><AbsDimension x="-30" y="-126"/></Offset></Anchor></Anchors>
         </FontString>
         <Texture name="imgSkillIcon" file="Interface\InventoryItems\WoWUnknownItem01">
