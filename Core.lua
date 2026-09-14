@@ -51,6 +51,7 @@ local pendingProfessionRefresh = false
 local professionRefreshDeadline = 0
 local professionRefreshDriver
 local recommendationTooltipTarget
+local acquisitionWhereSummary
 local addAcquisitionLocationsToTooltip
 local PROFESSION_REFRESH_DEBOUNCE = 0.20
 
@@ -2072,7 +2073,7 @@ local function formatAcquisitionGuidanceInfo(info)
     return table.concat(parts, " · ")
 end
 
-local function acquisitionWhereSummary(acquisition)
+acquisitionWhereSummary = function(acquisition)
     local info = acquisitionDisplayInfo(acquisition)
     if not info or info.alreadyAcquired then return nil end
     local locations = info.locations or {}

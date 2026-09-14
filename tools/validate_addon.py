@@ -58,6 +58,15 @@ def main():
     if "Profession_capper.xml" not in files:
         errors.append("TOC must load Profession_capper.xml")
 
+    core_text = (ROOT / "Core.lua").read_text(encoding="utf-8")
+    acquisition_forward = core_text.find("local acquisitionWhereSummary")
+    detail_panel = core_text.find("local function updateDetailPanel()")
+    acquisition_definition = core_text.find("acquisitionWhereSummary = function(acquisition)")
+    if not (0 <= acquisition_forward < detail_panel < acquisition_definition):
+        errors.append(
+            "Core.lua must forward-declare acquisitionWhereSummary before updateDetailPanel"
+        )
+
     try:
         tree = ET.parse(ROOT / "Profession_capper.xml")
         details = next(
