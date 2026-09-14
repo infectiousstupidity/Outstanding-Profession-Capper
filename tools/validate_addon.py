@@ -60,11 +60,26 @@ def main():
 
     try:
         tree = ET.parse(ROOT / "Profession_capper.xml")
-        details = tree.getroot().find(".//Frame[@name='$parentDetails']")
+        details = next(
+            (
+                element
+                for element in tree.getroot().iter()
+                if element.tag.rsplit("}", 1)[-1] == "Frame"
+                and element.attrib.get("name") == "$parentDetails"
+            ),
+            None,
+        )
         if details is None:
             errors.append("Profession_capper.xml is missing the route-details frame")
         else:
-            anchor = details.find("./Anchors/Anchor")
+            anchor = next(
+                (
+                    element
+                    for element in details.iter()
+                    if element.tag.rsplit("}", 1)[-1] == "Anchor"
+                ),
+                None,
+            )
             if anchor is None or anchor.attrib.get("point") != "BOTTOMLEFT" \
                     or anchor.attrib.get("relativeTo") != "MainFrameCore" \
                     or anchor.attrib.get("relativePoint") != "BOTTOMLEFT":
