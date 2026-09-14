@@ -14,6 +14,8 @@ REQUIRED_ORDER = [
     "CharacterSkill.lua",
     "RecipeDifficulty.lua",
     "RecipeDifficultyData.lua",
+    "GeneratedRouteData.lua",
+    "RouteData.lua",
     "RecipeCatalog.lua",
     "RecipeCatalogData.lua",
     "RecipeAcquisition.lua",

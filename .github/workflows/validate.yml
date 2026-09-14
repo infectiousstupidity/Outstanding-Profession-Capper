@@ -20,6 +20,10 @@ jobs:
         run: lua5.1 tools/test_character_skill.lua
       - name: Test recipe difficulty metadata
         run: lua5.1 tools/test_recipe_difficulty.lua
+      - name: Verify generated route topology
+        run: python3 tools/generate_route_data.py --check
+      - name: Test generated route topology
+        run: lua5.1 tools/test_route_data.lua
       - name: Test bundled recipe catalog
         run: lua5.1 tools/test_recipe_catalog.lua
       - name: Test recipe acquisition model
