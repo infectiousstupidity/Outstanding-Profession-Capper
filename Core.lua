@@ -1674,19 +1674,36 @@ local function updateAvailabilityMetrics(canMake, purchaseTotal, purchaseComplet
     end
 end
 
-local function getAcquisitionGuidance(spellID)
-    if type(addonTable.explainRecipeAcquisition) ~= "function" then
-        return addonTable.L["acquisition_unknown"]
+local function acquisitionDisplayInfo(acquisition)
+    if type(acquisition) ~= "table" then
+        return nil
     end
 
-    local state = { learnedRecipes = {} }
-    if type(UnitFactionGroup) == "function" then
-        state.faction = UnitFactionGroup("player")
-    end
+    local model = type(acquisition.model) == "table" and acquisition.model or acquisition
+    return {
+        sourceType = model.sourceType
+            or acquisition.sourceType
+            or acquisition.source
+            or model.source,
+        sourceName = model.sourceName or acquisition.sourceName,
+        zone = model.zone or acquisition.zone,
+        coordinates = model.coordinates or acquisition.coordinates,
+        goldCost = acquisition.goldCost
+            or model.goldCost
+            or model.purchasePrice
+            or acquisition.purchasePrice,
+        limitedStock = model.limitedStock == true or acquisition.limitedStock == true,
+        reputation = model.reputation or acquisition.reputation,
+        alreadyAcquired = acquisition.alreadyAcquired == true or model.alreadyAcquired == true,
+    }
+end
 
-    local info = addonTable.explainRecipeAcquisition(spellID, state, professionContext, {})
-    if not info or info.sourceType == "unknown" then
-        return addonTable.L["acquisition_unknown"]
+local function acquisitionSourceLabel(sourceType)
+    if sourceType == "learned"
+        or sourceType == "simulated_learned"
+        or sourceType == "owned_recipe_item"
+    then
+        return addonTable.L["acquisition_known"]
     end
 
     local labels = {
@@ -1697,11 +1714,38 @@ local function getAcquisitionGuidance(spellID)
         reputation = addonTable.L["acquisition_reputation"],
         quest = addonTable.L["acquisition_quest"],
         drop = addonTable.L["acquisition_drop"],
+        world_drop = addonTable.L["acquisition_drop"],
         manual = addonTable.L["acquisition_manual"],
     }
+    return labels[sourceType] or tostring(sourceType or addonTable.L["acquisition_unknown"])
+end
+
+local function shortAcquisitionLabel(acquisition)
+    local info = acquisitionDisplayInfo(acquisition)
+    if not info then
+        return nil
+    end
+    if info.alreadyAcquired then
+        return addonTable.L["acquisition_known"]
+    end
+
+    local label = acquisitionSourceLabel(info.sourceType)
+    if info.goldCost ~= nil then
+        return label .. " · " .. addonTable.formatCopperShort(info.goldCost)
+    end
+    return label
+end
+
+local function formatAcquisitionGuidanceInfo(info)
+    if not info then
+        return addonTable.L["acquisition_unknown"]
+    end
+    if info.alreadyAcquired then
+        return addonTable.L["acquisition_known"]
+    end
 
     local parts = {
-        addonTable.L["acquisition_prefix"] .. (labels[info.sourceType] or tostring(info.sourceType)),
+        addonTable.L["acquisition_prefix"] .. acquisitionSourceLabel(info.sourceType),
     }
 
     if info.sourceName and info.sourceName ~= "" then
@@ -1720,8 +1764,8 @@ local function getAcquisitionGuidance(spellID)
         table.insert(parts, location)
     end
 
-    if info.purchasePrice then
-        table.insert(parts, addonTable.formatCopperShort(info.purchasePrice))
+    if info.goldCost ~= nil then
+        table.insert(parts, addonTable.formatCopperShort(info.goldCost))
     end
 
     if info.limitedStock then
@@ -1733,6 +1777,31 @@ local function getAcquisitionGuidance(spellID)
     end
 
     return table.concat(parts, " · ")
+end
+
+local function getAcquisitionGuidance(spellID, acquisition)
+    if type(acquisition) == "table" then
+        return formatAcquisitionGuidanceInfo(acquisitionDisplayInfo(acquisition))
+    end
+
+    if type(addonTable.explainRecipeAcquisition) ~= "function" then
+        return addonTable.L["acquisition_unknown"]
+    end
+
+    local state = { learnedRecipes = {} }
+    if type(UnitFactionGroup) == "function" then
+        state.faction = UnitFactionGroup("player")
+    end
+    if type(UnitLevel) == "function" then
+        state.playerLevel = UnitLevel("player")
+    end
+
+    local info = addonTable.explainRecipeAcquisition(spellID, state, professionContext, {})
+    if not info or info.sourceType == "unknown" then
+        return addonTable.L["acquisition_unknown"]
+    end
+
+    return formatAcquisitionGuidanceInfo(info)
 end
 
 function setRecommendationMode(mode)
@@ -1844,6 +1913,18 @@ local function compareRowOnEnter(self)
 
     if candidate.cost and candidate.cost.quality == "stale" then
         GameTooltip:AddLine(addonTable.L["compare_stale"], 1, 0.72, 0.22, true)
+    end
+
+    local acquisitionInfo = candidate.cost
+        and acquisitionDisplayInfo(candidate.cost.acquisition)
+        or nil
+    if acquisitionInfo and not acquisitionInfo.alreadyAcquired then
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(addonTable.L["acquisition_required"], 1, 0.82, 0.12, true)
+        GameTooltip:AddLine(
+            getAcquisitionGuidance(candidate.recipeID, candidate.cost.acquisition),
+            0.82, 0.82, 0.82, true
+        )
     end
 
     GameTooltip:AddLine(" ")
@@ -2085,18 +2166,37 @@ local function renderComparisonView()
         row.perApp:SetText("~" .. addonTable.formatCopperShort(candidate.costPerCraft))
         row.perSkill:SetText("~" .. addonTable.formatCopperShort(candidate.expectedCostPerSkillUp))
 
+        local acquisitionInfo = candidate.cost
+            and acquisitionDisplayInfo(candidate.cost.acquisition)
+            or nil
+        local acquisitionMeta
+        if acquisitionInfo and not acquisitionInfo.alreadyAcquired then
+            acquisitionMeta = shortAcquisitionLabel(candidate.cost.acquisition)
+        end
+
         if stale then
-            row.meta:SetText(addonTable.L["compare_stale"])
+            row.meta:SetText(
+                acquisitionMeta
+                    and (acquisitionMeta .. " · " .. addonTable.L["compare_stale"])
+                    or addonTable.L["compare_stale"]
+            )
             row.meta:SetTextColor(1, 0.72, 0.22)
             row.perApp:SetTextColor(1, 0.72, 0.22)
             row.perSkill:SetTextColor(1, 0.72, 0.22)
         elseif not candidate.availableNow then
-            row.meta:SetText(addonTable.L["compare_not_available_now"])
+            row.meta:SetText(
+                acquisitionMeta
+                    and (acquisitionMeta .. " · " .. addonTable.L["compare_not_available_now"])
+                    or addonTable.L["compare_not_available_now"]
+            )
             row.meta:SetTextColor(1, 0.72, 0.22)
             row.perApp:SetTextColor(0.92, 0.92, 0.92)
             row.perSkill:SetTextColor(0.92, 0.92, 0.92)
         else
-            row.meta:SetText("")
+            row.meta:SetText(acquisitionMeta or "")
+            if acquisitionMeta then
+                row.meta:SetTextColor(0.95, 0.82, 0.42)
+            end
             row.perApp:SetTextColor(0.92, 0.92, 0.92)
             row.perSkill:SetTextColor(0.92, 0.92, 0.92)
         end
@@ -2178,22 +2278,52 @@ local function renderRouteView()
     end
 
     txtCompareEmpty:Hide()
+    local displayRows = {}
     local segments = plan.segments or {}
-    local count = table.getn(segments)
 
-    for i = 1, count do
+    for i = 1, table.getn(segments) do
         local segment = segments[i]
+        if segment.type == "craft" and segment.requiresAcquisition then
+            table.insert(displayRows, {
+                type = "acquisition",
+                segment = segment,
+            })
+        end
+        table.insert(displayRows, {
+            type = segment.type,
+            segment = segment,
+        })
+    end
+
+    local count = table.getn(displayRows)
+    for i = 1, count do
+        local display = displayRows[i]
+        local segment = display.segment
         local row = getRouteRow(i)
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", MainFrameCoreCompareContent, "TOPLEFT", 0, -((i - 1) * ROUTE_ROW_HEIGHT))
 
-        row.range:SetText(string.format(
-            addonTable.L["compare_route_range"],
-            tonumber(segment.skillStart) or 0,
-            tonumber(segment.skillEnd) or 0
-        ))
-
-        if segment.type == "training" then
+        if display.type == "acquisition" then
+            local name = segment.recipe and segment.recipe.name or tostring(segment.recipeID or "?")
+            row.range:SetText(tostring(tonumber(segment.skillStart) or 0))
+            row.step:SetText(string.format(
+                addonTable.L["compare_route_acquire"],
+                name,
+                shortAcquisitionLabel(segment.acquisition) or addonTable.L["acquisition_unknown"]
+            ))
+            row.step:SetTextColor(0.95, 0.82, 0.42)
+            row.crafts:SetText(addonTable.L["metric_unknown"])
+            if segment.acquisitionCost ~= nil then
+                row.cost:SetText("~" .. addonTable.formatCopperShort(segment.acquisitionCost))
+            else
+                row.cost:SetText(addonTable.L["metric_unknown"])
+            end
+        elseif display.type == "training" then
+            row.range:SetText(string.format(
+                addonTable.L["compare_route_range"],
+                tonumber(segment.skillStart) or 0,
+                tonumber(segment.skillEnd) or 0
+            ))
             row.step:SetText(string.format(
                 addonTable.L["compare_route_training"],
                 tonumber(segment.oldCap) or 0,
@@ -2201,14 +2331,24 @@ local function renderRouteView()
             ))
             row.step:SetTextColor(0.9, 0.82, 0.45)
             row.crafts:SetText(addonTable.L["metric_unknown"])
+            row.cost:SetText("~" .. addonTable.formatCopperShort(segment.marketCost))
         else
+            row.range:SetText(string.format(
+                addonTable.L["compare_route_range"],
+                tonumber(segment.skillStart) or 0,
+                tonumber(segment.skillEnd) or 0
+            ))
             local name = segment.recipe and segment.recipe.name or tostring(segment.recipeID or "?")
             row.step:SetText(name)
             row.step:SetTextColor(0.92, 0.92, 0.92)
             row.crafts:SetText("~" .. tostring(math.max(0, math.ceil(tonumber(segment.expectedCrafts) or 0))))
+            local craftCost = math.max(
+                0,
+                (tonumber(segment.marketCost) or 0) - (tonumber(segment.acquisitionCost) or 0)
+            )
+            row.cost:SetText("~" .. addonTable.formatCopperShort(craftCost))
         end
 
-        row.cost:SetText("~" .. addonTable.formatCopperShort(segment.marketCost))
         row:Show()
     end
 
@@ -2986,17 +3126,55 @@ function displayRecipe()
             MainFrameCoreCraft:SetText(L["craft_button_unavail"])
         end
     else
-        imgSkillIcon:SetTexture(GetSpellTexture(currentID) or UNKNOWN_ICON)
+        local selectedRecipe = usingDynamic
+            and dynamicRecommendation.currentSegment
+            and dynamicRecommendation.currentSegment.recipe
+            or nil
+        local outputItemID = selectedRecipe and selectedRecipe.outputItemID or nil
+        local outputTexture
+        if outputItemID and GetItemInfo then
+            local _, _, _, _, _, _, _, _, _, texture = GetItemInfo(outputItemID)
+            outputTexture = texture
+        end
+
+        imgSkillIcon:SetTexture(outputTexture or GetSpellTexture(currentID) or UNKNOWN_ICON)
         txtShouldCraft:SetText(shouldCraftRecipe[craftRecipeOptionsIndex] or tostring(currentID))
-        txtRecipeStatus:SetText(getAcquisitionGuidance(currentID) or L["recipe_not_learned"])
-        txtCraftStats:SetText(string.format(L["stats_unlearned"], formatSkillUps(skillUpsNeeded)))
         txtCraftProgress:SetText("")
-        txtCraftEta:SetText("")
         clearMaterialRows()
-        updateAvailabilityMetrics(0, 0, false)
         updateEnchantRepeatControls(false)
         MainFrameCoreCraft:Disable()
-        MainFrameCoreCraft:SetText(L["craft_button_unavail"])
+
+        if usingDynamic and dynamicRecommendation.requiresAcquisition then
+            local difficulty = dynamicRecommendation.currentCost
+                and dynamicRecommendation.currentCost.difficulty
+                or nil
+            local skillType = difficulty == "orange" and "optimal"
+                or difficulty == "yellow" and "medium"
+                or difficulty == "green" and "easy"
+                or difficulty == "gray" and "trivial"
+                or nil
+            updateRecommendationMeta({ skillType = skillType }, professionContext.effectiveSkill, displayedTarget)
+
+            txtRecipeStatus:SetText(
+                getAcquisitionGuidance(currentID, dynamicRecommendation.acquisition)
+            )
+            txtRecipeStatus:SetTextColor(0.95, 0.82, 0.42)
+            txtCraftStats:SetText(string.format(
+                L["acquisition_then_craft"],
+                plannedCrafts,
+                displayedTarget
+            ))
+            txtCraftEta:SetText(dynamicPriceLine())
+            updateAvailabilityMetrics(0, 0, false)
+            MainFrameCoreCraft:SetText(L["acquisition_button"])
+        else
+            txtRecipeStatus:SetText(getAcquisitionGuidance(currentID) or L["recipe_not_learned"])
+            txtRecipeStatus:SetTextColor(1, 0.72, 0.22)
+            txtCraftStats:SetText(string.format(L["stats_unlearned"], formatSkillUps(skillUpsNeeded)))
+            txtCraftEta:SetText("")
+            updateAvailabilityMetrics(0, 0, false)
+            MainFrameCoreCraft:SetText(L["craft_button_unavail"])
+        end
     end
 
     MainFrameCoreCraft:Show()

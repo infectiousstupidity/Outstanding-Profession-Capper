@@ -229,4 +229,38 @@ local key4 = addonTable.getRouteRefreshKey(context, state, {
 })
 assertEqual(key3 == key4, false, "modifier change refreshes")
 
+local acquisitionRoute = {
+    complete = true,
+    actions = {
+        {
+            type = "craft",
+            recipe = { id = "unknown", reagents = {} },
+            recipeID = "unknown",
+            skillFrom = 200,
+            skillTo = 201,
+            expectedCrafts = 1,
+            marketCost = 50,
+            goldCost = 50,
+            acquisitionGoldCost = 50,
+            cost = {
+                acquisition = {
+                    alreadyAcquired = false,
+                    source = "trainer",
+                    goldCost = 50,
+                    model = {
+                        sourceType = "trainer",
+                        sourceName = "Fixture trainer",
+                    },
+                },
+            },
+        },
+    },
+    segments = {},
+}
+local acquisitionPlan = addonTable.buildProfessionShoppingPlan(acquisitionRoute, {}, {})
+assertEqual(acquisitionPlan.complete, true, "acquisition route plan complete")
+assertEqual(acquisitionPlan.segments[1].requiresAcquisition, true, "segment exposes acquisition boundary")
+assertEqual(acquisitionPlan.segments[1].acquisition.source, "trainer", "segment retains acquisition source")
+assertEqual(acquisitionPlan.segments[1].acquisitionCost, 50, "segment retains one-time acquisition cost")
+
 print("Total cost and shopping plan tests passed.")

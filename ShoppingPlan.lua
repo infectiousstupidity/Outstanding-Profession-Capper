@@ -243,6 +243,15 @@ local function buildCostSegments(actions)
                 last.marketCost = last.marketCost + numberOrZero(action.marketCost)
                 last.routeGoldEstimate = last.routeGoldEstimate + numberOrZero(action.goldCost)
                 last.acquisitionCost = last.acquisitionCost + numberOrZero(action.acquisitionGoldCost)
+                if not last.acquisition and action.cost and action.cost.acquisition then
+                    last.acquisition = action.cost.acquisition
+                end
+                if action.cost
+                    and action.cost.acquisition
+                    and action.cost.acquisition.alreadyAcquired ~= true
+                then
+                    last.requiresAcquisition = true
+                end
             else
                 table.insert(segments, {
                     type = "craft",
@@ -254,6 +263,11 @@ local function buildCostSegments(actions)
                     marketCost = numberOrZero(action.marketCost),
                     routeGoldEstimate = numberOrZero(action.goldCost),
                     acquisitionCost = numberOrZero(action.acquisitionGoldCost),
+                    acquisition = action.cost and action.cost.acquisition or nil,
+                    requiresAcquisition = action.cost
+                        and action.cost.acquisition
+                        and action.cost.acquisition.alreadyAcquired ~= true
+                        or false,
                 })
             end
         elseif action.type == "training" then
