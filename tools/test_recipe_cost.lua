@@ -5,7 +5,9 @@ addonTable.getEffectiveSkillForBase = function(baseSkill, context)
 end
 
 local prices = {}
+local priceLookupCalls = 0
 addonTable.lookupItemPrice = function(item)
+    priceLookupCalls = priceLookupCalls + 1
     local price = prices[item]
     if not price then
         return { available = false, unavailableReason = "missing" }
@@ -104,6 +106,18 @@ assertEqual(yellow.difficulty, "yellow", "yellow difficulty")
 assertNear(yellow.skillUpChance, 0.75, 0.0001, "yellow chance")
 assertNear(yellow.expectedCraftsPerSkillUp, 4 / 3, 0.0001, "yellow expected crafts")
 assertNear(yellow.expectedMarketCostPerSkillUp, 200 * 4 / 3, 0.0001, "yellow market cost")
+
+local sharedMaterialCache = {}
+local cachedOrange = addonTable.calculateRecipeCost(recipe, 90, nil, {}, {
+    materialCostCache = sharedMaterialCache,
+})
+local callsAfterCachedOrange = priceLookupCalls
+local cachedYellow = addonTable.calculateRecipeCost(recipe, 105, nil, {}, {
+    materialCostCache = sharedMaterialCache,
+})
+assertEqual(cachedOrange.materialMarketValuePerCraft, cachedYellow.materialMarketValuePerCraft, "cached material per-craft value stable")
+assertEqual(priceLookupCalls, callsAfterCachedOrange, "same recipe reuses material pricing across skill points")
+assertNear(cachedYellow.expectedMarketCostPerSkillUp, 200 * 4 / 3, 0.0001, "cached yellow scaling remains correct")
 
 local green = addonTable.calculateRecipeCost(recipe, 115, nil, {}, {})
 assertEqual(green.difficulty, "green", "green difficulty")
