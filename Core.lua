@@ -15,6 +15,9 @@ local compareRows = {}
 local routeRows = {}
 local compareVisibleCount = 5
 local compareView = "comparison"
+local routePageStart = 1
+local routePreviousButton
+local routeNextButton
 local enchantRepeatNotice
 local dynamicRecommendation
 
@@ -33,6 +36,7 @@ local COMPARE_EXPAND_STEP = 5
 local COMPARE_MAX_VISIBLE = 10
 local COMPARE_ROW_HEIGHT = 36
 local ROUTE_ROW_HEIGHT = 34
+local ROUTE_MAX_VISIBLE = 10
 local COMPARE_CONTENT_TOP = 132
 local COMPARE_FOOTER_SPACE = 58
 local COMPARE_MIN_HEIGHT = 356
@@ -1514,15 +1518,25 @@ local function updateModeControls()
     setModeButtonState(MainFrameCoreStaticMode, mode == "static")
 
     if MainFrameCoreRoute then
-        if isOptimizedMode(mode) and dynamicRecommendation and dynamicRecommendation.available then
+        local staticRouteAvailable = mode == "static"
+            and professionContext
+            and type(addonTable.buildStaticProfessionRoute) == "function"
+            and type(addonTable.getProfessionGuide) == "function"
+            and addonTable.getProfessionGuide(professionContext.professionName) ~= nil
+        local dynamicRouteAvailable = isOptimizedMode(mode)
+            and dynamicRecommendation
+            and dynamicRecommendation.available
+
+        if staticRouteAvailable or dynamicRouteAvailable then
+            MainFrameCoreRoute:SetText(
+                staticRouteAvailable
+                    and addonTable.L["route_button_static"]
+                    or addonTable.L["route_button"]
+            )
             MainFrameCoreRoute:Show()
         else
             MainFrameCoreRoute:Hide()
         end
-    end
-
-    if not isOptimizedMode(mode) and MainFrameCoreCompare then
-        MainFrameCoreCompare:Hide()
     end
 end
 
@@ -2172,6 +2186,17 @@ local function routeRowOnEnter(self)
             tonumber(segment.skillStart) or 0,
             tonumber(segment.skillEnd) or 0
         ), 0.82, 0.82, 0.82, true)
+
+        if self.rowType == "static"
+            and type(segment.recipeNames) == "table"
+            and table.getn(segment.recipeNames) > 1
+        then
+            GameTooltip:AddLine(" ")
+            GameTooltip:AddLine(addonTable.L["static_route_alternatives_title"], 1, 0.82, 0.12, true)
+            for i = 2, table.getn(segment.recipeNames) do
+                GameTooltip:AddLine(segment.recipeNames[i], 0.82, 0.82, 0.82, true)
+            end
+        end
     end
     GameTooltip:Show()
 end
@@ -2273,7 +2298,66 @@ local function updateComparePanelHeight(rowCount, rowHeight)
     ))
 end
 
+local function ensureRoutePagingButtons()
+    if routePreviousButton and routeNextButton then
+        return
+    end
+
+    routePreviousButton = CreateFrame("Button", nil, MainFrameCoreCompare, "UIPanelButtonTemplate")
+    routePreviousButton:SetWidth(72)
+    routePreviousButton:SetHeight(22)
+    routePreviousButton:SetPoint("BOTTOMLEFT", MainFrameCoreCompare, "BOTTOMLEFT", 16, 14)
+    routePreviousButton:SetText(addonTable.L["route_previous"])
+    routePreviousButton:SetScript("OnClick", function()
+        routePageStart = math.max(1, routePageStart - ROUTE_MAX_VISIBLE)
+        refreshComparisonPanel()
+    end)
+    routePreviousButton:Hide()
+
+    routeNextButton = CreateFrame("Button", nil, MainFrameCoreCompare, "UIPanelButtonTemplate")
+    routeNextButton:SetWidth(72)
+    routeNextButton:SetHeight(22)
+    routeNextButton:SetPoint("BOTTOMLEFT", MainFrameCoreCompare, "BOTTOMLEFT", 92, 14)
+    routeNextButton:SetText(addonTable.L["route_next"])
+    routeNextButton:SetScript("OnClick", function()
+        routePageStart = routePageStart + ROUTE_MAX_VISIBLE
+        refreshComparisonPanel()
+    end)
+    routeNextButton:Hide()
+end
+
+local function hideRoutePagingButtons()
+    if routePreviousButton then routePreviousButton:Hide() end
+    if routeNextButton then routeNextButton:Hide() end
+end
+
+local function getRoutePage(total)
+    ensureRoutePagingButtons()
+    total = math.max(0, tonumber(total) or 0)
+
+    local maxStart = math.floor((math.max(total, 1) - 1) / ROUTE_MAX_VISIBLE)
+        * ROUTE_MAX_VISIBLE + 1
+    if routePageStart > maxStart then
+        routePageStart = maxStart
+    elseif routePageStart < 1 then
+        routePageStart = 1
+    end
+
+    local pageEnd = math.min(total, routePageStart + ROUTE_MAX_VISIBLE - 1)
+    if total > ROUTE_MAX_VISIBLE then
+        routePreviousButton:Show()
+        routeNextButton:Show()
+        if routePageStart <= 1 then routePreviousButton:Disable() else routePreviousButton:Enable() end
+        if pageEnd >= total then routeNextButton:Disable() else routeNextButton:Enable() end
+    else
+        hideRoutePagingButtons()
+    end
+
+    return routePageStart, pageEnd
+end
+
 local function renderComparisonView()
+    hideRoutePagingButtons()
     hideRouteRows()
     setRouteHeadersVisible(false)
     setComparisonHeadersVisible(true)
@@ -2415,6 +2499,7 @@ local function renderRouteView()
 
     local plan = dynamicRecommendation and dynamicRecommendation.plan
     if not plan or not plan.complete then
+        hideRoutePagingButtons()
         txtCompareEmpty:SetText(addonTable.L["route_tooltip_incomplete"])
         txtCompareEmpty:Show()
         txtCompareFooter:SetText("")
@@ -2441,14 +2526,17 @@ local function renderRouteView()
     end
 
     local count = table.getn(displayRows)
-    for i = 1, count do
-        local display = displayRows[i]
+    local pageStart, pageEnd = getRoutePage(count)
+    local visibleIndex = 0
+    for sourceIndex = pageStart, pageEnd do
+        visibleIndex = visibleIndex + 1
+        local display = displayRows[sourceIndex]
         local segment = display.segment
-        local row = getRouteRow(i)
+        local row = getRouteRow(visibleIndex)
         row.segment = segment
         row.rowType = display.type
         row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", MainFrameCoreCompareContent, "TOPLEFT", 0, -((i - 1) * ROUTE_ROW_HEIGHT))
+        row:SetPoint("TOPLEFT", MainFrameCoreCompareContent, "TOPLEFT", 0, -((visibleIndex - 1) * ROUTE_ROW_HEIGHT))
 
         if display.type == "acquisition" then
             local name = segment.recipe and segment.recipe.name or tostring(segment.recipeID or "?")
@@ -2466,11 +2554,7 @@ local function renderRouteView()
                 row.cost:SetText(addonTable.L["metric_unknown"])
             end
         elseif display.type == "training" then
-            row.range:SetText(string.format(
-                addonTable.L["compare_route_range"],
-                tonumber(segment.skillStart) or 0,
-                tonumber(segment.skillEnd) or 0
-            ))
+            row.range:SetText(tostring(tonumber(segment.skillStart) or 0))
             row.step:SetText(string.format(
                 addonTable.L["compare_route_training"],
                 tonumber(segment.oldCap) or 0,
@@ -2500,16 +2584,109 @@ local function renderRouteView()
     end
 
     local totalCost = plan.estimatedCurrentPurchaseCost or plan.estimatedMarketValueCost
+    local pageText = string.format(addonTable.L["compare_route_page"], pageStart, pageEnd, count)
     if totalCost then
-        txtCompareFooter:SetText(string.format(
-            addonTable.L["compare_route_total"],
-            addonTable.formatCopperShort(totalCost)
-        ))
+        txtCompareFooter:SetText(
+            string.format(addonTable.L["compare_route_total"], addonTable.formatCopperShort(totalCost))
+                .. " · " .. pageText
+        )
     else
-        txtCompareFooter:SetText("")
+        txtCompareFooter:SetText(pageText)
     end
 
-    updateComparePanelHeight(math.max(count, 1), ROUTE_ROW_HEIGHT)
+    updateComparePanelHeight(math.max(visibleIndex, 1), ROUTE_ROW_HEIGHT)
+end
+
+local function renderStaticRouteView()
+    hideCompareRows()
+    hideRouteRows()
+    setComparisonHeadersVisible(false)
+    setRouteHeadersVisible(true)
+    MainFrameCoreCompareShowMore:Hide()
+    txtCompareSubtitle:SetText(addonTable.L["static_route_subtitle"])
+
+    local playerLevel
+    if type(UnitLevel) == "function" then
+        local ok, level = pcall(UnitLevel, "player")
+        if ok then playerLevel = tonumber(level) end
+    end
+
+    local plan = type(addonTable.buildStaticProfessionRoute) == "function"
+        and addonTable.buildStaticProfessionRoute(
+            professionContext and professionContext.professionName,
+            professionContext and professionContext.baseSkill or 0,
+            450,
+            professionContext,
+            playerLevel
+        )
+        or nil
+
+    if not plan or table.getn(plan.segments or {}) == 0 then
+        hideRoutePagingButtons()
+        txtCompareEmpty:SetText(addonTable.L["static_route_unavailable"])
+        txtCompareEmpty:Show()
+        txtCompareFooter:SetText("")
+        updateComparePanelHeight(3, ROUTE_ROW_HEIGHT)
+        return
+    end
+
+    txtCompareEmpty:Hide()
+    local segments = plan.segments or {}
+    local count = table.getn(segments)
+    local pageStart, pageEnd = getRoutePage(count)
+    local visibleIndex = 0
+
+    for sourceIndex = pageStart, pageEnd do
+        visibleIndex = visibleIndex + 1
+        local segment = segments[sourceIndex]
+        local row = getRouteRow(visibleIndex)
+        row.segment = segment
+        row.rowType = segment.type == "training" and "training" or "static"
+        row:ClearAllPoints()
+        row:SetPoint("TOPLEFT", MainFrameCoreCompareContent, "TOPLEFT", 0, -((visibleIndex - 1) * ROUTE_ROW_HEIGHT))
+
+        if segment.type == "training" then
+            row.range:SetText(tostring(tonumber(segment.skillStart) or 0))
+            local trainingText = string.format(
+                addonTable.L["compare_route_training"],
+                tonumber(segment.oldCap) or 0,
+                tonumber(segment.newCap) or 0
+            )
+            if segment.available == false and tonumber(segment.requiredLevel) then
+                trainingText = trainingText .. " · " .. string.format(
+                    addonTable.L["static_route_requires_level"],
+                    tonumber(segment.requiredLevel)
+                )
+            end
+            row.step:SetText(trainingText)
+            row.step:SetTextColor(0.9, 0.82, 0.45)
+        else
+            row.range:SetText(string.format(
+                addonTable.L["compare_route_range"],
+                tonumber(segment.skillStart) or 0,
+                tonumber(segment.skillEnd) or 0
+            ))
+            local name = segment.recipe and segment.recipe.name or tostring(segment.recipeID or "?")
+            local alternatives = tonumber(segment.alternatives) or 0
+            if alternatives > 0 then
+                name = string.format(addonTable.L["static_route_alternatives"], name, alternatives)
+            end
+            row.step:SetText(name)
+            row.step:SetTextColor(0.92, 0.92, 0.92)
+        end
+
+        row.crafts:SetText(addonTable.L["metric_unknown"])
+        row.cost:SetText(addonTable.L["metric_unknown"])
+        row:Show()
+    end
+
+    txtCompareFooter:SetText(string.format(
+        addonTable.L["static_route_footer"],
+        pageStart,
+        pageEnd,
+        count
+    ))
+    updateComparePanelHeight(math.max(visibleIndex, 1), ROUTE_ROW_HEIGHT)
 end
 
 function refreshComparisonPanel()
@@ -2517,7 +2694,27 @@ function refreshComparisonPanel()
         return
     end
 
-    if not isOptimizedMode(getRecommendationMode())
+    local mode = getRecommendationMode()
+    if mode == "static" then
+        if not professionContext
+            or type(addonTable.buildStaticProfessionRoute) ~= "function"
+        then
+            MainFrameCoreCompare:Hide()
+            return
+        end
+
+        MainFrameCoreCompareCurrentTab:Hide()
+        MainFrameCoreCompareRouteTab:Show()
+        compareView = "route"
+        setCompareTabState(MainFrameCoreCompareRouteTab, true)
+        renderStaticRouteView()
+        return
+    end
+
+    MainFrameCoreCompareCurrentTab:Show()
+    MainFrameCoreCompareRouteTab:Show()
+
+    if not isOptimizedMode(mode)
         or not dynamicRecommendation
         or not dynamicRecommendation.available
     then
@@ -2536,8 +2733,14 @@ function refreshComparisonPanel()
 end
 
 function setComparisonView(view)
-    if view ~= "route" then
+    if getRecommendationMode() == "static" then
+        view = "route"
+    elseif view ~= "route" then
         view = "comparison"
+    end
+
+    if compareView ~= view then
+        routePageStart = 1
     end
     compareView = view
     refreshComparisonPanel()
@@ -2566,16 +2769,27 @@ function toggleComparisonPanel(forceState)
         return
     end
 
-    if not isOptimizedMode(getRecommendationMode())
+    local mode = getRecommendationMode()
+    if mode == "static" then
+        if not professionContext
+            or type(addonTable.buildStaticProfessionRoute) ~= "function"
+        then
+            MainFrameCoreCompare:Hide()
+            return
+        end
+        compareView = "route"
+    elseif not isOptimizedMode(mode)
         or not dynamicRecommendation
         or not dynamicRecommendation.available
     then
         MainFrameCoreCompare:Hide()
         return
+    else
+        compareView = "comparison"
     end
 
     compareVisibleCount = COMPARE_DEFAULT_VISIBLE
-    compareView = "comparison"
+    routePageStart = 1
     MainFrameCoreCompare:Show()
     refreshComparisonPanel()
 end

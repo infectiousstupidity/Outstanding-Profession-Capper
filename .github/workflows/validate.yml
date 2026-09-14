@@ -38,6 +38,8 @@ jobs:
         run: lua5.1 tools/test_dynamic_recommendations.lua
       - name: Test full-catalog adaptive routes
         run: lua5.1 tools/test_full_catalog_routes.lua
+      - name: Test static full route
+        run: lua5.1 tools/test_static_route.lua
       - name: Test craft sessions
         run: lua5.1 tools/test_session.lua
       - name: Test enchant replacement confirmation
