@@ -18,6 +18,7 @@ REQUIRED_ORDER = [
     "RouteData.lua",
     "RecipeCatalog.lua",
     "RecipeCatalogData.lua",
+    "RecipeSourceLocations.lua",
     "RecipeAcquisition.lua",
     "RecipeAcquisitionData.lua",
     "ProfessionTraining.lua",
@@ -58,7 +59,16 @@ def main():
         errors.append("TOC must load Profession_capper.xml")
 
     try:
-        ET.parse(ROOT / "Profession_capper.xml")
+        tree = ET.parse(ROOT / "Profession_capper.xml")
+        details = tree.getroot().find(".//Frame[@name='$parentDetails']")
+        if details is None:
+            errors.append("Profession_capper.xml is missing the route-details frame")
+        else:
+            anchor = details.find("./Anchors/Anchor")
+            if anchor is None or anchor.attrib.get("point") != "BOTTOMLEFT" \
+                    or anchor.attrib.get("relativeTo") != "MainFrameCore" \
+                    or anchor.attrib.get("relativePoint") != "BOTTOMLEFT":
+                errors.append("Route details must be anchored inside MainFrameCore")
     except ET.ParseError as exc:
         errors.append(f"Profession_capper.xml is not well formed: {exc}")
 

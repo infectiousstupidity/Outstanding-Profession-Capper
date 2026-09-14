@@ -28,6 +28,8 @@ jobs:
         run: lua5.1 tools/test_recipe_catalog.lua
       - name: Test recipe acquisition model
         run: lua5.1 tools/test_recipe_acquisition.lua
+      - name: Test recipe source locations
+        run: lua5.1 tools/test_recipe_source_locations.lua
       - name: Test price provider abstraction
         run: lua5.1 tools/test_price_provider.lua
       - name: Test TSM AuctionDB provider

@@ -42,7 +42,7 @@ local COMPARE_CONTENT_TOP = 132
 local COMPARE_FOOTER_SPACE = 58
 local COMPARE_MIN_HEIGHT = 356
 
-local DETAILS_PANEL_HEIGHT = 74
+local DETAILS_PANEL_HEIGHT = 96
 local DETAILS_PANEL_GAP = 10
 
 local tradeSkillStateMutation = false
@@ -51,6 +51,7 @@ local pendingProfessionRefresh = false
 local professionRefreshDeadline = 0
 local professionRefreshDriver
 local recommendationTooltipTarget
+local addAcquisitionLocationsToTooltip
 local PROFESSION_REFRESH_DEBOUNCE = 0.20
 
 local UNKNOWN_ICON = "Interface\\InventoryItems\\WoWUnknownItem01"
@@ -536,6 +537,9 @@ local function recommendationTooltipOnEnter(self)
         return
     end
     showRecipeOutputTooltip(self, self.recipe, self.recipeID, self.recipeName)
+    if self.acquisition and addAcquisitionLocationsToTooltip then
+        addAcquisitionLocationsToTooltip(self.acquisition)
+    end
     GameTooltip:Show()
 end
 
@@ -543,7 +547,7 @@ local function recommendationTooltipOnLeave()
     GameTooltip:Hide()
 end
 
-local function updateRecommendationTooltipTarget(recipeID, recipe, recipeName)
+local function updateRecommendationTooltipTarget(recipeID, recipe, recipeName, acquisition)
     if not recommendationTooltipTarget then
         recommendationTooltipTarget = CreateFrame("Button", nil, MainFrameCore)
         recommendationTooltipTarget:SetWidth(500)
@@ -557,6 +561,7 @@ local function updateRecommendationTooltipTarget(recipeID, recipe, recipeName)
     recommendationTooltipTarget.recipeID = recipeID
     recommendationTooltipTarget.recipe = recipe
     recommendationTooltipTarget.recipeName = recipeName
+    recommendationTooltipTarget.acquisition = acquisition
     recommendationTooltipTarget:Show()
 end
 
@@ -986,6 +991,18 @@ local function updatePanelHeight(materialHeight, showRepeatControls, showDetails
         + math.max(0, materialHeight or 0)
         + detailsHeight
         + footerSpace
+
+    if MainFrameCoreDetails then
+        MainFrameCoreDetails:ClearAllPoints()
+        MainFrameCoreDetails:SetPoint(
+            "BOTTOMLEFT",
+            MainFrameCore,
+            "BOTTOMLEFT",
+            18,
+            footerSpace
+        )
+    end
+
     MainFrameCore:SetHeight(math.max(MIN_PANEL_HEIGHT, requiredHeight))
 end
 
@@ -1653,10 +1670,20 @@ local function updateDetailPanel()
             humanizeDynamicReason(reason)
         ))
         txtDetailsRoute:SetTextColor(1, 0.72, 0.22)
+        txtDetailsSource:SetText("")
         txtDetailsCoverage:SetText("")
         txtDetailsCandidates:SetText("")
         return true
     end
+
+    local sourceSummary = dynamicRecommendation.requiresAcquisition
+        and acquisitionWhereSummary(dynamicRecommendation.acquisition)
+        or nil
+    txtDetailsSource:SetText(
+        sourceSummary
+            and string.format(addonTable.L["details_source"], sourceSummary)
+            or ""
+    )
 
     local plan = dynamicRecommendation.plan
     local target = tonumber(dynamicRecommendation.targetSkill)
@@ -1778,20 +1805,146 @@ local function updateAvailabilityMetrics(canMake, purchaseTotal, purchaseComplet
     end
 end
 
+local function playerFactionKey()
+    if type(UnitFactionGroup) ~= "function" then return nil end
+    local ok, faction = pcall(UnitFactionGroup, "player")
+    if not ok then return nil end
+    faction = string.lower(tostring(faction or ""))
+    if faction == "alliance" then return "alliance" end
+    if faction == "horde" then return "horde" end
+    return nil
+end
+
+local function currentZoneName()
+    local functions = { GetRealZoneText, GetZoneText }
+    for index = 1, table.getn(functions) do
+        if type(functions[index]) == "function" then
+            local ok, zone = pcall(functions[index])
+            if ok and type(zone) == "string" and zone ~= "" then
+                return zone
+            end
+        end
+    end
+    return nil
+end
+
+local function locationCompatible(location, playerFaction)
+    local faction = location and location.faction
+    if not faction or faction == "" or faction == "neutral" then return true end
+    if not playerFaction then return true end
+    return faction == playerFaction
+end
+
+local function collectAcquisitionLocations(acquisition)
+    if type(acquisition) ~= "table" then return {} end
+
+    local model = type(acquisition.model) == "table" and acquisition.model or acquisition
+    local sourceType = model.sourceType
+        or acquisition.sourceType
+        or acquisition.source
+        or model.source
+    local playerFaction = playerFactionKey()
+    local currentZone = currentZoneName()
+    local locations = {}
+    local seen = {}
+
+    local function addLocation(location)
+        if type(location) ~= "table" or not locationCompatible(location, playerFaction) then
+            return
+        end
+        local coordinates = location.coordinates
+        local x = type(coordinates) == "table" and tonumber(coordinates.x or coordinates[1]) or nil
+        local y = type(coordinates) == "table" and tonumber(coordinates.y or coordinates[2]) or nil
+        local key = table.concat({
+            tostring(location.npcID or ""),
+            tostring(location.name or ""),
+            tostring(location.zone or ""),
+            tostring(x or ""),
+            tostring(y or ""),
+        }, ":")
+        if not seen[key] then
+            seen[key] = true
+            table.insert(locations, {
+                npcID = location.npcID,
+                name = location.name,
+                faction = location.faction,
+                zone = location.zone,
+                zoneID = location.zoneID,
+                coordinates = coordinates,
+            })
+        end
+    end
+
+    local function addSource(source)
+        if type(source) ~= "table" then return end
+        for index = 1, table.getn(source.locations or {}) do
+            addLocation(source.locations[index])
+        end
+        if source.zone and source.zone ~= "" then
+            addLocation({
+                name = source.sourceName,
+                faction = source.faction,
+                zone = source.zone,
+                coordinates = source.coordinates,
+            })
+        end
+    end
+
+    addSource(model)
+    if acquisition ~= model then addSource(acquisition) end
+
+    local alternatives = model.alternatives or acquisition.alternatives or {}
+    for index = 1, table.getn(alternatives) do
+        local alternative = alternatives[index]
+        local alternativeType = alternative
+            and (alternative.sourceType or alternative.source)
+            or nil
+        if alternativeType == sourceType then
+            addSource(alternative)
+        end
+    end
+
+    table.sort(locations, function(left, right)
+        local function priority(location)
+            if currentZone and location.zone == currentZone then return 0 end
+            if not location.faction or location.faction == "neutral" then return 1 end
+            if playerFaction and location.faction == playerFaction then return 2 end
+            return 3
+        end
+        local leftPriority, rightPriority = priority(left), priority(right)
+        if leftPriority ~= rightPriority then return leftPriority < rightPriority end
+        if tostring(left.zone or "") ~= tostring(right.zone or "") then
+            return tostring(left.zone or "") < tostring(right.zone or "")
+        end
+        return tostring(left.name or "") < tostring(right.name or "")
+    end)
+
+    return locations
+end
+
 local function acquisitionDisplayInfo(acquisition)
     if type(acquisition) ~= "table" then
         return nil
     end
 
     local model = type(acquisition.model) == "table" and acquisition.model or acquisition
+    local locations = collectAcquisitionLocations(acquisition)
+    local primary = locations[1]
     return {
         sourceType = model.sourceType
             or acquisition.sourceType
             or acquisition.source
             or model.source,
-        sourceName = model.sourceName or acquisition.sourceName,
-        zone = model.zone or acquisition.zone,
-        coordinates = model.coordinates or acquisition.coordinates,
+        sourceName = primary and primary.name
+            or model.sourceName
+            or acquisition.sourceName,
+        zone = primary and primary.zone
+            or model.zone
+            or acquisition.zone,
+        coordinates = primary and primary.coordinates
+            or model.coordinates
+            or acquisition.coordinates,
+        locations = locations,
         goldCost = acquisition.goldCost
             or model.goldCost
             or model.purchasePrice
@@ -1824,6 +1977,26 @@ local function acquisitionSourceLabel(sourceType)
     return labels[sourceType] or tostring(sourceType or addonTable.L["acquisition_unknown"])
 end
 
+local function formatAcquisitionLocation(location, includeName)
+    if type(location) ~= "table" then return nil end
+    local zone = location.zone
+    local coordinates = location.coordinates
+    local x = type(coordinates) == "table" and tonumber(coordinates.x or coordinates[1]) or nil
+    local y = type(coordinates) == "table" and tonumber(coordinates.y or coordinates[2]) or nil
+    local locationText = zone and tostring(zone) or nil
+    if locationText and x and y then
+        locationText = locationText .. string.format(" (%.1f, %.1f)", x, y)
+    end
+
+    if includeName and location.name and location.name ~= "" then
+        if locationText then
+            return tostring(location.name) .. " — " .. locationText
+        end
+        return tostring(location.name)
+    end
+    return locationText
+end
+
 local function shortAcquisitionLabel(acquisition)
     local info = acquisitionDisplayInfo(acquisition)
     if not info then
@@ -1833,11 +2006,17 @@ local function shortAcquisitionLabel(acquisition)
         return addonTable.L["acquisition_known"]
     end
 
-    local label = acquisitionSourceLabel(info.sourceType)
-    if info.goldCost ~= nil then
-        return label .. " · " .. addonTable.formatCopperShort(info.goldCost)
+    local parts = { acquisitionSourceLabel(info.sourceType) }
+    local primary = info.locations and info.locations[1]
+    if primary and primary.zone then
+        table.insert(parts, primary.zone)
+    elseif info.zone and info.zone ~= "" then
+        table.insert(parts, info.zone)
     end
-    return label
+    if info.goldCost ~= nil then
+        table.insert(parts, addonTable.formatCopperShort(info.goldCost))
+    end
+    return table.concat(parts, " · ")
 end
 
 local function formatAcquisitionGuidanceInfo(info)
@@ -1851,36 +2030,89 @@ local function formatAcquisitionGuidanceInfo(info)
     local parts = {
         addonTable.L["acquisition_prefix"] .. acquisitionSourceLabel(info.sourceType),
     }
+    local primary = info.locations and info.locations[1]
 
-    if info.sourceName and info.sourceName ~= "" then
-        table.insert(parts, info.sourceName)
-    end
-
-    if info.zone and info.zone ~= "" then
-        local location = info.zone
-        if type(info.coordinates) == "table" then
-            local x = tonumber(info.coordinates.x or info.coordinates[1])
-            local y = tonumber(info.coordinates.y or info.coordinates[2])
-            if x and y then
-                location = location .. string.format(" %.1f, %.1f", x, y)
-            end
+    if primary then
+        if primary.name and primary.name ~= "" then
+            table.insert(parts, primary.name)
         end
-        table.insert(parts, location)
+        local location = formatAcquisitionLocation(primary, false)
+        if location then table.insert(parts, location) end
+        local extraCount = table.getn(info.locations) - 1
+        if extraCount > 0 then
+            table.insert(parts, string.format(addonTable.L["acquisition_more_locations"], extraCount))
+        end
+    else
+        if info.sourceName and info.sourceName ~= "" then
+            table.insert(parts, info.sourceName)
+        end
+        if info.zone and info.zone ~= "" then
+            local location = info.zone
+            if type(info.coordinates) == "table" then
+                local x = tonumber(info.coordinates.x or info.coordinates[1])
+                local y = tonumber(info.coordinates.y or info.coordinates[2])
+                if x and y then
+                    location = location .. string.format(" (%.1f, %.1f)", x, y)
+                end
+            end
+            table.insert(parts, location)
+        end
     end
 
     if info.goldCost ~= nil then
         table.insert(parts, addonTable.formatCopperShort(info.goldCost))
     end
-
     if info.limitedStock then
         table.insert(parts, addonTable.L["acquisition_limited_stock"])
     end
-
     if type(info.reputation) == "table" and info.reputation.faction and info.reputation.standing then
         table.insert(parts, tostring(info.reputation.faction) .. " " .. tostring(info.reputation.standing))
     end
 
     return table.concat(parts, " · ")
+end
+
+local function acquisitionWhereSummary(acquisition)
+    local info = acquisitionDisplayInfo(acquisition)
+    if not info or info.alreadyAcquired then return nil end
+    local locations = info.locations or {}
+    if table.getn(locations) == 0 then return nil end
+
+    local summary = formatAcquisitionLocation(locations[1], true)
+    local extraCount = table.getn(locations) - 1
+    if summary and extraCount > 0 then
+        summary = summary .. " · " .. string.format(
+            addonTable.L["acquisition_more_locations"],
+            extraCount
+        )
+    end
+    return summary
+end
+
+addAcquisitionLocationsToTooltip = function(acquisition)
+    local info = acquisitionDisplayInfo(acquisition)
+    if not info or info.alreadyAcquired then return end
+    local locations = info.locations or {}
+    if table.getn(locations) == 0 then return end
+
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine(addonTable.L["acquisition_locations_title"], 1, 0.82, 0.12, true)
+    local maxVisible = math.min(8, table.getn(locations))
+    for index = 1, maxVisible do
+        GameTooltip:AddLine(
+            formatAcquisitionLocation(locations[index], true) or "",
+            0.82, 0.82, 0.82, true
+        )
+    end
+    if table.getn(locations) > maxVisible then
+        GameTooltip:AddLine(
+            string.format(
+                addonTable.L["acquisition_more_locations"],
+                table.getn(locations) - maxVisible
+            ),
+            0.65, 0.65, 0.65, true
+        )
+    end
 end
 
 local function getAcquisitionGuidance(spellID, acquisition, compact)
@@ -2055,6 +2287,7 @@ local function compareRowOnEnter(self)
             getAcquisitionGuidance(candidate.recipeID, candidate.cost.acquisition),
             0.82, 0.82, 0.82, true
         )
+        addAcquisitionLocationsToTooltip(candidate.cost.acquisition)
     end
 
     GameTooltip:AddLine(" ")
@@ -2195,6 +2428,7 @@ local function routeRowOnEnter(self)
             getAcquisitionGuidance(segment.recipeID, segment.acquisition),
             0.95, 0.82, 0.42, true
         )
+        addAcquisitionLocationsToTooltip(segment.acquisition)
     else
         GameTooltip:AddLine(string.format(
             addonTable.L["recipe_tooltip_route_range"],
@@ -3607,7 +3841,8 @@ function displayRecipe()
         tooltipRecipe,
         shouldCraftRecipe[craftRecipeOptionsIndex]
             or (data and data.name)
-            or tostring(currentID)
+            or tostring(currentID),
+        usingDynamic and dynamicRecommendation.acquisition or nil
     )
 
     updatePanelHeight(renderedMaterialHeight, targetedEnchant, detailsVisible)
