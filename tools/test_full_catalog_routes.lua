@@ -262,6 +262,7 @@ assert(acquireFirst.nextAction == "acquire_recipe", "unknown recipe must be acqu
 assert(acquireFirst.acquisition.sourceType == "trainer", "chosen acquisition retained for UI")
 
 unknownAcquisitionCost = 1000
+addonTable.invalidateDynamicRecommendationCache()
 local expensive = addonTable.computeDynamicProfessionRecommendation(
     cache,
     context,
@@ -271,6 +272,7 @@ assert(expensive.available == true, "known route remains valid")
 assert(expensive.currentSegment.recipeID == 10, "expensive acquisition keeps known recipe")
 assert(table.getn(expensive.route.segments) == 1, "no unnecessary acquisition")
 unknownAcquisitionCost = 50
+addonTable.invalidateDynamicRecommendationCache()
 
 local bloodElf = addonTable.computeDynamicProfessionRecommendation(cache, {
     professionName = "Enchanting",
