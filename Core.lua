@@ -20,6 +20,7 @@ local routePreviousButton
 local routeNextButton
 local enchantRepeatNotice
 local dynamicRecommendation
+local dynamicOptimizerDisabled = false
 
 local MATERIAL_ROW_HEIGHT = 54
 local MATERIAL_CONVERSION_ROW_HEIGHT = 88
@@ -1482,6 +1483,7 @@ local function humanizeDynamicReason(reason)
         price_provider_unavailable = L["dynamic_reason_no_prices"],
         no_available_recipe = L["dynamic_reason_no_available_recipe"],
         materials_not_available_now = L["dynamic_reason_no_available_recipe"],
+        optimizer_error = L["dynamic_reason_optimizer_error"],
     }
     return reasons[reason] or tostring(reason or L["dynamic_reason_unknown"])
 end
@@ -2923,13 +2925,43 @@ function GetCraftingToDo()
         if isOptimizedMode(recommendationMode)
             and type(addonTable.computeDynamicProfessionRecommendation) == "function"
         then
-            dynamicRecommendation = addonTable.computeDynamicProfessionRecommendation(
-                recipeCache,
-                professionContext,
-                { requireAvailableNow = recommendationMode == "available" }
-            )
-        end
+            if dynamicOptimizerDisabled then
+                dynamicRecommendation = {
+                    available = false,
+                    fallbackToStaticGuide = true,
+                    reason = "optimizer_error",
+                    routeReason = "optimizer_error",
+                }
+            else
+                local optimizerOK, recommendationOrError = pcall(
+                    addonTable.computeDynamicProfessionRecommendation,
+                    recipeCache,
+                    professionContext,
+                    { requireAvailableNow = recommendationMode == "available" }
+                )
 
+                if optimizerOK then
+                    dynamicRecommendation = recommendationOrError
+                else
+                    -- Dynamic optimization must never take the deterministic guide
+                    -- down with it. Disable it for this UI session after a hard
+                    -- failure so reopening the profession cannot repeat an OOM loop.
+                    dynamicOptimizerDisabled = true
+                    dynamicRecommendation = {
+                        available = false,
+                        fallbackToStaticGuide = true,
+                        reason = "optimizer_error",
+                        routeReason = "optimizer_error",
+                    }
+                    if type(collectgarbage) == "function" then
+                        pcall(collectgarbage, "collect")
+                    end
+                    if type(geterrorhandler) == "function" then
+                        geterrorhandler()(recommendationOrError)
+                    end
+                end
+            end
+        end
         if dynamicRecommendation and dynamicRecommendation.available then
             local segment = dynamicRecommendation.currentSegment
             shouldCraft = { segment.recipeID }

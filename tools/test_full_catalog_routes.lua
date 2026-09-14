@@ -37,6 +37,20 @@ addonTable.isRecipeEligibleForDynamicOptimization = function()
     return true
 end
 
+addonTable.getRecipeDifficultyMetadata = function(recipe)
+    local spellID = type(recipe) == "table" and recipe.spellID or recipe
+    if spellID == 13 then
+        return {
+            requiredSkill = 202,
+            graySkill = 450,
+        }
+    end
+    return {
+        requiredSkill = 1,
+        graySkill = 450,
+    }
+end
+
 addonTable.getRecipeCatalogRecipes = function(profession)
     assert(profession == "Enchanting", "profession catalog selection")
     return {
@@ -106,7 +120,8 @@ addonTable.calculateRecipeCost = function(recipe, skill, context, state)
     end
 
     local material = recipe.spellID == 13 and 10 or 100
-    local acquired = state.acquiredOneTime and state.acquiredOneTime["recipe:13"]
+    local acquired = state.routeActiveRecipeID == 13
+        or (state.acquiredOneTime and state.acquiredOneTime["recipe:13"])
     local oneTime = {}
     local acquisition
 

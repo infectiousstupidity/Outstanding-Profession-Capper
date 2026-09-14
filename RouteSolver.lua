@@ -38,8 +38,13 @@ local function acquiredKey(set)
     return table.concat(sortedKeys(set), "\31")
 end
 
-local function nodeKey(skill, trainedCap, acquired)
-    return tostring(skill) .. ":" .. tostring(trainedCap) .. ":" .. acquiredKey(acquired)
+local function nodeKey(skill, trainedCap, acquired, lastRecipeID)
+    return table.concat({
+        tostring(skill),
+        tostring(trainedCap),
+        tostring(lastRecipeID or ""),
+        acquiredKey(acquired),
+    }, ":")
 end
 
 local function heapPush(heap, node)
@@ -131,17 +136,19 @@ local function applyCostOneTime(acquired, cost, metric)
         local oneTime = cost.oneTimeCosts[i]
         local key = oneTime.key and tostring(oneTime.key) or nil
         if key and not nextAcquired[key] then
-            nextAcquired[key] = true
             table.insert(acquiredNow, oneTime)
 
-            -- Reusable reagent/tool costs are already included by RecipeCost in the
-            -- expected per-skill-up total. Recipe acquisition is exposed separately.
+            -- Recipe learning is modeled as a segment activation. Persisting every
+            -- recipe key in the route state creates a combinatorial state explosion
+            -- on the full catalog. Reusable tools still persist normally.
             if oneTime.kind == "recipe_acquisition" then
                 extraCost = extraCost + oneTimeMetricCost(oneTime, metric)
                 extraMarketCost = extraMarketCost + numberOrZero(
                     oneTime.marketCost ~= nil and oneTime.marketCost or oneTime.goldCost
                 )
                 extraGoldCost = extraGoldCost + numberOrZero(oneTime.goldCost)
+            else
+                nextAcquired[key] = true
             end
         end
     end
@@ -278,6 +285,14 @@ local function buildSegments(actions)
     return segments
 end
 
+local function getCandidateRecipes(recipes, options, skill)
+    local indexed = options and options.candidateRecipesBySkill
+    if type(indexed) == "table" then
+        return indexed[skill] or {}
+    end
+    return recipes
+end
+
 function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, options)
     recipes = recipes or {}
     state = state or {}
@@ -344,8 +359,9 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
         previous = nil,
         transition = nil,
         quality = "complete",
+        lastRecipeID = nil,
     }
-    local startKey = nodeKey(startSkill, startingCap, initialAcquired)
+    local startKey = nodeKey(startSkill, startingCap, initialAcquired, nil)
     best[startKey] = startNode
     heapPush(heap, startNode)
 
@@ -354,7 +370,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
 
     while table.getn(heap) > 0 do
         local node = heapPop(heap)
-        local key = nodeKey(node.skill, node.trainedCap, node.acquired)
+        local key = nodeKey(node.skill, node.trainedCap, node.acquired, node.lastRecipeID)
         if best[key] == node then
             result.exploredStates = result.exploredStates + 1
             if result.exploredStates > maxStates then
@@ -369,9 +385,12 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
             end
 
             if node.skill < node.trainedCap then
-                for recipeIndex = 1, table.getn(recipes) do
-                    local recipe = recipes[recipeIndex]
+                local candidateRecipes = getCandidateRecipes(recipes, options, node.skill)
+                for recipeIndex = 1, table.getn(candidateRecipes) do
+                    local recipe = candidateRecipes[recipeIndex]
+                    local recipeID = getRecipeID(recipe, recipeIndex)
                     local routeState = copyState(state, node.acquired)
+                    routeState.routeActiveRecipeID = node.lastRecipeID
                     local cost = costRecipe(recipe, node.skill, skillContext, routeState, options.costOptions or {})
 
                     if cost and cost.available and cost.useful and cost.expectedCraftsPerSkillUp then
@@ -393,7 +412,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                             local edgeMetric = numberOrZero(metricCost) + extraMetric
                             local nextSkill = math.min(targetSkill, node.skill + 1)
                             local totalCost = node.totalCost + edgeMetric
-                            local nextKey = nodeKey(nextSkill, node.trainedCap, nextAcquired)
+                            local nextKey = nodeKey(nextSkill, node.trainedCap, nextAcquired, recipeID)
                             local existing = best[nextKey]
 
                             if not existing or totalCost < existing.totalCost then
@@ -414,10 +433,11 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                     totalCurrentPurchaseCost = node.totalCurrentPurchaseCost + edgeCurrent,
                                     previous = node,
                                     quality = (node.quality == "stale" or cost.quality == "stale") and "stale" or "complete",
+                                    lastRecipeID = recipeID,
                                     transition = {
                                         type = "craft",
                                         recipe = recipe,
-                                        recipeID = getRecipeID(recipe, recipeIndex),
+                                        recipeID = recipeID,
                                         skillFrom = node.skill,
                                         skillTo = nextSkill,
                                         expectedCrafts = cost.expectedCraftsPerSkillUp,
@@ -455,7 +475,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                 nextAcquired[keyName] = true
                                 local newCap = tonumber(action.newCap or action.targetCap)
                                 local totalCost = node.totalCost + trainingMetric
-                                local nextKey = nodeKey(node.skill, newCap, nextAcquired)
+                                local nextKey = nodeKey(node.skill, newCap, nextAcquired, node.lastRecipeID)
                                 local existing = best[nextKey]
 
                                 if not existing or totalCost < existing.totalCost then
@@ -469,6 +489,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                         totalCurrentPurchaseCost = node.totalCurrentPurchaseCost + trainingGold,
                                         previous = node,
                                         quality = node.quality,
+                                        lastRecipeID = node.lastRecipeID,
                                         transition = {
                                             type = "training",
                                             training = action,
