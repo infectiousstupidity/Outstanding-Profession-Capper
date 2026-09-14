@@ -64,6 +64,7 @@ local global = addonTable.solveCheapestProfessionRoute(recipes, nil, { currentCa
     startSkill = 0,
     targetSkill = 3,
     costRecipe = globalFixture,
+    pruneDominatedRecipeSwitches = true,
 })
 assertEqual(global.complete, true, "global route complete")
 assertEqual(global.actions[1].recipeID, "B", "global optimizer avoids greedy first craft")
@@ -342,12 +343,13 @@ local scalable = addonTable.solveCheapestProfessionRoute(
         optimizeFor = "current",
         costRecipe = manyRecipeFixture,
         candidateRecipesBySkill = indexedCandidates,
+        pruneDominatedRecipeSwitches = true,
     }
 )
 assertEqual(scalable.complete, true, "full-catalog style route completes within bounded state space")
 assertEqual(scalable.actions[1].recipeID, "recipe-1", "cheapest activation wins")
 assertEqual(scalable.totalCurrentPurchaseCost, 31, "recipe acquisition is charged once for a continuous segment")
 assert(scalable.exploredStates < 500, "indexed route should not explode state count")
-assert(manyCostCalls < 2500, "candidate index should bound recipe-cost evaluations")
+assert(manyCostCalls < 400, "dominated-switch pruning should bound recipe-cost evaluations")
 
 print("Cheapest route solver tests passed.")

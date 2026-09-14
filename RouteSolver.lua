@@ -34,17 +34,34 @@ local function sortedKeys(set)
     return keys
 end
 
+local acquiredKeyCache = setmetatable({}, { __mode = "k" })
+
 local function acquiredKey(set)
-    return table.concat(sortedKeys(set), "\31")
+    if type(set) ~= "table" then
+        return ""
+    end
+
+    local cached = acquiredKeyCache[set]
+    if cached ~= nil then
+        return cached
+    end
+
+    local key = table.concat(sortedKeys(set), "\31")
+    acquiredKeyCache[set] = key
+    return key
 end
 
-local function nodeKey(skill, trainedCap, acquired, lastRecipeID)
+local function routeStateKey(skill, trainedCap, acquired)
     return table.concat({
         tostring(skill),
         tostring(trainedCap),
-        tostring(lastRecipeID or ""),
         acquiredKey(acquired),
     }, ":")
+end
+
+local function nodeKey(skill, trainedCap, acquired, lastRecipeID)
+    return routeStateKey(skill, trainedCap, acquired)
+        .. ":" .. tostring(lastRecipeID or "")
 end
 
 local function heapPush(heap, node)
@@ -367,6 +384,8 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
 
     local finalNode
     local missing = {}
+    local craftExpansionGroups = {}
+    local pruneDominatedRecipeSwitches = options.pruneDominatedRecipeSwitches == true
 
     while table.getn(heap) > 0 do
         local node = heapPop(heap)
@@ -385,77 +404,92 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
             end
 
             if node.skill < node.trainedCap then
+                local expandAllCandidates = true
+                if pruneDominatedRecipeSwitches then
+                    local craftGroupKey = routeStateKey(node.skill, node.trainedCap, node.acquired)
+                    expandAllCandidates = craftExpansionGroups[craftGroupKey] ~= true
+                    if expandAllCandidates then
+                        craftExpansionGroups[craftGroupKey] = true
+                    end
+                end
+
                 local candidateRecipes = getCandidateRecipes(recipes, options, node.skill)
                 for recipeIndex = 1, table.getn(candidateRecipes) do
                     local recipe = candidateRecipes[recipeIndex]
                     local recipeID = getRecipeID(recipe, recipeIndex)
-                    local routeState = copyState(state, node.acquired)
-                    routeState.routeActiveRecipeID = node.lastRecipeID
-                    local cost = costRecipe(recipe, node.skill, skillContext, routeState, options.costOptions or {})
+                    local evaluateCandidate = expandAllCandidates
+                        or (node.lastRecipeID ~= nil
+                            and tostring(recipeID) == tostring(node.lastRecipeID))
 
-                    if cost and cost.available and cost.useful and cost.expectedCraftsPerSkillUp then
-                        local metricCost = resolveMetricCost(cost, metric)
-                        if metricCost ~= nil then
-                            local nextAcquired, extraMetric, extraMarket, extraGold, acquiredNow = applyCostOneTime(
-                                node.acquired,
-                                cost,
-                                metric
-                            )
-                            nextAcquired = applyProducedKeys(nextAcquired, recipe)
+                    if evaluateCandidate then
+                        local routeState = copyState(state, node.acquired)
+                        routeState.routeActiveRecipeID = node.lastRecipeID
+                        local cost = costRecipe(recipe, node.skill, skillContext, routeState, options.costOptions or {})
 
-                            local edgeMarket = numberOrZero(cost.expectedMarketCostPerSkillUp) + extraMarket
-                            local edgeGold = numberOrZero(cost.expectedGoldNeededNowPerSkillUp) + extraGold
-                            local edgeCurrent = numberOrZero(
-                                cost.expectedCurrentPurchaseCostPerSkillUp
-                                    or cost.expectedMarketCostPerSkillUp
-                            ) + extraGold
-                            local edgeMetric = numberOrZero(metricCost) + extraMetric
-                            local nextSkill = math.min(targetSkill, node.skill + 1)
-                            local totalCost = node.totalCost + edgeMetric
-                            local nextKey = nodeKey(nextSkill, node.trainedCap, nextAcquired, recipeID)
-                            local existing = best[nextKey]
+                        if cost and cost.available and cost.useful and cost.expectedCraftsPerSkillUp then
+                            local metricCost = resolveMetricCost(cost, metric)
+                            if metricCost ~= nil then
+                                local nextAcquired, extraMetric, extraMarket, extraGold, acquiredNow = applyCostOneTime(
+                                    node.acquired,
+                                    cost,
+                                    metric
+                                )
+                                nextAcquired = applyProducedKeys(nextAcquired, recipe)
 
-                            if not existing or totalCost < existing.totalCost then
-                                local acquisitionGoldCost = 0
-                                for acquiredIndex = 1, table.getn(acquiredNow) do
-                                    if acquiredNow[acquiredIndex].kind == "recipe_acquisition" then
-                                        acquisitionGoldCost = acquisitionGoldCost + numberOrZero(acquiredNow[acquiredIndex].goldCost)
+                                local edgeMarket = numberOrZero(cost.expectedMarketCostPerSkillUp) + extraMarket
+                                local edgeGold = numberOrZero(cost.expectedGoldNeededNowPerSkillUp) + extraGold
+                                local edgeCurrent = numberOrZero(
+                                    cost.expectedCurrentPurchaseCostPerSkillUp
+                                        or cost.expectedMarketCostPerSkillUp
+                                ) + extraGold
+                                local edgeMetric = numberOrZero(metricCost) + extraMetric
+                                local nextSkill = math.min(targetSkill, node.skill + 1)
+                                local totalCost = node.totalCost + edgeMetric
+                                local nextKey = nodeKey(nextSkill, node.trainedCap, nextAcquired, recipeID)
+                                local existing = best[nextKey]
+
+                                if not existing or totalCost < existing.totalCost then
+                                    local acquisitionGoldCost = 0
+                                    for acquiredIndex = 1, table.getn(acquiredNow) do
+                                        if acquiredNow[acquiredIndex].kind == "recipe_acquisition" then
+                                            acquisitionGoldCost = acquisitionGoldCost + numberOrZero(acquiredNow[acquiredIndex].goldCost)
+                                        end
                                     end
-                                end
 
-                                local nextNode = {
-                                    skill = nextSkill,
-                                    trainedCap = node.trainedCap,
-                                    acquired = nextAcquired,
-                                    totalCost = totalCost,
-                                    totalMarketCost = node.totalMarketCost + edgeMarket,
-                                    totalGoldCost = node.totalGoldCost + edgeGold,
-                                    totalCurrentPurchaseCost = node.totalCurrentPurchaseCost + edgeCurrent,
-                                    previous = node,
-                                    quality = (node.quality == "stale" or cost.quality == "stale") and "stale" or "complete",
-                                    lastRecipeID = recipeID,
-                                    transition = {
-                                        type = "craft",
-                                        recipe = recipe,
-                                        recipeID = recipeID,
-                                        skillFrom = node.skill,
-                                        skillTo = nextSkill,
-                                        expectedCrafts = cost.expectedCraftsPerSkillUp,
-                                        skillUpChance = cost.skillUpChance,
-                                        marketCost = edgeMarket,
-                                        goldCost = edgeGold,
-                                        currentPurchaseCost = edgeCurrent,
-                                        acquisitionGoldCost = acquisitionGoldCost,
-                                        quality = cost.quality,
-                                        cost = cost,
-                                    },
-                                }
-                                best[nextKey] = nextNode
-                                heapPush(heap, nextNode)
+                                    local nextNode = {
+                                        skill = nextSkill,
+                                        trainedCap = node.trainedCap,
+                                        acquired = nextAcquired,
+                                        totalCost = totalCost,
+                                        totalMarketCost = node.totalMarketCost + edgeMarket,
+                                        totalGoldCost = node.totalGoldCost + edgeGold,
+                                        totalCurrentPurchaseCost = node.totalCurrentPurchaseCost + edgeCurrent,
+                                        previous = node,
+                                        quality = (node.quality == "stale" or cost.quality == "stale") and "stale" or "complete",
+                                        lastRecipeID = recipeID,
+                                        transition = {
+                                            type = "craft",
+                                            recipe = recipe,
+                                            recipeID = recipeID,
+                                            skillFrom = node.skill,
+                                            skillTo = nextSkill,
+                                            expectedCrafts = cost.expectedCraftsPerSkillUp,
+                                            skillUpChance = cost.skillUpChance,
+                                            marketCost = edgeMarket,
+                                            goldCost = edgeGold,
+                                            currentPurchaseCost = edgeCurrent,
+                                            acquisitionGoldCost = acquisitionGoldCost,
+                                            quality = cost.quality,
+                                            cost = cost,
+                                        },
+                                    }
+                                    best[nextKey] = nextNode
+                                    heapPush(heap, nextNode)
+                                end
                             end
+                        elseif cost and cost.incomplete then
+                            addMissingReason(missing, cost.unavailableReason or "incomplete_recipe_cost")
                         end
-                    elseif cost and cost.incomplete then
-                        addMissingReason(missing, cost.unavailableReason or "incomplete_recipe_cost")
                     end
                 end
             end
