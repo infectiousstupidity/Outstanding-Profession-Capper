@@ -19,6 +19,7 @@ REQUIRED_ORDER = [
     "RecipeCatalog.lua",
     "RecipeCatalogData.lua",
     "RecipeSourceLocations.lua",
+    "MapLocations.lua",
     "RecipeAcquisition.lua",
     "RecipeAcquisitionData.lua",
     "ProfessionTraining.lua",
@@ -57,6 +58,16 @@ def main():
 
     if "Profession_capper.xml" not in files:
         errors.append("TOC must load Profession_capper.xml")
+
+    source_locations_text = (ROOT / "RecipeSourceLocations.lua").read_text(encoding="utf-8")
+    if "zoneID = " in source_locations_text:
+        errors.append("RecipeSourceLocations.lua must use explicit areaID/mapID fields, not legacy zoneID")
+    if "mapID = " not in source_locations_text:
+        errors.append("RecipeSourceLocations.lua must include WorldMapAreaID values for Show on map")
+    for bad_name, area_id in (("Events", 12), ("Professions", 11), ("Class", 10), ("Eastern Kingdoms", 1)):
+        bad_entry = f'zone = "{bad_name}", areaID = {area_id},'
+        if bad_entry in source_locations_text:
+            errors.append(f"Recipe source AreaTableID {area_id} is mislabeled as Questie category {bad_name}")
 
     core_text = (ROOT / "Core.lua").read_text(encoding="utf-8")
     acquisition_forward = core_text.find("local acquisitionWhereSummary")
