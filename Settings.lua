@@ -94,7 +94,12 @@ function addonTable.setRecommendationMode(mode)
         return false
     end
 
-    getDB().recommendationMode = mode
+    local db = getDB()
+    local changed = db.recommendationMode ~= mode
+    db.recommendationMode = mode
+    if changed and type(addonTable.noteRuntimeModeChanged) == "function" then
+        addonTable.noteRuntimeModeChanged()
+    end
     return true
 end
 

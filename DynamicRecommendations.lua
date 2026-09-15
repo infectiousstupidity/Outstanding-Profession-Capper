@@ -14,7 +14,16 @@ local REUSABLE_PROFESSION_TOOLS = {
 }
 
 local recommendationCache = {}
-local RECOMMENDATION_CACHE_TTL = 5
+local recommendationCacheOrder = {}
+local recommendationCacheHead = 1
+local recommendationCacheTail = 0
+local recommendationCacheEntries = 0
+local recommendationCacheToken = 0
+local RECOMMENDATION_CACHE_TTL = 15
+local RECOMMENDATION_CACHE_MAX_ENTRIES = 8
+
+local canonicalOptimizerRecipes = {}
+local canonicalOptimizerRecipeCount = 0
 
 local function measurePerformance(name, callback, ...)
     if type(addonTable.measurePerformance) == "function" then
@@ -65,8 +74,87 @@ local function learnedRecipeSignature(recipeCache)
     return table.concat(parts, ",")
 end
 
-function addonTable.invalidateDynamicRecommendationCache()
+local function clearRecommendationCache()
     recommendationCache = {}
+    recommendationCacheOrder = {}
+    recommendationCacheHead = 1
+    recommendationCacheTail = 0
+    recommendationCacheEntries = 0
+    recommendationCacheToken = 0
+end
+
+local function removeRecommendationCacheKey(key)
+    if recommendationCache[key] ~= nil then
+        recommendationCache[key] = nil
+        recommendationCacheEntries = math.max(0, recommendationCacheEntries - 1)
+    end
+end
+
+local function rebuildRecommendationCacheOrder()
+    local compacted = {}
+    local count = 0
+    for key, current in pairs(recommendationCache) do
+        count = count + 1
+        compacted[count] = {
+            key = key,
+            token = current.token,
+        }
+    end
+    recommendationCacheOrder = compacted
+    recommendationCacheHead = 1
+    recommendationCacheTail = count
+end
+
+local function storeRecommendationCache(key, entry)
+    if recommendationCache[key] == nil then
+        recommendationCacheEntries = recommendationCacheEntries + 1
+    end
+    recommendationCacheToken = recommendationCacheToken + 1
+    entry.token = recommendationCacheToken
+    recommendationCache[key] = entry
+    recommendationCacheTail = recommendationCacheTail + 1
+    recommendationCacheOrder[recommendationCacheTail] = {
+        key = key,
+        token = recommendationCacheToken,
+    }
+
+    while recommendationCacheEntries > RECOMMENDATION_CACHE_MAX_ENTRIES do
+        local oldest = recommendationCacheOrder[recommendationCacheHead]
+        recommendationCacheOrder[recommendationCacheHead] = nil
+        recommendationCacheHead = recommendationCacheHead + 1
+        if oldest then
+            local current = recommendationCache[oldest.key]
+            if current and current.token == oldest.token then
+                removeRecommendationCacheKey(oldest.key)
+            end
+        end
+    end
+
+    if recommendationCacheTail - recommendationCacheHead + 1
+        > RECOMMENDATION_CACHE_MAX_ENTRIES * 4
+    then
+        rebuildRecommendationCacheOrder()
+    end
+end
+
+function addonTable.invalidateDynamicRecommendationCache()
+    clearRecommendationCache()
+    if type(addonTable.bumpRuntimeRevision) == "function" then
+        addonTable.bumpRuntimeRevision("manual")
+    end
+end
+
+function addonTable.getDynamicRuntimeCacheStats()
+    return {
+        recommendationEntries = recommendationCacheEntries,
+        maxRecommendationEntries = RECOMMENDATION_CACHE_MAX_ENTRIES,
+        recommendationQueueEntries = math.max(
+            0,
+            recommendationCacheTail - recommendationCacheHead + 1
+        ),
+        maxRecommendationQueueEntries = RECOMMENDATION_CACHE_MAX_ENTRIES * 4,
+        canonicalRecipeEntries = canonicalOptimizerRecipeCount,
+    }
 end
 
 local function parseItemID(item)
@@ -87,6 +175,10 @@ local function parseItemID(item)
 end
 
 local function getOwnedCount(itemID, fallback)
+    if itemID and type(addonTable.getRuntimeInventoryCount) == "function" then
+        return addonTable.getRuntimeInventoryCount(itemID, fallback)
+    end
+
     if itemID and type(GetItemCount) == "function" then
         local ok, count = pcall(GetItemCount, itemID, true)
         if not ok then
@@ -380,6 +472,76 @@ local function copyCatalogReagent(reagent)
     return result
 end
 
+local function getOrBuildCanonicalOptimizerRecipe(record)
+    local spellID = tonumber(record and record.spellID)
+    if not spellID then
+        return nil
+    end
+
+    local existing = canonicalOptimizerRecipes[spellID]
+    if existing then
+        performanceCache("canonical_recipe", true)
+        return existing
+    end
+
+    performanceCache("canonical_recipe", false)
+    local canonicalName = record.name
+    if type(GetSpellInfo) == "function" then
+        local ok, resolvedName = pcall(GetSpellInfo, spellID)
+        if ok and type(resolvedName) == "string" and resolvedName ~= "" then
+            canonicalName = resolvedName
+        end
+    end
+
+    local recipe = {
+        spellID = spellID,
+        name = canonicalName or ("Spell " .. tostring(spellID)),
+        profession = record.profession,
+        requiredSkill = record.requiredSkill,
+        outputItemID = record.outputItemID,
+        outputQuantity = record.outputQuantity,
+        recipeItemID = record.recipeItemID,
+        liveSkillType = nil,
+        learned = false,
+        catalogRecord = record,
+        reagents = {},
+        outputs = {},
+    }
+
+    for reagentIndex = 1, table.getn(record.reagents or {}) do
+        table.insert(recipe.reagents, copyCatalogReagent(record.reagents[reagentIndex]))
+    end
+    if record.outputItemID then
+        table.insert(recipe.outputs, {
+            itemID = record.outputItemID,
+            item = record.outputItemID,
+            quantity = tonumber(record.outputQuantity) or 1,
+        })
+    end
+
+    canonicalOptimizerRecipes[spellID] = recipe
+    canonicalOptimizerRecipeCount = canonicalOptimizerRecipeCount + 1
+    return recipe
+end
+
+function addonTable.getCanonicalOptimizerRecipe(spellID)
+    spellID = tonumber(spellID)
+    if not spellID then
+        return nil
+    end
+    local existing = canonicalOptimizerRecipes[spellID]
+    if existing then
+        return existing
+    end
+    if type(addonTable.getRecipeCatalogRecord) == "function" then
+        local record = addonTable.getRecipeCatalogRecord(spellID)
+        if record then
+            return getOrBuildCanonicalOptimizerRecipe(record)
+        end
+    end
+    return nil
+end
+
 local function spellName(spellID, fallback)
     if type(GetSpellInfo) == "function" then
         local ok, name = pcall(GetSpellInfo, spellID)
@@ -519,37 +681,30 @@ function addonTable.buildFullProfessionOptimizationInput(recipeCache, skillConte
 
         if eligible then
             local live = liveBySpell[record.spellID]
-            local recipe = {
-                spellID = record.spellID,
-                name = live and live.name or spellName(record.spellID, record.name),
-                profession = record.profession,
-                requiredSkill = record.requiredSkill,
-                outputItemID = record.outputItemID,
-                outputQuantity = record.outputQuantity,
-                recipeItemID = record.recipeItemID,
-                liveSkillType = live and live.liveSkillType or nil,
-                learned = live ~= nil,
-                catalogRecord = record,
-                reagents = {},
-                outputs = {},
-            }
+            local canonical = getOrBuildCanonicalOptimizerRecipe(record)
+            local recipe = canonical
 
-            if live and type(live.reagents) == "table" and table.getn(live.reagents) > 0 then
-                recipe.reagents = live.reagents
-            else
-                for reagentIndex = 1, table.getn(record.reagents or {}) do
-                    table.insert(recipe.reagents, copyCatalogReagent(record.reagents[reagentIndex]))
-                end
-            end
-
-            if live and type(live.outputs) == "table" and table.getn(live.outputs) > 0 then
-                recipe.outputs = live.outputs
-            elseif record.outputItemID then
-                table.insert(recipe.outputs, {
-                    itemID = record.outputItemID,
-                    item = record.outputItemID,
-                    quantity = tonumber(record.outputQuantity) or 1,
-                })
+            if live then
+                recipe = {
+                    spellID = canonical.spellID,
+                    name = live.name or spellName(record.spellID, canonical.name),
+                    profession = canonical.profession,
+                    requiredSkill = canonical.requiredSkill,
+                    outputItemID = canonical.outputItemID,
+                    outputQuantity = canonical.outputQuantity,
+                    recipeItemID = canonical.recipeItemID,
+                    liveSkillType = live.liveSkillType,
+                    learned = true,
+                    catalogRecord = record,
+                    reagents = type(live.reagents) == "table"
+                        and table.getn(live.reagents) > 0
+                        and live.reagents
+                        or canonical.reagents,
+                    outputs = type(live.outputs) == "table"
+                        and table.getn(live.outputs) > 0
+                        and live.outputs
+                        or canonical.outputs,
+                }
             end
 
             if state.learnedRecipes[record.spellID] then
@@ -1027,37 +1182,117 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         return result
     end
 
+    if type(addonTable.syncRuntimeSkillContext) == "function" then
+        addonTable.syncRuntimeSkillContext(skillContext)
+    end
+
     local providerRevision = type(addonTable.getActivePriceProviderRevision) == "function"
         and addonTable.getActivePriceProviderRevision()
         or nil
+    local revisions = type(addonTable.getRuntimeRevisions) == "function"
+        and addonTable.getRuntimeRevisions()
+        or {}
+    local lifecycle = type(addonTable.getProfessionBookLifecycleState) == "function"
+        and addonTable.getProfessionBookLifecycleState(skillContext.professionName)
+        or nil
+    local bookRevision = lifecycle and lifecycle.generation or nil
+    if bookRevision == nil then
+        local globalBookRevision = tonumber(revisions.professionBook)
+        if globalBookRevision and globalBookRevision > 0 then
+            bookRevision = globalBookRevision
+        else
+            bookRevision = learnedRecipeSignature(recipeCache)
+        end
+    end
+    local skillRevision = revisions.skill
+        or table.concat({
+            tostring(skillContext.baseSkill or 0),
+            tostring(skillContext.currentCap or 0),
+            tostring(skillContext.activeSkillModifier or 0),
+        }, ":")
+    local inventoryRevision = revisions.inventory or "legacy"
+    local eligibilityRevision = revisions.eligibility or "legacy"
+    local modeRevision = revisions.mode or "legacy"
+    local manualRevision = revisions.manual or "legacy"
+    local acquisitionRevision = options.acquisitionRevision
+        or addonTable.recipeAcquisitionDataRevision
+        or "static"
+
     local cacheKey = table.concat({
         tostring(result.providerName),
         tostring(providerRevision or "unknown"),
         tostring(skillContext.professionName or ""),
-        tostring(skillContext.baseSkill or 0),
-        tostring(skillContext.currentCap or 0),
-        tostring(skillContext.activeSkillModifier or 0),
+        tostring(bookRevision),
+        tostring(skillRevision),
+        tostring(inventoryRevision),
+        tostring(eligibilityRevision),
+        tostring(modeRevision),
+        tostring(manualRevision),
         result.requireAvailableNow and "available" or "cheapest",
         tostring(options.optimizeFor or "current"),
         tostring(options.targetSkill or ""),
-        learnedRecipeSignature(recipeCache),
+        tostring(acquisitionRevision),
     }, "|")
     local cacheNow = runtimeNow()
     local cachedRecommendation = recommendationCache[cacheKey]
     if cachedRecommendation
-        and (providerRevision ~= nil
-            or cacheNow - cachedRecommendation.createdAt <= RECOMMENDATION_CACHE_TTL)
+        and cacheNow - cachedRecommendation.createdAt <= RECOMMENDATION_CACHE_TTL
     then
         performanceCache("recommendation", true)
         return cachedRecommendation.result
     end
+    if cachedRecommendation then
+        removeRecommendationCacheKey(cacheKey)
+    end
     performanceCache("recommendation", false)
 
+    local capturedRevisions = revisions
+    local function dependenciesStillCurrent()
+        if type(addonTable.getRuntimeRevisions) == "function" then
+            local current = addonTable.getRuntimeRevisions()
+            for _, key in ipairs({
+                "professionBook",
+                "skill",
+                "inventory",
+                "eligibility",
+                "mode",
+                "manual",
+            }) do
+                if current[key] ~= capturedRevisions[key] then
+                    return false
+                end
+            end
+        end
+        if type(addonTable.getActivePriceProviderName) == "function"
+            and addonTable.getActivePriceProviderName() ~= result.providerName
+        then
+            return false
+        end
+        if providerRevision ~= nil
+            and type(addonTable.getActivePriceProviderRevision) == "function"
+            and addonTable.getActivePriceProviderRevision() ~= providerRevision
+        then
+            return false
+        end
+        return true
+    end
+
     local function cacheAndReturn(value)
-        recommendationCache[cacheKey] = {
+        if not dependenciesStillCurrent() then
+            return {
+                available = false,
+                fallbackToStaticGuide = true,
+                reason = "runtime_inputs_changed",
+                providerName = result.providerName,
+                requireAvailableNow = result.requireAvailableNow,
+                routeComplete = false,
+            }
+        end
+
+        storeRecommendationCache(cacheKey, {
             createdAt = runtimeNow(),
             result = value,
-        }
+        })
         return value
     end
 
@@ -1070,8 +1305,17 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         return result
     end
 
-    local cachedPriceLookup = type(addonTable.lookupItemPrice) == "function"
-        and createCachedPriceLookup(addonTable.lookupItemPrice)
+    local persistentPriceLookup
+    if type(addonTable.createRevisionedPriceLookup) == "function" then
+        persistentPriceLookup = addonTable.createRevisionedPriceLookup(
+            result.providerName,
+            providerRevision
+        )
+    else
+        persistentPriceLookup = addonTable.lookupItemPrice
+    end
+    local cachedPriceLookup = type(persistentPriceLookup) == "function"
+        and createCachedPriceLookup(persistentPriceLookup)
         or nil
     local cachedRecipeCost = createCachedRecipeCost(addonTable.calculateRecipeCost)
     local costOptions = {}
@@ -1214,10 +1458,10 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         {
             priceLookup = cachedPriceLookup,
             unitPriceChooser = costOptions.unitPriceChooser,
-            priceRevision = options.priceRevision,
-            recipeRevision = options.recipeRevision,
-            acquisitionRevision = options.acquisitionRevision
-                or addonTable.recipeAcquisitionDataRevision,
+            priceRevision = options.priceRevision or providerRevision,
+            recipeRevision = options.recipeRevision or bookRevision,
+            acquisitionRevision = acquisitionRevision,
+            runtimeRevisions = capturedRevisions,
         }
     )
     result.plan = plan

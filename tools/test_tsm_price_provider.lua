@@ -62,6 +62,7 @@ assertEqual(raw.freshness, "fresh", "raw freshness")
 assertEqual(raw.providerVersion, "v4.14.66-wrath", "raw provider version")
 assertEqual(raw.providerBackend, "AuctionDB API", "raw backend")
 
+addonTable.resetPriceCache()
 TSM_API = {
     ToItemString = function(item)
         if string.find(item, "34054", 1, true) then
@@ -88,6 +89,7 @@ assertEqual(public.recentValue, 225, "public recent wins")
 assertEqual(public.updatedAt, 99000, "public result keeps raw scan timestamp")
 assertEqual(public.providerBackend, "TSM_API + AuctionDB API", "combined backend")
 
+addonTable.resetPriceCache()
 TSM_API.GetCustomPriceValue = function(source)
     if source == "DBMinBuyout" then
         return 1000
@@ -104,6 +106,7 @@ assertNear(suspiciousHigh.marketRatio, 10, 0.0001, "high outlier ratio")
 assertEqual(suspiciousHigh.minBuyout, 1000, "high outlier raw buyout preserved")
 assertEqual(suspiciousHigh.marketValue, 100, "high outlier market preserved")
 
+addonTable.resetPriceCache()
 TSM_API.GetCustomPriceValue = function(source)
     if source == "DBMinBuyout" then
         return 10
@@ -118,6 +121,7 @@ assertEqual(suspiciousLow.isSuspicious, true, "low outlier flagged")
 assertEqual(suspiciousLow.suspiciousReason, "min_buyout_far_below_market", "low outlier reason")
 assertNear(suspiciousLow.marketRatio, 0.1, 0.0001, "low outlier ratio")
 
+addonTable.resetPriceCache()
 TSM_API.GetCustomPriceValue = function()
     error("broken TSM API")
 end
@@ -156,6 +160,7 @@ assertEqual(saved.providerBackend, "AuctionDB SavedVariables", "SavedVariables b
 assertEqual(saved.freshness, "stale", "SavedVariables stale state")
 
 TSM_AuctionDB.realms["Horde - ChromieCraft"] = {}
+addonTable.resetPriceCache()
 local missing = addonTable.lookupItemPrice(34054, 100000)
 assertEqual(missing.available, false, "unscanned item unavailable")
 assertEqual(missing.unavailableReason, "item_not_scanned", "unscanned reason")

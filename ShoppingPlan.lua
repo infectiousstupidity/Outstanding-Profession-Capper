@@ -331,20 +331,36 @@ function addonTable.getRouteRefreshKey(skillContext, state, options)
         provider = addonTable.getActivePriceProviderName()
     end
 
+    local runtimeRevisions = options.runtimeRevisions
+    if runtimeRevisions == nil and type(addonTable.getRuntimeRevisions) == "function" then
+        runtimeRevisions = addonTable.getRuntimeRevisions()
+    end
+
     local parts = {
         "profession=" .. tostring(skillContext.professionName or state.professionName or ""),
         "base=" .. tostring(skillContext.baseSkill or state.baseSkill or 0),
         "effective=" .. tostring(skillContext.effectiveSkill or skillContext.currentSkill or 0),
         "modifier=" .. tostring(skillContext.activeSkillModifier or 0),
         "cap=" .. tostring(skillContext.currentCap or state.currentCap or 0),
-        "inventory=" .. encodeMap(state.inventory),
-        "learned=" .. encodeSet(state.learnedRecipes),
-        "reusable=" .. encodeSet(state.acquiredOneTime or state.acquiredReusable),
         "provider=" .. tostring(provider or ""),
         "priceRevision=" .. tostring(options.priceRevision or options.scanUpdatedAt or ""),
         "recipeRevision=" .. tostring(options.recipeRevision or state.recipeRevision or ""),
         "acquisitionRevision=" .. tostring(options.acquisitionRevision or state.acquisitionRevision or ""),
     }
+
+    if type(runtimeRevisions) == "table" then
+        table.insert(parts, "inventoryRevision=" .. tostring(runtimeRevisions.inventory or 0))
+        table.insert(parts, "eligibilityRevision=" .. tostring(runtimeRevisions.eligibility or 0))
+        table.insert(parts, "professionBookRevision=" .. tostring(runtimeRevisions.professionBook or 0))
+        table.insert(parts, "skillRevision=" .. tostring(runtimeRevisions.skill or 0))
+        table.insert(parts, "modeRevision=" .. tostring(runtimeRevisions.mode or 0))
+    else
+        -- Compatibility fallback for isolated callers that do not load the
+        -- runtime revision module. Production paths use numeric generations.
+        table.insert(parts, "inventory=" .. encodeMap(state.inventory))
+        table.insert(parts, "learned=" .. encodeSet(state.learnedRecipes))
+        table.insert(parts, "reusable=" .. encodeSet(state.acquiredOneTime or state.acquiredReusable))
+    end
 
     return table.concat(parts, "|")
 end

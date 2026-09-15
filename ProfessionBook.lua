@@ -83,6 +83,9 @@ function addonTable.storeProfessionBookSnapshot(profession, recipes, context)
     end
 
     generation = generation + 1
+    if type(addonTable.bumpRuntimeRevision) == "function" then
+        addonTable.bumpRuntimeRevision("professionBook")
+    end
     snapshots[profession] = {
         profession = profession,
         recipes = recipes,

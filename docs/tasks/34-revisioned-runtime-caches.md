@@ -1,6 +1,6 @@
 # Task 34 — Revisioned runtime caches and immutable optimizer inputs
 
-Status: QUEUED  
+Status: IN PROGRESS — code implemented; Task 32 baseline and in-game acceptance pending  
 Phase: 7 — Runtime performance hardening  
 Depends on: Tasks 32 and 33
 
@@ -130,3 +130,20 @@ Using Task 32 perf output:
 ## Non-goals
 
 Do not change the optimization objective. In particular, do not remove inventory from Cheapest route costing in this task. That is a separate product/semantics decision and must not be smuggled into a performance refactor.
+
+
+## Implementation status
+
+The runtime now uses explicit generations for profession-book, skill/context, inventory, character eligibility, recommendation mode, and exceptional/manual invalidation. The recommendation key also contains provider identity/revision, target inputs, availability mode, optimization objective, and acquisition-data revision.
+
+Task 33's profession-book snapshot remains the learned/live overlay. Bundled catalog recipes are converted lazily to canonical immutable optimizer structures and static/unknown recipes reuse those structures across passes. Inventory counts are cached only within the current inventory generation.
+
+`PriceProvider.lua` now owns a bounded 512-entry raw-result cache keyed by provider identity, provider revision, and item identity. Negative lookups are cached. Providers without revisions use a 15-second TTL. Normalized freshness/age is recalculated on every read.
+
+The recommendation/shopping-plan result cache is bounded to 8 entries and a 15-second TTL. It depends explicitly on all runtime generations that affect semantics. A generation/provider change detected during a calculation rejects the result instead of publishing it.
+
+`BAG_UPDATE` no longer clears the entire recommendation/price/static-recipe cache. It advances the inventory generation only. Learned spells, level changes, reputation changes, skill/modifier changes, and mode changes advance their corresponding generations.
+
+Deterministic tests cover revisioned positive/negative price reuse, provider revision changes, unknown-revision TTL expiry, inventory-generation invalidation, preservation of price/static structures across bag changes, profession-book/skill/eligibility invalidation, canonical recipe reuse/non-mutation, stale-result rejection, and cache-size bounds.
+
+The code remains IN PROGRESS until the Task 32 real-client measurements and this task's manual warm-open/bag/TSM-scan/learned-recipe checks are captured.

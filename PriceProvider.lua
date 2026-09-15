@@ -5,6 +5,15 @@ local providers = {}
 local selectedProviderName = NULL_PROVIDER_NAME
 local preferredProviderName
 
+local PRICE_CACHE_MAX_ENTRIES = 512
+local PRICE_CACHE_UNKNOWN_REVISION_TTL = 15
+local priceCache = {}
+local priceCacheOrder = {}
+local priceCacheHead = 1
+local priceCacheTail = 0
+local priceCacheEntries = 0
+local priceCacheToken = 0
+
 local freshnessSettings = {
     freshMaxAgeSeconds = 6 * 60 * 60,
     staleMaxAgeSeconds = 72 * 60 * 60,
@@ -58,6 +67,118 @@ local function inferItemFields(item, raw)
     end
 
     return itemID, itemLink
+end
+
+local function runtimeNow()
+    if type(GetTime) == "function" then
+        local ok, value = pcall(GetTime)
+        if ok and tonumber(value) then
+            return tonumber(value)
+        end
+    end
+    if os and type(os.clock) == "function" then
+        return os.clock()
+    end
+    return 0
+end
+
+local function cacheItemKey(item)
+    if type(item) == "number" then
+        return "item:" .. tostring(item)
+    end
+    if type(item) == "string" then
+        local numeric = tonumber(item)
+        if numeric then
+            return "item:" .. tostring(numeric)
+        end
+        local itemID = string.match(item, "[Ii][Tt][Ee][Mm]:(%d+)")
+            or string.match(item, "^[Ii]:(%d+)")
+        if itemID then
+            return "item:" .. tostring(itemID)
+        end
+    end
+    return tostring(item)
+end
+
+local function copyRaw(raw)
+    if type(raw) ~= "table" then
+        return raw
+    end
+    local result = {}
+    for key, value in pairs(raw) do
+        result[key] = value
+    end
+    return result
+end
+
+local function removePriceCacheKey(key)
+    if priceCache[key] ~= nil then
+        priceCache[key] = nil
+        priceCacheEntries = math.max(0, priceCacheEntries - 1)
+    end
+end
+
+local function rebuildPriceCacheOrder()
+    local compacted = {}
+    local count = 0
+    for key, entry in pairs(priceCache) do
+        count = count + 1
+        compacted[count] = {
+            key = key,
+            token = entry.token,
+        }
+    end
+    priceCacheOrder = compacted
+    priceCacheHead = 1
+    priceCacheTail = count
+end
+
+local function enforcePriceCacheBound()
+    while priceCacheEntries > PRICE_CACHE_MAX_ENTRIES do
+        local oldest = priceCacheOrder[priceCacheHead]
+        priceCacheOrder[priceCacheHead] = nil
+        priceCacheHead = priceCacheHead + 1
+        if oldest then
+            local current = priceCache[oldest.key]
+            if current and current.token == oldest.token then
+                removePriceCacheKey(oldest.key)
+            end
+        end
+    end
+
+    if priceCacheTail - priceCacheHead + 1 > PRICE_CACHE_MAX_ENTRIES * 4 then
+        rebuildPriceCacheOrder()
+    end
+end
+
+local function readPriceCache(key, now)
+    local entry = priceCache[key]
+    if not entry then
+        return nil, false
+    end
+    if entry.expiresAt and now > entry.expiresAt then
+        removePriceCacheKey(key)
+        return nil, false
+    end
+    return entry.raw, true
+end
+
+local function writePriceCache(key, raw, expiresAt)
+    if priceCache[key] == nil then
+        priceCacheEntries = priceCacheEntries + 1
+    end
+    priceCacheToken = priceCacheToken + 1
+    priceCache[key] = {
+        raw = copyRaw(raw),
+        expiresAt = expiresAt,
+        token = priceCacheToken,
+    }
+    priceCacheTail = priceCacheTail + 1
+    priceCacheOrder[priceCacheTail] = {
+        key = key,
+        token = priceCacheToken,
+    }
+    enforcePriceCacheBound()
 end
 
 local function unavailableResult(item, source, reason, detail)
@@ -322,13 +443,20 @@ function addonTable.getActivePriceProviderName()
     return selectedProviderName
 end
 
-function addonTable.getActivePriceProviderRevision()
-    local entry = refreshSelection()
+local function providerRevision(entry)
     local provider = entry and entry.provider
-    if not provider or type(provider.getRevision) ~= "function" then return nil end
+    if not provider or type(provider.getRevision) ~= "function" then
+        return nil
+    end
     local ok, revision = pcall(provider.getRevision, provider)
-    if not ok or revision == nil then return nil end
+    if not ok or revision == nil then
+        return nil
+    end
     return tostring(revision)
+end
+
+function addonTable.getActivePriceProviderRevision()
+    return providerRevision(refreshSelection())
 end
 
 function addonTable.getRegisteredPriceProviders()
@@ -340,16 +468,94 @@ function addonTable.getRegisteredPriceProviders()
     return names
 end
 
-function addonTable.lookupItemPrice(item, nowOverride)
+local function lookupItemPriceCached(item, nowOverride, expectedProviderName, expectedRevision, revisionCaptured)
     local entry = refreshSelection()
-    local provider = entry.provider
+    if expectedProviderName and entry.name ~= expectedProviderName then
+        return unavailableResult(
+            item,
+            entry.name,
+            "provider_changed",
+            "active provider changed during recommendation"
+        )
+    end
 
-    local ok, raw = pcall(provider.getItemPrice, provider, item)
-    if not ok then
-        return unavailableResult(item, entry.name, "provider_error", tostring(raw))
+    local revision
+    if revisionCaptured then
+        revision = expectedRevision
+    else
+        revision = providerRevision(entry)
+    end
+
+    local now = runtimeNow()
+    local revisionKey = revision ~= nil and tostring(revision) or "ttl"
+    local key = table.concat({
+        entry.name,
+        revisionKey,
+        cacheItemKey(item),
+    }, "|")
+
+    local raw, hit = readPriceCache(key, now)
+    if type(addonTable.performanceCache) == "function" then
+        addonTable.performanceCache("provider_price", hit)
+    end
+
+    if not hit then
+        local ok, providerRaw = pcall(entry.provider.getItemPrice, entry.provider, item)
+        if ok then
+            raw = providerRaw
+        else
+            raw = {
+                item = item,
+                available = false,
+                unavailableReason = "provider_error",
+                unavailableDetail = tostring(providerRaw),
+                source = entry.name,
+            }
+        end
+
+        local expiresAt = revision == nil
+            and (now + PRICE_CACHE_UNKNOWN_REVISION_TTL)
+            or nil
+        writePriceCache(key, raw, expiresAt)
     end
 
     return addonTable.normalizePriceResult(item, raw, entry.name, nowOverride)
+end
+
+function addonTable.lookupItemPrice(item, nowOverride)
+    return lookupItemPriceCached(item, nowOverride, nil, nil, false)
+end
+
+function addonTable.createRevisionedPriceLookup(providerName, providerRevisionValue)
+    providerName = tostring(providerName or "")
+    return function(item, nowOverride)
+        return lookupItemPriceCached(
+            item,
+            nowOverride,
+            providerName,
+            providerRevisionValue ~= nil and tostring(providerRevisionValue) or nil,
+            true
+        )
+    end
+end
+
+function addonTable.resetPriceCache()
+    priceCache = {}
+    priceCacheOrder = {}
+    priceCacheHead = 1
+    priceCacheTail = 0
+    priceCacheEntries = 0
+    priceCacheToken = 0
+end
+
+function addonTable.getPriceCacheStats()
+    return {
+        entries = priceCacheEntries,
+        maxEntries = PRICE_CACHE_MAX_ENTRIES,
+        queueEntries = math.max(0, priceCacheTail - priceCacheHead + 1),
+        maxQueueEntries = PRICE_CACHE_MAX_ENTRIES * 4,
+        unknownRevisionTTL = PRICE_CACHE_UNKNOWN_REVISION_TTL,
+    }
 end
 
 local function buildChoice(result, amount, priceType)
