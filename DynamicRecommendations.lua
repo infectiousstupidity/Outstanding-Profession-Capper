@@ -16,6 +16,31 @@ local REUSABLE_PROFESSION_TOOLS = {
 local recommendationCache = {}
 local RECOMMENDATION_CACHE_TTL = 5
 
+local function measurePerformance(name, callback, ...)
+    if type(addonTable.measurePerformance) == "function" then
+        return addonTable.measurePerformance(name, callback, ...)
+    end
+    return callback(...)
+end
+
+local function performanceIncrement(name, amount)
+    if type(addonTable.performanceIncrement) == "function" then
+        addonTable.performanceIncrement(name, amount)
+    end
+end
+
+local function performanceCache(name, hit)
+    if type(addonTable.performanceCache) == "function" then
+        addonTable.performanceCache(name, hit)
+    end
+end
+
+local function performanceSet(name, value)
+    if type(addonTable.performanceSet) == "function" then
+        addonTable.performanceSet(name, value)
+    end
+end
+
 local function runtimeNow()
     if type(GetTime) == "function" then
         local ok, value = pcall(GetTime)
@@ -645,9 +670,12 @@ local function createCachedPriceLookup(baseLookup)
         local key = itemID and ("item:" .. tostring(itemID)) or tostring(item)
 
         if cached[key] then
+            performanceCache("price", true)
             return cache[key]
         end
 
+        performanceCache("price", false)
+        performanceIncrement("unique_price_lookups", 1)
         local result = baseLookup(item, now)
         cached[key] = true
         cache[key] = result
@@ -699,9 +727,11 @@ local function createCachedRecipeCost(baseCostRecipe)
 
         local cachedCost = cache[key]
         if cachedCost ~= nil then
+            performanceCache("recipe_cost", true)
             return shallowCopy(cachedCost)
         end
 
+        performanceCache("recipe_cost", false)
         local cost = baseCostRecipe(recipe, skill, skillContext, state, options or {})
         if cost ~= nil then
             -- Full-catalog routes can touch thousands of recipe/skill states.
@@ -764,7 +794,7 @@ local function applyLiveSkillType(cost, recipe, skill, currentSkill)
     return cost
 end
 
-local function rankCurrentRecipes(recipes, skillContext, state, skill, options)
+local function rankCurrentRecipesInternal(recipes, skillContext, state, skill, options)
     local ranked = {}
     local currentSkill = tonumber(skillContext and skillContext.baseSkill) or 0
     local costRecipe = options and options.costRecipe or addonTable.calculateRecipeCost
@@ -840,6 +870,18 @@ local function rankCurrentRecipes(recipes, skillContext, state, skill, options)
     end)
 
     return ranked
+end
+
+local function rankCurrentRecipes(recipes, skillContext, state, skill, options)
+    return measurePerformance(
+        "current_candidate_ranking",
+        rankCurrentRecipesInternal,
+        recipes,
+        skillContext,
+        state,
+        skill,
+        options
+    )
 end
 
 local function firstRankedCandidate(ranking, requireAvailableNow)
@@ -1006,8 +1048,10 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         and (providerRevision ~= nil
             or cacheNow - cachedRecommendation.createdAt <= RECOMMENDATION_CACHE_TTL)
     then
+        performanceCache("recommendation", true)
         return cachedRecommendation.result
     end
+    performanceCache("recommendation", false)
 
     local function cacheAndReturn(value)
         recommendationCache[cacheKey] = {
@@ -1041,7 +1085,12 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     costOptions.materialCostCache = {}
     result.priceLookup = cachedPriceLookup
 
-    local recipes, state = addonTable.buildFullProfessionOptimizationInput(recipeCache, skillContext)
+    local recipes, state = measurePerformance(
+        "optimizer_input",
+        addonTable.buildFullProfessionOptimizationInput,
+        recipeCache,
+        skillContext
+    )
     result.recipes = recipes
     result.state = state
     if table.getn(recipes) == 0 then
@@ -1062,7 +1111,9 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         return cacheAndReturn(result)
     end
 
-    local candidateRecipesBySkill = buildRouteCandidateIndex(
+    local candidateRecipesBySkill = measurePerformance(
+        "candidate_index",
+        buildRouteCandidateIndex,
         recipes,
         skillContext,
         skillContext.baseSkill,
@@ -1101,19 +1152,27 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     routeCostOptions.baseCostRecipe = cachedRecipeCost
     routeCostOptions.allowGreenRoute = state.fullCatalog == true
 
-    local route = addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, {
-        startSkill = skillContext.baseSkill,
-        targetSkill = targetSkill,
-        optimizeFor = options.optimizeFor or "current",
-        maxStates = options.maxStates,
-        costRecipe = adaptiveRouteCost,
-        costOptions = routeCostOptions,
-        trainingSteps = state.trainingSteps,
-        candidateRecipesBySkill = candidateRecipesBySkill,
-        pruneDominatedRecipeSwitches = true,
-        layeredDynamicProgramming = true,
-    })
+    local route = measurePerformance(
+        "route_solver",
+        addonTable.solveCheapestProfessionRoute,
+        recipes,
+        skillContext,
+        state,
+        {
+            startSkill = skillContext.baseSkill,
+            targetSkill = targetSkill,
+            optimizeFor = options.optimizeFor or "current",
+            maxStates = options.maxStates,
+            costRecipe = adaptiveRouteCost,
+            costOptions = routeCostOptions,
+            trainingSteps = state.trainingSteps,
+            candidateRecipesBySkill = candidateRecipesBySkill,
+            pruneDominatedRecipeSwitches = true,
+            layeredDynamicProgramming = true,
+        }
+    )
     result.route = route
+    performanceSet("route_explored_states", route and route.exploredStates or 0)
 
     if not route or not route.complete then
         result.routeReason = route and route.reason or "no_complete_route"
@@ -1147,14 +1206,20 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         and result.acquisition.alreadyAcquired ~= true
     result.nextAction = result.requiresAcquisition and "acquire_recipe" or "craft"
 
-    local plan = addonTable.buildProfessionShoppingPlan(route, state, {
-        priceLookup = cachedPriceLookup,
-        unitPriceChooser = costOptions.unitPriceChooser,
-        priceRevision = options.priceRevision,
-        recipeRevision = options.recipeRevision,
-        acquisitionRevision = options.acquisitionRevision
-            or addonTable.recipeAcquisitionDataRevision,
-    })
+    local plan = measurePerformance(
+        "shopping_plan",
+        addonTable.buildProfessionShoppingPlan,
+        route,
+        state,
+        {
+            priceLookup = cachedPriceLookup,
+            unitPriceChooser = costOptions.unitPriceChooser,
+            priceRevision = options.priceRevision,
+            recipeRevision = options.recipeRevision,
+            acquisitionRevision = options.acquisitionRevision
+                or addonTable.recipeAcquisitionDataRevision,
+        }
+    )
     result.plan = plan
 
     if not plan or not plan.complete then

@@ -48,6 +48,7 @@ local DETAILS_PANEL_GAP = 10
 local tradeSkillStateMutation = false
 local suppressTradeSkillUpdatesUntil = 0
 local pendingProfessionRefresh = false
+local pendingProfessionRefreshReason
 local professionRefreshDeadline = 0
 local professionRefreshDriver
 local recommendationTooltipTarget
@@ -307,7 +308,7 @@ local function restoreTradeSkillView(state)
     end
 end
 
-local function withUnfilteredTradeSkill(callback)
+local function withUnfilteredTradeSkillInternal(callback)
     if tradeSkillStateMutation then
         return false
     end
@@ -340,7 +341,18 @@ local function withUnfilteredTradeSkill(callback)
     return restoreOk
 end
 
-local function buildRecipeCache()
+local function withUnfilteredTradeSkill(callback)
+    if type(addonTable.measurePerformance) == "function" then
+        return addonTable.measurePerformance(
+            "with_unfiltered_trade_skill",
+            withUnfilteredTradeSkillInternal,
+            callback
+        )
+    end
+    return withUnfilteredTradeSkillInternal(callback)
+end
+
+local function buildRecipeCacheInternal()
     recipeCache = {}
     transientSpellIndexMap = {}
 
@@ -369,6 +381,13 @@ local function buildRecipeCache()
             }
         end
     end
+end
+
+local function buildRecipeCache()
+    if type(addonTable.measurePerformance) == "function" then
+        return addonTable.measurePerformance("build_recipe_cache", buildRecipeCacheInternal)
+    end
+    return buildRecipeCacheInternal()
 end
 
 local function getOwnedItemCount(itemID, fallback)
@@ -2037,7 +2056,10 @@ function setRecommendationMode(mode)
 
     if professionContext then
         resetValues()
-        GetCraftingToDo()
+        if type(addonTable.performanceRecordRefreshRequest) == "function" then
+            addonTable.performanceRecordRefreshRequest("MODE_CHANGE")
+        end
+        GetCraftingToDo("MODE_CHANGE")
     else
         updateModeControls()
     end
@@ -3013,7 +3035,7 @@ local function showStatus(message)
     MainFrameCore:SetHeight(MIN_PANEL_HEIGHT)
 end
 
-function GetCraftingToDo()
+local function getCraftingToDoInternal()
     local L = addonTable.L
 
     if not professionContext then
@@ -3125,6 +3147,31 @@ function GetCraftingToDo()
     displayRecipe()
 end
 
+function GetCraftingToDo(reason)
+    local metadata = {
+        profession = professionContext and professionContext.professionName or nil,
+        baseSkill = professionContext and professionContext.baseSkill or nil,
+        effectiveSkill = professionContext and professionContext.effectiveSkill or nil,
+        currentCap = professionContext and professionContext.currentCap or nil,
+        mode = getRecommendationMode(),
+        providerName = type(addonTable.getActivePriceProviderName) == "function"
+            and addonTable.getActivePriceProviderName()
+            or nil,
+        providerRevision = type(addonTable.getActivePriceProviderRevision) == "function"
+            and addonTable.getActivePriceProviderRevision()
+            or nil,
+    }
+
+    if type(addonTable.measurePerformanceRefresh) == "function" then
+        return addonTable.measurePerformanceRefresh(
+            reason or "DIRECT",
+            metadata,
+            getCraftingToDoInternal
+        )
+    end
+    return getCraftingToDoInternal()
+end
+
 local function printProfessionDebug()
     local rawName, rawRank, rawCap, rawModifier = GetTradeSkillLine()
     local context = addonTable.readProfessionSkillContext()
@@ -3211,8 +3258,38 @@ local function printPriceDebug(item)
         .. (result.suspiciousReason and (" (" .. result.suspiciousReason .. ")") or ""))
 end
 
+local function printPerformanceDebug(argument)
+    local subcommand = string.lower(tostring(argument or ""))
+    subcommand = string.match(subcommand, "^%s*(.-)%s*$") or ""
+
+    if subcommand == "off" then
+        addonTable.setPerformanceEnabled(false)
+        print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper perf]|r disabled")
+        return
+    end
+
+    if subcommand == "reset" then
+        addonTable.setPerformanceEnabled(true)
+        addonTable.resetPerformance()
+        print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper perf]|r reset; instrumentation enabled")
+        return
+    end
+
+    if subcommand == "on" then
+        addonTable.setPerformanceEnabled(true)
+    elseif not addonTable.isPerformanceEnabled() then
+        addonTable.setPerformanceEnabled(true)
+        print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper perf]|r enabled; perform an action, then run /pcapper perf again")
+    end
+
+    local lines = addonTable.getPerformanceSummaryLines()
+    for i = 1, table.getn(lines or {}) do
+        print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper perf]|r " .. lines[i])
+    end
+end
+
 local function printCommandHelp()
-    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper]|r /pcapper show, hide, attach, detach, lock, unlock, reset, debug, price <itemID>, help")
+    print("|cff" .. addonTable.chat_frame_default_color .. "[Profession Capper]|r /pcapper show, hide, attach, detach, lock, unlock, reset, debug, price <itemID>, perf [on|off|reset], help")
 end
 
 function TogglePcapperFrame(command)
@@ -3254,6 +3331,8 @@ function TogglePcapperFrame(command)
         printProfessionDebug()
     elseif action == "price" then
         printPriceDebug(argument)
+    elseif action == "perf" then
+        printPerformanceDebug(argument)
     elseif action == "help" then
         printCommandHelp()
     else
@@ -3276,7 +3355,12 @@ function ProfessionCapper_OnDragStop()
     addonTable.saveFramePosition(MainFrameCore)
 end
 
-local function refreshProfessionState(forceRefresh)
+local function refreshProfessionState(forceRefresh, reason, requestRecorded)
+    reason = reason or "DIRECT"
+    if not requestRecorded and type(addonTable.performanceRecordRefreshRequest) == "function" then
+        addonTable.performanceRecordRefreshRequest(reason)
+    end
+
     if tradeSkillStateMutation or GetTime() < suppressTradeSkillUpdatesUntil then
         return false
     end
@@ -3308,7 +3392,7 @@ local function refreshProfessionState(forceRefresh)
     end
 
     resetValues()
-    GetCraftingToDo()
+    GetCraftingToDo(reason)
     addonTable.applyFramePosition(MainFrameCore)
 
     if addonTable.getSettings().enabled then
@@ -3322,15 +3406,22 @@ end
 
 local function cancelScheduledProfessionRefresh()
     pendingProfessionRefresh = false
+    pendingProfessionRefreshReason = nil
     professionRefreshDeadline = 0
     if professionRefreshDriver then
         professionRefreshDriver:Hide()
     end
 end
 
-local function scheduleProfessionRefresh(delay)
+local function scheduleProfessionRefresh(delay, reason)
+    reason = reason or "SCHEDULED"
+
     if not MainFrameCore or not MainFrameCore:IsShown() then
         return
+    end
+
+    if type(addonTable.performanceRecordRefreshRequest) == "function" then
+        addonTable.performanceRecordRefreshRequest(reason)
     end
 
     if not professionRefreshDriver then
@@ -3355,13 +3446,20 @@ local function scheduleProfessionRefresh(delay)
                 return
             end
 
+            local refreshReason = pendingProfessionRefreshReason or "SCHEDULED"
             pendingProfessionRefresh = false
+            pendingProfessionRefreshReason = nil
             professionRefreshDeadline = 0
             self:Hide()
-            refreshProfessionState(true)
+            refreshProfessionState(true, refreshReason, true)
         end)
     end
 
+    if not pendingProfessionRefresh then
+        pendingProfessionRefreshReason = reason
+    elseif pendingProfessionRefreshReason ~= reason then
+        pendingProfessionRefreshReason = "MULTIPLE_EVENTS"
+    end
     pendingProfessionRefresh = true
     professionRefreshDeadline = GetTime() + math.max(0, tonumber(delay) or PROFESSION_REFRESH_DEBOUNCE)
     professionRefreshDriver:Show()
@@ -3431,6 +3529,9 @@ function fnOnEvent()
 
     if event == "TRADE_SKILL_CLOSE" then
         cancelScheduledProfessionRefresh()
+        if type(addonTable.performanceMarkProfessionClosed) == "function" then
+            addonTable.performanceMarkProfessionClosed()
+        end
         addonTable.clearCraftSession()
         addonTable.clearProfessionSkillContext()
         professionContext = nil
@@ -3444,7 +3545,7 @@ function fnOnEvent()
         end
         local session = addonTable.getCraftSession()
         if not session or not session.active then
-            scheduleProfessionRefresh(PROFESSION_REFRESH_DEBOUNCE)
+            scheduleProfessionRefresh(PROFESSION_REFRESH_DEBOUNCE, "BAG_UPDATE")
         end
         return
     end
@@ -3453,7 +3554,7 @@ function fnOnEvent()
         if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
             addonTable.invalidateDynamicRecommendationCache()
         end
-        scheduleProfessionRefresh(0.05)
+        scheduleProfessionRefresh(0.05, "LEARNED_SPELL_IN_TAB")
         return
     end
 
@@ -3461,7 +3562,7 @@ function fnOnEvent()
         if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
             addonTable.invalidateDynamicRecommendationCache()
         end
-        refreshProfessionState(false)
+        refreshProfessionState(false, "PLAYER_EQUIPMENT_CHANGED")
         return
     end
 
@@ -3470,19 +3571,24 @@ function fnOnEvent()
             if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
                 addonTable.invalidateDynamicRecommendationCache()
             end
-            refreshProfessionState(false)
+            refreshProfessionState(false, "UNIT_AURA")
         end
         return
     end
 
     if event == "TRADE_SKILL_UPDATE" then
-        if refreshProfessionState(false) then
+        local refreshReason = pendingProfessionRefreshReason or "TRADE_SKILL_UPDATE"
+        local requestRecorded = pendingProfessionRefreshReason ~= nil
+        if requestRecorded and type(addonTable.performanceRecordRefreshRequest) == "function" then
+            addonTable.performanceRecordRefreshRequest("TRADE_SKILL_UPDATE")
+        end
+        if refreshProfessionState(false, refreshReason, requestRecorded) then
             cancelScheduledProfessionRefresh()
         end
     end
 end
 
-function displayRecipe()
+local function displayRecipeInternal()
     local L = addonTable.L
     local usingDynamic = isOptimizedMode(getRecommendationMode())
         and dynamicRecommendation
@@ -3729,6 +3835,13 @@ function displayRecipe()
     end
 
     previousRecipeKey = currentKey
+end
+
+function displayRecipe()
+    if type(addonTable.measurePerformance) == "function" then
+        return addonTable.measurePerformance("ui_render_update", displayRecipeInternal)
+    end
+    return displayRecipeInternal()
 end
 
 function displayNextRecipe()

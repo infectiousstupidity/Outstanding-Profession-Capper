@@ -18,6 +18,8 @@ jobs:
         run: find . -name '*.lua' -print0 | xargs -0 -n1 luac5.1 -p
       - name: Test character skill context
         run: lua5.1 tools/test_character_skill.lua
+      - name: Test performance instrumentation
+        run: lua5.1 tools/test_performance.lua
       - name: Test recipe difficulty metadata
         run: lua5.1 tools/test_recipe_difficulty.lua
       - name: Verify generated route topology

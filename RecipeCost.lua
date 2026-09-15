@@ -731,6 +731,10 @@ local function materialCostCacheKey(recipe, state, options)
 end
 
 function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, options)
+    if type(addonTable.performanceIncrement) == "function" then
+        addonTable.performanceIncrement("recipe_cost_evaluations", 1)
+    end
+
     state = state or {}
     options = options or {}
 
@@ -822,6 +826,9 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
         or nil
     local materialKey = materialCache and materialCostCacheKey(recipe, state, options) or nil
     local cachedMaterial = materialKey and materialCache[materialKey] or nil
+    if materialCache and type(addonTable.performanceCache) == "function" then
+        addonTable.performanceCache("material_cost", cachedMaterial ~= nil)
+    end
 
     if cachedMaterial then
         result.reagentCosts = cachedMaterial.reagentCosts
