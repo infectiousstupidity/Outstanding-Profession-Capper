@@ -1647,6 +1647,10 @@ end
 local function updateDetailPanel()
     updateDetailModeControl()
 
+    if type(addonTable.updateAcquisitionLocationControls) == "function" then
+        addonTable.updateAcquisitionLocationControls(nil)
+    end
+
     if not MainFrameCoreDetails then
         return false
     end
@@ -1685,6 +1689,11 @@ local function updateDetailPanel()
             and string.format(addonTable.L["details_source"], sourceSummary)
             or ""
     )
+    if dynamicRecommendation.requiresAcquisition
+        and type(addonTable.updateAcquisitionLocationControls) == "function"
+    then
+        addonTable.updateAcquisitionLocationControls(dynamicRecommendation.acquisition)
+    end
 
     local plan = dynamicRecommendation.plan
     local target = tonumber(dynamicRecommendation.targetSkill)
@@ -1806,121 +1815,11 @@ local function updateAvailabilityMetrics(canMake, purchaseTotal, purchaseComplet
     end
 end
 
-local function playerFactionKey()
-    if type(UnitFactionGroup) ~= "function" then return nil end
-    local ok, faction = pcall(UnitFactionGroup, "player")
-    if not ok then return nil end
-    faction = string.lower(tostring(faction or ""))
-    if faction == "alliance" then return "alliance" end
-    if faction == "horde" then return "horde" end
-    return nil
-end
-
-local function currentZoneName()
-    local functions = { GetRealZoneText, GetZoneText }
-    for index = 1, table.getn(functions) do
-        if type(functions[index]) == "function" then
-            local ok, zone = pcall(functions[index])
-            if ok and type(zone) == "string" and zone ~= "" then
-                return zone
-            end
-        end
-    end
-    return nil
-end
-
-local function locationCompatible(location, playerFaction)
-    local faction = location and location.faction
-    if not faction or faction == "" or faction == "neutral" then return true end
-    if not playerFaction then return true end
-    return faction == playerFaction
-end
-
 local function collectAcquisitionLocations(acquisition)
-    if type(acquisition) ~= "table" then return {} end
-
-    local model = type(acquisition.model) == "table" and acquisition.model or acquisition
-    local sourceType = model.sourceType
-        or acquisition.sourceType
-        or acquisition.source
-        or model.source
-    local playerFaction = playerFactionKey()
-    local currentZone = currentZoneName()
-    local locations = {}
-    local seen = {}
-
-    local function addLocation(location)
-        if type(location) ~= "table" or not locationCompatible(location, playerFaction) then
-            return
-        end
-        local coordinates = location.coordinates
-        local x = type(coordinates) == "table" and tonumber(coordinates.x or coordinates[1]) or nil
-        local y = type(coordinates) == "table" and tonumber(coordinates.y or coordinates[2]) or nil
-        local key = table.concat({
-            tostring(location.npcID or ""),
-            tostring(location.name or ""),
-            tostring(location.zone or ""),
-            tostring(x or ""),
-            tostring(y or ""),
-        }, ":")
-        if not seen[key] then
-            seen[key] = true
-            table.insert(locations, {
-                npcID = location.npcID,
-                name = location.name,
-                faction = location.faction,
-                zone = location.zone,
-                zoneID = location.zoneID,
-                coordinates = coordinates,
-            })
-        end
+    if type(addonTable.collectAcquisitionLocations) == "function" then
+        return addonTable.collectAcquisitionLocations(acquisition)
     end
-
-    local function addSource(source)
-        if type(source) ~= "table" then return end
-        for index = 1, table.getn(source.locations or {}) do
-            addLocation(source.locations[index])
-        end
-        if source.zone and source.zone ~= "" then
-            addLocation({
-                name = source.sourceName,
-                faction = source.faction,
-                zone = source.zone,
-                coordinates = source.coordinates,
-            })
-        end
-    end
-
-    addSource(model)
-    if acquisition ~= model then addSource(acquisition) end
-
-    local alternatives = model.alternatives or acquisition.alternatives or {}
-    for index = 1, table.getn(alternatives) do
-        local alternative = alternatives[index]
-        local alternativeType = alternative
-            and (alternative.sourceType or alternative.source)
-            or nil
-        if alternativeType == sourceType then
-            addSource(alternative)
-        end
-    end
-
-    table.sort(locations, function(left, right)
-        local function priority(location)
-            if currentZone and location.zone == currentZone then return 0 end
-            if not location.faction or location.faction == "neutral" then return 1 end
-            if playerFaction and location.faction == playerFaction then return 2 end
-            return 3
-        end
-        local leftPriority, rightPriority = priority(left), priority(right)
-        if leftPriority ~= rightPriority then return leftPriority < rightPriority end
-        if tostring(left.zone or "") ~= tostring(right.zone or "") then
-            return tostring(left.zone or "") < tostring(right.zone or "")
-        end
-        return tostring(left.name or "") < tostring(right.name or "")
-    end)
-
-    return locations
+    return {}
 end
 
 local function acquisitionDisplayInfo(acquisition)
@@ -2039,10 +1938,6 @@ local function formatAcquisitionGuidanceInfo(info)
         end
         local location = formatAcquisitionLocation(primary, false)
         if location then table.insert(parts, location) end
-        local extraCount = table.getn(info.locations) - 1
-        if extraCount > 0 then
-            table.insert(parts, string.format(addonTable.L["acquisition_more_locations"], extraCount))
-        end
     else
         if info.sourceName and info.sourceName ~= "" then
             table.insert(parts, info.sourceName)
@@ -2078,16 +1973,7 @@ acquisitionWhereSummary = function(acquisition)
     if not info or info.alreadyAcquired then return nil end
     local locations = info.locations or {}
     if table.getn(locations) == 0 then return nil end
-
-    local summary = formatAcquisitionLocation(locations[1], true)
-    local extraCount = table.getn(locations) - 1
-    if summary and extraCount > 0 then
-        summary = summary .. " · " .. string.format(
-            addonTable.L["acquisition_more_locations"],
-            extraCount
-        )
-    end
-    return summary
+    return formatAcquisitionLocation(locations[1], true)
 end
 
 addAcquisitionLocationsToTooltip = function(acquisition)
@@ -2098,20 +1984,10 @@ addAcquisitionLocationsToTooltip = function(acquisition)
 
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine(addonTable.L["acquisition_locations_title"], 1, 0.82, 0.12, true)
-    local maxVisible = math.min(8, table.getn(locations))
-    for index = 1, maxVisible do
+    for index = 1, table.getn(locations) do
         GameTooltip:AddLine(
             formatAcquisitionLocation(locations[index], true) or "",
             0.82, 0.82, 0.82, true
-        )
-    end
-    if table.getn(locations) > maxVisible then
-        GameTooltip:AddLine(
-            string.format(
-                addonTable.L["acquisition_more_locations"],
-                table.getn(locations) - maxVisible
-            ),
-            0.65, 0.65, 0.65, true
         )
     end
 end
