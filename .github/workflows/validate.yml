@@ -22,6 +22,8 @@ jobs:
         run: lua5.1 tools/test_performance.lua
       - name: Test profession book lifecycle
         run: lua5.1 tools/test_profession_book.lua
+      - name: Test revisioned runtime caches
+        run: lua5.1 tools/test_runtime_caches.lua
       - name: Test recipe difficulty metadata
         run: lua5.1 tools/test_recipe_difficulty.lua
       - name: Verify generated route topology

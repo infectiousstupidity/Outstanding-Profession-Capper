@@ -70,6 +70,7 @@ assertEqual(spendChoice.unitPrice, 100, "fresh spend prefers auction")
 assertEqual(spendChoice.priceType, "auction", "fresh spend type")
 
 scenario.updatedAt = 1000
+addonTable.resetPriceCache()
 local stale = addonTable.lookupItemPrice(34054, 100000)
 assertEqual(stale.freshness, "stale", "stale state")
 assertEqual(stale.isStale, true, "stale flag")
@@ -82,6 +83,7 @@ assertEqual(spendChoice.priceType, "vendor", "stale spend type")
 
 scenario.updatedAt = 1
 scenario.vendorBuyPrice = nil
+addonTable.resetPriceCache()
 local tooOld = addonTable.lookupItemPrice(34054, 400000)
 assertEqual(tooOld.freshness, "stale", "old state remains stale")
 assertEqual(tooOld.isTooOld, true, "old price too old")
@@ -92,6 +94,7 @@ assertEqual(oldReason, "auction_price_too_old", "too old reason")
 scenario.minBuyout = 0
 scenario.marketValue = -5
 scenario.vendorBuyPrice = nil
+addonTable.resetPriceCache()
 local missing = addonTable.lookupItemPrice(34054, 100000)
 assertEqual(missing.available, false, "non-positive prices unavailable")
 assertEqual(missing.unavailableReason, "no_price_data", "non-positive reason")
@@ -129,6 +132,7 @@ scenario.minBuyout = 100
 scenario.marketValue = 125
 scenario.vendorBuyPrice = 80
 scenario.updatedAt = nil
+addonTable.resetPriceCache()
 local unknownFreshness = addonTable.lookupItemPrice(34054, 100000)
 assertEqual(unknownFreshness.freshness, "unknown", "missing timestamp freshness")
 assertEqual(unknownFreshness.available, true, "missing timestamp still available")

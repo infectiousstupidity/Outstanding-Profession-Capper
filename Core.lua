@@ -391,6 +391,10 @@ local function buildRecipeCache()
 end
 
 local function getOwnedItemCount(itemID, fallback)
+    if itemID and type(addonTable.getRuntimeInventoryCount) == "function" then
+        return addonTable.getRuntimeInventoryCount(itemID, fallback)
+    end
+
     if itemID and type(GetItemCount) == "function" then
         local ok, count = pcall(GetItemCount, itemID, true)
         if not ok then
@@ -3539,6 +3543,10 @@ local function refreshProfessionState(forceRefresh, reason, requestRecorded)
         return false
     end
 
+    if type(addonTable.syncRuntimeSkillContext) == "function" then
+        addonTable.syncRuntimeSkillContext(nextContext)
+    end
+
     if not forceRefresh and not changed then
         return false
     end
@@ -3662,6 +3670,8 @@ function fnOnLoad()
     this:RegisterEvent("BAG_UPDATE")
     this:RegisterEvent("LEARNED_SPELL_IN_TAB")
     this:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+    this:RegisterEvent("PLAYER_LEVEL_UP")
+    this:RegisterEvent("UPDATE_FACTION")
     this:RegisterEvent("UNIT_AURA")
     this:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     this:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
@@ -3700,8 +3710,8 @@ function fnOnEvent()
     end
 
     if event == "BAG_UPDATE" then
-        if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
-            addonTable.invalidateDynamicRecommendationCache()
+        if type(addonTable.noteRuntimeInventoryChanged) == "function" then
+            addonTable.noteRuntimeInventoryChanged()
         end
         local session = addonTable.getCraftSession()
         if not session or not session.active then
@@ -3717,26 +3727,28 @@ function fnOnEvent()
                 professionContext and professionContext.professionName or nil
             )
         end
-        if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
-            addonTable.invalidateDynamicRecommendationCache()
+        if type(addonTable.noteRuntimeEligibilityChanged) == "function" then
+            addonTable.noteRuntimeEligibilityChanged()
         end
         scheduleProfessionRefresh(0.05, "LEARNED_SPELL_IN_TAB")
         return
     end
 
     if event == "PLAYER_EQUIPMENT_CHANGED" then
-        if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
-            addonTable.invalidateDynamicRecommendationCache()
-        end
         refreshProfessionState(false, "PLAYER_EQUIPMENT_CHANGED")
+        return
+    end
+
+    if event == "PLAYER_LEVEL_UP" or event == "UPDATE_FACTION" then
+        if type(addonTable.noteRuntimeEligibilityChanged) == "function" then
+            addonTable.noteRuntimeEligibilityChanged()
+        end
+        scheduleProfessionRefresh(0.05, event)
         return
     end
 
     if event == "UNIT_AURA" then
         if arg1 == "player" then
-            if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
-                addonTable.invalidateDynamicRecommendationCache()
-            end
             refreshProfessionState(false, "UNIT_AURA")
         end
         return

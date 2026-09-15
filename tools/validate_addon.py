@@ -16,6 +16,7 @@ REQUIRED_ORDER = [
     "RecipeDifficultyData.lua",
     "GeneratedRouteData.lua",
     "Performance.lua",
+    "RuntimeState.lua",
     "ProfessionBook.lua",
     "RouteData.lua",
     "RecipeCatalog.lua",
