@@ -16,6 +16,7 @@ RouteData.lua
 RecipeCatalog.lua
 RecipeCatalogData.lua
 RecipeSourceLocations.lua
+MapLocations.lua
 RecipeAcquisition.lua
 RecipeAcquisitionData.lua
 ProfessionTraining.lua
