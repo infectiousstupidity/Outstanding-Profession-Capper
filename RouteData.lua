@@ -42,24 +42,45 @@ local function buildCandidateIndex(profession, modifier)
     local cacheKey = tostring(profession) .. ":" .. tostring(modifier)
     local cached = candidateIndexCache[cacheKey]
     if cached then
+        if type(addonTable.performanceCache) == "function" then
+            addonTable.performanceCache("generated_candidate_index", true)
+        end
         return cached
     end
 
-    local starts = topology.starts or {}
-    local stops = topology.stops or {}
-    local active = {}
-    local index = {}
-
-    for requiredSkill = 0, modifier do
-        addEvents(active, starts[requiredSkill])
+    if type(addonTable.performanceCache) == "function" then
+        addonTable.performanceCache("generated_candidate_index", false)
     end
 
-    for baseSkill = 0, 449 do
-        if baseSkill > 0 then
-            addEvents(active, starts[baseSkill + modifier])
+    local function constructIndex()
+        local starts = topology.starts or {}
+        local stops = topology.stops or {}
+        local active = {}
+        local index = {}
+
+        for requiredSkill = 0, modifier do
+            addEvents(active, starts[requiredSkill])
         end
-        removeEvents(active, stops[baseSkill])
-        index[baseSkill] = snapshot(active)
+
+        for baseSkill = 0, 449 do
+            if baseSkill > 0 then
+                addEvents(active, starts[baseSkill + modifier])
+            end
+            removeEvents(active, stops[baseSkill])
+            index[baseSkill] = snapshot(active)
+        end
+
+        return index
+    end
+
+    local index
+    if type(addonTable.measurePerformance) == "function" then
+        index = addonTable.measurePerformance(
+            "generated_candidate_index_build",
+            constructIndex
+        )
+    else
+        index = constructIndex()
     end
 
     candidateIndexCache[cacheKey] = index

@@ -12,6 +12,7 @@ CharacterSkill.lua
 RecipeDifficulty.lua
 RecipeDifficultyData.lua
 GeneratedRouteData.lua
+Performance.lua
 RouteData.lua
 RecipeCatalog.lua
 RecipeCatalogData.lua

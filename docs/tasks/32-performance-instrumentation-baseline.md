@@ -1,6 +1,6 @@
 # Task 32 — Runtime performance instrumentation and baseline
 
-Status: QUEUED  
+Status: IN PROGRESS — instrumentation implemented; real-client baseline capture pending  
 Phase: 7 — Runtime performance hardening  
 Depends on: Tasks 29 and 30
 
