@@ -310,7 +310,456 @@ local function getCandidateRecipes(recipes, options, skill)
     return recipes
 end
 
-local function solveLayeredProfessionRoute(
+local DEFAULT_ROUTE_SLICE_BUDGET_MS = 3
+
+addonTable.routeSolverSettings = addonTable.routeSolverSettings or {
+    sliceBudgetMs = DEFAULT_ROUTE_SLICE_BUDGET_MS,
+}
+
+local function routeNowMilliseconds(clock)
+    if type(clock) == "function" then
+        local value = tonumber(clock())
+        return value or 0
+    end
+
+    if type(debugprofilestop) == "function" then
+        local ok, value = pcall(debugprofilestop)
+        if ok and tonumber(value) then
+            return tonumber(value)
+        end
+    end
+
+    if type(GetTime) == "function" then
+        local ok, value = pcall(GetTime)
+        if ok and tonumber(value) then
+            return tonumber(value) * 1000
+        end
+    end
+
+    if os and type(os.clock) == "function" then
+        return os.clock() * 1000
+    end
+
+    return 0
+end
+
+local function routeMemoryKilobytes()
+    if type(collectgarbage) ~= "function" then
+        return nil
+    end
+    local ok, value = pcall(collectgarbage, "count")
+    if ok and tonumber(value) then
+        return tonumber(value)
+    end
+    return nil
+end
+
+local function mapValues(map)
+    local values = {}
+    for _, value in pairs(map or {}) do
+        table.insert(values, value)
+    end
+    return values
+end
+
+local function newRouteResult(startSkill, targetSkill, metric)
+    return {
+        complete = false,
+        fallbackToStaticGuide = true,
+        startSkill = startSkill,
+        targetSkill = targetSkill,
+        optimizationMetric = metric,
+        actions = {},
+        segments = {},
+        totalMarketCost = nil,
+        totalGoldCost = nil,
+        totalCurrentPurchaseCost = nil,
+        totalExpectedCrafts = 0,
+        quality = "incomplete",
+        missingData = {},
+        exploredStates = 0,
+        reason = nil,
+    }
+end
+
+local function releaseRouteJobState(job)
+    job.recipes = nil
+    job.skillContext = nil
+    job.state = nil
+    job.options = nil
+    job.costRecipe = nil
+    job.current = nil
+    job.currentEntries = nil
+    job.readyStates = nil
+    job.readyEntries = nil
+    job.groups = nil
+    job.groupEntries = nil
+    job.nextStates = nil
+    job.candidates = nil
+    job.candidateByID = nil
+    job.trainingSteps = nil
+    job.isCurrent = nil
+end
+
+local function finishRouteJobMetrics(job)
+    if job.finishedAtMs == nil then
+        job.finishedAtMs = routeNowMilliseconds()
+    end
+    if job.memoryAfterKb == nil then
+        job.memoryAfterKb = routeMemoryKilobytes()
+    end
+    if job.memoryBeforeKb and job.memoryAfterKb then
+        job.memoryDeltaKb = job.memoryAfterKb - job.memoryBeforeKb
+    end
+    if job.startedAtMs and job.finishedAtMs then
+        job.elapsedMs = math.max(0, job.finishedAtMs - job.startedAtMs)
+    end
+end
+
+local function jobRelax(target, node)
+    local key = nodeKey(node.skill, node.trainedCap, node.acquired, node.lastRecipeID)
+    local existing = target[key]
+    if not existing or node.totalCost < existing.totalCost then
+        target[key] = node
+    end
+end
+
+local function jobAdvanceTraining(job, node)
+    local cursor = node
+    while cursor.skill >= cursor.trainedCap and cursor.skill < job.targetSkill do
+        local chosen
+        local chosenMetric
+        local chosenMarket
+        local chosenGold
+        local chosenKey
+        local chosenCap
+
+        for trainingIndex = 1, table.getn(job.trainingSteps) do
+            local action = job.trainingSteps[trainingIndex]
+            if trainingAvailable(action, cursor.skill, cursor.trainedCap) then
+                local keyName = tostring(
+                    action.key or ("training:" .. tostring(action.newCap or action.targetCap))
+                )
+                if not cursor.acquired[keyName] then
+                    local newCap = tonumber(action.newCap or action.targetCap)
+                    local trainingMetric, trainingMarket, trainingGold = getTrainingCost(
+                        action,
+                        job.metric
+                    )
+                    if newCap and trainingMetric ~= nil
+                        and (not chosenCap
+                            or newCap < chosenCap
+                            or (newCap == chosenCap and trainingMetric < chosenMetric))
+                    then
+                        chosen = action
+                        chosenMetric = trainingMetric
+                        chosenMarket = trainingMarket
+                        chosenGold = trainingGold
+                        chosenKey = keyName
+                        chosenCap = newCap
+                    end
+                end
+            end
+        end
+
+        if not chosen then
+            addMissingReason(job.missing, "training_metadata_missing")
+            return nil
+        end
+
+        local nextAcquired = copyMap(cursor.acquired)
+        nextAcquired[chosenKey] = true
+        cursor = {
+            skill = cursor.skill,
+            trainedCap = chosenCap,
+            acquired = nextAcquired,
+            totalCost = cursor.totalCost + chosenMetric,
+            totalMarketCost = cursor.totalMarketCost + chosenMarket,
+            totalGoldCost = cursor.totalGoldCost + chosenGold,
+            totalCurrentPurchaseCost = cursor.totalCurrentPurchaseCost + chosenGold,
+            previous = cursor,
+            quality = cursor.quality,
+            lastRecipeID = cursor.lastRecipeID,
+            transition = {
+                type = "training",
+                training = chosen,
+                skillFrom = cursor.skill,
+                skillTo = cursor.skill,
+                oldCap = cursor.trainedCap,
+                newCap = chosenCap,
+                marketCost = chosenMarket,
+                goldCost = chosenGold,
+                currentPurchaseCost = chosenGold,
+                quality = "complete",
+            },
+        }
+    end
+    return cursor
+end
+
+local function jobEvaluateCraft(job, node, recipe, recipeIndex)
+    local recipeID = getRecipeID(recipe, recipeIndex)
+    local routeState = copyState(job.state, node.acquired)
+    routeState.routeActiveRecipeID = node.lastRecipeID
+    local cost = job.costRecipe(
+        recipe,
+        node.skill,
+        job.skillContext,
+        routeState,
+        job.options.costOptions or {}
+    )
+
+    if not (cost and cost.available and cost.useful and cost.expectedCraftsPerSkillUp) then
+        if cost and cost.incomplete then
+            addMissingReason(job.missing, cost.unavailableReason or "incomplete_recipe_cost")
+        end
+        return
+    end
+
+    local metricCost = resolveMetricCost(cost, job.metric)
+    if metricCost == nil then
+        return
+    end
+
+    local nextAcquired, extraMetric, extraMarket, extraGold, acquiredNow = applyCostOneTime(
+        node.acquired,
+        cost,
+        job.metric
+    )
+    nextAcquired = applyProducedKeys(nextAcquired, recipe)
+
+    local edgeMarket = numberOrZero(cost.expectedMarketCostPerSkillUp) + extraMarket
+    local edgeGold = numberOrZero(cost.expectedGoldNeededNowPerSkillUp) + extraGold
+    local edgeCurrent = numberOrZero(
+        cost.expectedCurrentPurchaseCostPerSkillUp
+            or cost.expectedMarketCostPerSkillUp
+    ) + extraGold
+    local edgeMetric = numberOrZero(metricCost) + extraMetric
+    local nextSkill = math.min(job.targetSkill, node.skill + 1)
+
+    local acquisitionGoldCost = 0
+    for acquiredIndex = 1, table.getn(acquiredNow) do
+        if acquiredNow[acquiredIndex].kind == "recipe_acquisition" then
+            acquisitionGoldCost = acquisitionGoldCost
+                + numberOrZero(acquiredNow[acquiredIndex].goldCost)
+        end
+    end
+
+    jobRelax(job.nextStates, {
+        skill = nextSkill,
+        trainedCap = node.trainedCap,
+        acquired = nextAcquired,
+        totalCost = node.totalCost + edgeMetric,
+        totalMarketCost = node.totalMarketCost + edgeMarket,
+        totalGoldCost = node.totalGoldCost + edgeGold,
+        totalCurrentPurchaseCost = node.totalCurrentPurchaseCost + edgeCurrent,
+        previous = node,
+        quality = (node.quality == "stale" or cost.quality == "stale")
+            and "stale"
+            or "complete",
+        lastRecipeID = recipeID,
+        transition = {
+            type = "craft",
+            recipe = recipe,
+            recipeID = recipeID,
+            skillFrom = node.skill,
+            skillTo = nextSkill,
+            expectedCrafts = cost.expectedCraftsPerSkillUp,
+            skillUpChance = cost.skillUpChance,
+            marketCost = edgeMarket,
+            goldCost = edgeGold,
+            currentPurchaseCost = edgeCurrent,
+            acquisitionGoldCost = acquisitionGoldCost,
+            quality = cost.quality,
+            cost = cost,
+        },
+    })
+end
+
+local function beginRouteLayer(job)
+    if job.skill >= job.targetSkill or next(job.current or {}) == nil then
+        job.phase = "finalize"
+        return
+    end
+
+    job.currentEntries = mapValues(job.current)
+    job.currentCursor = 1
+    job.readyStates = {}
+    job.phase = "prepare_ready"
+end
+
+local function finalizeLayeredRouteJob(job)
+    local result = job.result
+    for reason in pairs(job.missing) do
+        table.insert(result.missingData, reason)
+    end
+    table.sort(result.missingData)
+
+    local finalNode
+    for _, node in pairs(job.current or {}) do
+        if node.skill >= job.targetSkill
+            and (not finalNode or node.totalCost < finalNode.totalCost)
+        then
+            finalNode = node
+        end
+    end
+
+    if not finalNode then
+        result.reason = result.reason or "no_complete_route"
+    else
+        result.actions = reconstruct(finalNode)
+        result.segments = buildSegments(result.actions)
+        result.totalMarketCost = finalNode.totalMarketCost
+        result.totalGoldCost = finalNode.totalGoldCost
+        result.totalCurrentPurchaseCost = finalNode.totalCurrentPurchaseCost
+        result.quality = finalNode.quality
+        result.complete = true
+        result.fallbackToStaticGuide = false
+
+        for actionIndex = 1, table.getn(result.actions) do
+            if result.actions[actionIndex].type == "craft" then
+                result.totalExpectedCrafts = result.totalExpectedCrafts
+                    + numberOrZero(result.actions[actionIndex].expectedCrafts)
+            end
+        end
+    end
+
+    job.status = "completed"
+    job.phase = "done"
+    finishRouteJobMetrics(job)
+    releaseRouteJobState(job)
+end
+
+local function routeJobStillCurrent(job)
+    if type(job.isCurrent) ~= "function" then
+        return true
+    end
+    local ok, current = pcall(job.isCurrent, job.generationToken)
+    return ok and current and true or false
+end
+
+local function performRouteJobOperation(job)
+    if job.status ~= "running" then
+        return
+    end
+
+    if job.phase == "prepare_ready" then
+        local node = job.currentEntries[job.currentCursor]
+        if not node then
+            job.readyEntries = mapValues(job.readyStates)
+            job.readyCursor = 1
+            job.groups = {}
+            job.phase = "group_ready"
+            return
+        end
+
+        local ready = jobAdvanceTraining(job, node)
+        if ready and ready.skill == job.skill and ready.skill < ready.trainedCap then
+            jobRelax(job.readyStates, ready)
+        end
+        job.currentCursor = job.currentCursor + 1
+        return
+    end
+
+    if job.phase == "group_ready" then
+        local node = job.readyEntries[job.readyCursor]
+        if not node then
+            job.groupEntries = mapValues(job.groups)
+            job.groupCursor = 1
+            job.groupNodeCursor = 1
+            job.candidateCursor = 1
+            job.nextStates = {}
+            job.candidates = getCandidateRecipes(job.recipes, job.options, job.skill)
+            job.candidateByID = {}
+            for recipeIndex = 1, table.getn(job.candidates) do
+                local recipe = job.candidates[recipeIndex]
+                job.candidateByID[tostring(getRecipeID(recipe, recipeIndex))] = {
+                    recipe = recipe,
+                    index = recipeIndex,
+                }
+            end
+            job.phase = "expand_groups"
+            return
+        end
+
+        job.result.exploredStates = job.result.exploredStates + 1
+        if job.result.exploredStates > job.maxStates then
+            job.result.reason = "state_limit_exceeded"
+            addMissingReason(job.missing, "state_limit_exceeded")
+            job.phase = "finalize"
+            return
+        end
+
+        local groupKey = routeStateKey(node.skill, node.trainedCap, node.acquired)
+        local group = job.groups[groupKey]
+        if not group then
+            group = { nodes = {}, bestSwitchNode = node }
+            job.groups[groupKey] = group
+        elseif node.totalCost < group.bestSwitchNode.totalCost then
+            group.bestSwitchNode = node
+        end
+        table.insert(group.nodes, node)
+        job.readyCursor = job.readyCursor + 1
+        return
+    end
+
+    if job.phase == "expand_groups" then
+        local group = job.groupEntries[job.groupCursor]
+        if not group then
+            job.current = job.nextStates
+            job.skill = job.skill + 1
+            job.currentEntries = nil
+            job.readyStates = nil
+            job.readyEntries = nil
+            job.groups = nil
+            job.groupEntries = nil
+            job.nextStates = nil
+            job.candidates = nil
+            job.candidateByID = nil
+            beginRouteLayer(job)
+            return
+        end
+
+        local node = group.nodes[job.groupNodeCursor]
+        if not node then
+            job.groupCursor = job.groupCursor + 1
+            job.groupNodeCursor = 1
+            job.candidateCursor = 1
+            return
+        end
+
+        if node == group.bestSwitchNode then
+            local recipe = job.candidates[job.candidateCursor]
+            if recipe then
+                jobEvaluateCraft(job, node, recipe, job.candidateCursor)
+                job.candidateCursor = job.candidateCursor + 1
+            else
+                job.groupNodeCursor = job.groupNodeCursor + 1
+                job.candidateCursor = 1
+            end
+            return
+        end
+
+        if node.lastRecipeID ~= nil then
+            local continuing = job.candidateByID[tostring(node.lastRecipeID)]
+            if continuing then
+                jobEvaluateCraft(job, node, continuing.recipe, continuing.index)
+            end
+        end
+        job.groupNodeCursor = job.groupNodeCursor + 1
+        job.candidateCursor = 1
+        return
+    end
+
+    if job.phase == "finalize" then
+        finalizeLayeredRouteJob(job)
+        return
+    end
+
+    error("Unknown route job phase: " .. tostring(job.phase))
+end
+
+local function createLayeredRouteJob(
     recipes,
     skillContext,
     state,
@@ -323,9 +772,7 @@ local function solveLayeredProfessionRoute(
     maxStates,
     costRecipe
 )
-    local missing = {}
     local initialAcquired = copyMap(state.acquiredOneTime or state.acquiredReusable)
-    local current = {}
     local startNode = {
         skill = startSkill,
         trainedCap = startingCap,
@@ -339,258 +786,208 @@ local function solveLayeredProfessionRoute(
         quality = "complete",
         lastRecipeID = nil,
     }
+    local current = {}
     current[nodeKey(startSkill, startingCap, initialAcquired, nil)] = startNode
 
-    local trainingSteps = options.trainingSteps or state.trainingSteps or {}
+    local job = {
+        status = "running",
+        phase = "prepare_ready",
+        result = result,
+        recipes = recipes,
+        skillContext = skillContext,
+        state = state,
+        options = options,
+        startSkill = startSkill,
+        targetSkill = targetSkill,
+        startingCap = startingCap,
+        metric = metric,
+        maxStates = maxStates,
+        costRecipe = costRecipe,
+        current = current,
+        skill = startSkill,
+        missing = {},
+        trainingSteps = options.trainingSteps or state.trainingSteps or {},
+        generationToken = options.generationToken,
+        isCurrent = options.isJobCurrent,
+        sliceBudgetMs = tonumber(options.sliceBudgetMs)
+            or tonumber(addonTable.routeSolverSettings.sliceBudgetMs)
+            or DEFAULT_ROUTE_SLICE_BUDGET_MS,
+        sliceCount = 0,
+        largestSliceMs = 0,
+        totalWorkMs = 0,
+        operationCount = 0,
+        memoryBeforeKb = routeMemoryKilobytes(),
+        startedAtMs = routeNowMilliseconds(),
+    }
 
-    local function relax(target, node)
-        local key = nodeKey(node.skill, node.trainedCap, node.acquired, node.lastRecipeID)
-        local existing = target[key]
-        if not existing or node.totalCost < existing.totalCost then
-            target[key] = node
-        end
+    if targetSkill <= startSkill then
+        result.complete = true
+        result.fallbackToStaticGuide = false
+        result.totalMarketCost = 0
+        result.totalGoldCost = 0
+        result.totalCurrentPurchaseCost = 0
+        result.quality = "complete"
+        job.status = "completed"
+        job.phase = "done"
+        finishRouteJobMetrics(job)
+        releaseRouteJobState(job)
+        return job
     end
 
-    local function advanceTraining(node)
-        local cursor = node
-        while cursor.skill >= cursor.trainedCap and cursor.skill < targetSkill do
-            local chosen
-            local chosenMetric
-            local chosenMarket
-            local chosenGold
-            local chosenKey
-            local chosenCap
-
-            for trainingIndex = 1, table.getn(trainingSteps) do
-                local action = trainingSteps[trainingIndex]
-                if trainingAvailable(action, cursor.skill, cursor.trainedCap) then
-                    local keyName = tostring(action.key or ("training:" .. tostring(action.newCap or action.targetCap)))
-                    if not cursor.acquired[keyName] then
-                        local newCap = tonumber(action.newCap or action.targetCap)
-                        local trainingMetric, trainingMarket, trainingGold = getTrainingCost(action, metric)
-                        if newCap and trainingMetric ~= nil
-                            and (not chosenCap
-                                or newCap < chosenCap
-                                or (newCap == chosenCap and trainingMetric < chosenMetric))
-                        then
-                            chosen = action
-                            chosenMetric = trainingMetric
-                            chosenMarket = trainingMarket
-                            chosenGold = trainingGold
-                            chosenKey = keyName
-                            chosenCap = newCap
-                        end
-                    end
-                end
-            end
-
-            if not chosen then
-                addMissingReason(missing, "training_metadata_missing")
-                return nil
-            end
-
-            local nextAcquired = copyMap(cursor.acquired)
-            nextAcquired[chosenKey] = true
-            cursor = {
-                skill = cursor.skill,
-                trainedCap = chosenCap,
-                acquired = nextAcquired,
-                totalCost = cursor.totalCost + chosenMetric,
-                totalMarketCost = cursor.totalMarketCost + chosenMarket,
-                totalGoldCost = cursor.totalGoldCost + chosenGold,
-                totalCurrentPurchaseCost = cursor.totalCurrentPurchaseCost + chosenGold,
-                previous = cursor,
-                quality = cursor.quality,
-                lastRecipeID = cursor.lastRecipeID,
-                transition = {
-                    type = "training",
-                    training = chosen,
-                    skillFrom = cursor.skill,
-                    skillTo = cursor.skill,
-                    oldCap = cursor.trainedCap,
-                    newCap = chosenCap,
-                    marketCost = chosenMarket,
-                    goldCost = chosenGold,
-                    currentPurchaseCost = chosenGold,
-                    quality = "complete",
-                },
-            }
-        end
-        return cursor
+    if type(costRecipe) ~= "function" then
+        result.reason = "cost_engine_unavailable"
+        job.status = "completed"
+        job.phase = "done"
+        finishRouteJobMetrics(job)
+        releaseRouteJobState(job)
+        return job
     end
 
-    local function evaluateCraft(node, recipe, recipeIndex, nextStates)
-        local recipeID = getRecipeID(recipe, recipeIndex)
-        local routeState = copyState(state, node.acquired)
-        routeState.routeActiveRecipeID = node.lastRecipeID
-        local cost = costRecipe(recipe, node.skill, skillContext, routeState, options.costOptions or {})
+    beginRouteLayer(job)
+    return job
+end
 
-        if not (cost and cost.available and cost.useful and cost.expectedCraftsPerSkillUp) then
-            if cost and cost.incomplete then
-                addMissingReason(missing, cost.unavailableReason or "incomplete_recipe_cost")
-            end
-            return
-        end
+function addonTable.createCheapestProfessionRouteJob(recipes, skillContext, state, options)
+    recipes = recipes or {}
+    state = state or {}
+    options = options or {}
 
-        local metricCost = resolveMetricCost(cost, metric)
-        if metricCost == nil then
-            return
-        end
+    local startSkill = tonumber(
+        options.startSkill or state.baseSkill or (skillContext and skillContext.baseSkill)
+    ) or 0
+    local targetSkill = tonumber(options.targetSkill or state.targetSkill or 450) or 450
+    local startingCap = tonumber(
+        state.currentCap or (skillContext and skillContext.currentCap) or targetSkill
+    ) or targetSkill
+    local metric
+    if options.optimizeFor == "gold" then
+        metric = "gold"
+    elseif options.optimizeFor == "current" then
+        metric = "current"
+    else
+        metric = "market"
+    end
+    local maxStates = tonumber(options.maxStates) or DEFAULT_MAX_STATES
+    local costRecipe = options.costRecipe or addonTable.calculateRecipeCost
+    local result = newRouteResult(startSkill, targetSkill, metric)
 
-        local nextAcquired, extraMetric, extraMarket, extraGold, acquiredNow = applyCostOneTime(
-            node.acquired,
-            cost,
-            metric
-        )
-        nextAcquired = applyProducedKeys(nextAcquired, recipe)
+    return createLayeredRouteJob(
+        recipes,
+        skillContext,
+        state,
+        options,
+        result,
+        startSkill,
+        targetSkill,
+        startingCap,
+        metric,
+        maxStates,
+        costRecipe
+    )
+end
 
-        local edgeMarket = numberOrZero(cost.expectedMarketCostPerSkillUp) + extraMarket
-        local edgeGold = numberOrZero(cost.expectedGoldNeededNowPerSkillUp) + extraGold
-        local edgeCurrent = numberOrZero(
-            cost.expectedCurrentPurchaseCostPerSkillUp
-                or cost.expectedMarketCostPerSkillUp
-        ) + extraGold
-        local edgeMetric = numberOrZero(metricCost) + extraMetric
-        local nextSkill = math.min(targetSkill, node.skill + 1)
-
-        local acquisitionGoldCost = 0
-        for acquiredIndex = 1, table.getn(acquiredNow) do
-            if acquiredNow[acquiredIndex].kind == "recipe_acquisition" then
-                acquisitionGoldCost = acquisitionGoldCost + numberOrZero(acquiredNow[acquiredIndex].goldCost)
-            end
-        end
-
-        relax(nextStates, {
-            skill = nextSkill,
-            trainedCap = node.trainedCap,
-            acquired = nextAcquired,
-            totalCost = node.totalCost + edgeMetric,
-            totalMarketCost = node.totalMarketCost + edgeMarket,
-            totalGoldCost = node.totalGoldCost + edgeGold,
-            totalCurrentPurchaseCost = node.totalCurrentPurchaseCost + edgeCurrent,
-            previous = node,
-            quality = (node.quality == "stale" or cost.quality == "stale") and "stale" or "complete",
-            lastRecipeID = recipeID,
-            transition = {
-                type = "craft",
-                recipe = recipe,
-                recipeID = recipeID,
-                skillFrom = node.skill,
-                skillTo = nextSkill,
-                expectedCrafts = cost.expectedCraftsPerSkillUp,
-                skillUpChance = cost.skillUpChance,
-                marketCost = edgeMarket,
-                goldCost = edgeGold,
-                currentPurchaseCost = edgeCurrent,
-                acquisitionGoldCost = acquisitionGoldCost,
-                quality = cost.quality,
-                cost = cost,
-            },
-        })
+function addonTable.cancelCheapestProfessionRouteJob(job, reason)
+    if type(job) ~= "table" or job.status ~= "running" then
+        return false
     end
 
-    for skill = startSkill, targetSkill - 1 do
-        local readyStates = {}
-        for _, node in pairs(current) do
-            local ready = advanceTraining(node)
-            if ready and ready.skill == skill and ready.skill < ready.trainedCap then
-                relax(readyStates, ready)
-            end
-        end
+    job.status = "cancelled"
+    job.cancelReason = tostring(reason or "cancelled")
+    job.result.reason = job.cancelReason
+    job.result.complete = false
+    job.result.fallbackToStaticGuide = true
+    job.phase = "done"
+    finishRouteJobMetrics(job)
+    releaseRouteJobState(job)
+    return true
+end
 
-        local groups = {}
-        for _, node in pairs(readyStates) do
-            result.exploredStates = result.exploredStates + 1
-            if result.exploredStates > maxStates then
-                result.reason = "state_limit_exceeded"
-                addMissingReason(missing, "state_limit_exceeded")
-                break
-            end
+function addonTable.stepCheapestProfessionRouteJob(job, budgetMs, clock)
+    if type(job) ~= "table" then
+        return "invalid", nil
+    end
+    if job.status ~= "running" then
+        return job.status, job.result
+    end
 
-            local groupKey = routeStateKey(node.skill, node.trainedCap, node.acquired)
-            local group = groups[groupKey]
-            if not group then
-                group = { nodes = {}, bestSwitchNode = node }
-                groups[groupKey] = group
-            elseif node.totalCost < group.bestSwitchNode.totalCost then
-                group.bestSwitchNode = node
-            end
-            table.insert(group.nodes, node)
-        end
+    if not routeJobStillCurrent(job) then
+        addonTable.cancelCheapestProfessionRouteJob(job, "stale_inputs")
+        return job.status, job.result
+    end
 
-        if result.reason == "state_limit_exceeded" then
+    local budget = tonumber(budgetMs) or tonumber(job.sliceBudgetMs)
+        or DEFAULT_ROUTE_SLICE_BUDGET_MS
+    if budget <= 0 then
+        budget = DEFAULT_ROUTE_SLICE_BUDGET_MS
+    end
+
+    local startedAt = routeNowMilliseconds(clock)
+    local operationsBefore = job.operationCount
+    while job.status == "running" do
+        performRouteJobOperation(job)
+        job.operationCount = job.operationCount + 1
+
+        if job.status ~= "running" then
             break
         end
 
-        local nextStates = {}
-        for _, group in pairs(groups) do
-            local candidates = getCandidateRecipes(recipes, options, skill)
-            local candidateByID = {}
-            for recipeIndex = 1, table.getn(candidates) do
-                local recipe = candidates[recipeIndex]
-                candidateByID[tostring(getRecipeID(recipe, recipeIndex))] = {
-                    recipe = recipe,
-                    index = recipeIndex,
-                }
-            end
-
-            for nodeIndex = 1, table.getn(group.nodes) do
-                local node = group.nodes[nodeIndex]
-                if node == group.bestSwitchNode then
-                    for recipeIndex = 1, table.getn(candidates) do
-                        evaluateCraft(node, candidates[recipeIndex], recipeIndex, nextStates)
-                    end
-                elseif node.lastRecipeID ~= nil then
-                    local continuing = candidateByID[tostring(node.lastRecipeID)]
-                    if continuing then
-                        evaluateCraft(node, continuing.recipe, continuing.index, nextStates)
-                    end
-                end
-            end
-        end
-
-        current = nextStates
-        if next(current) == nil then
+        local elapsed = routeNowMilliseconds(clock) - startedAt
+        if job.operationCount > operationsBefore and elapsed >= budget then
             break
         end
     end
 
-    for reason in pairs(missing) do
-        table.insert(result.missingData, reason)
+    local elapsed = math.max(0, routeNowMilliseconds(clock) - startedAt)
+    job.sliceCount = job.sliceCount + 1
+    job.totalWorkMs = job.totalWorkMs + elapsed
+    if elapsed > job.largestSliceMs then
+        job.largestSliceMs = elapsed
     end
-    table.sort(result.missingData)
 
-    local finalNode
-    for _, node in pairs(current) do
-        if node.skill >= targetSkill
-            and (not finalNode or node.totalCost < finalNode.totalCost)
-        then
-            finalNode = node
+    if job.status == "running" and not routeJobStillCurrent(job) then
+        addonTable.cancelCheapestProfessionRouteJob(job, "stale_inputs")
+    end
+
+    return job.status, job.result
+end
+
+function addonTable.runCheapestProfessionRouteJob(job)
+    if type(job) ~= "table" then
+        return nil
+    end
+
+    while job.status == "running" do
+        if not routeJobStillCurrent(job) then
+            addonTable.cancelCheapestProfessionRouteJob(job, "stale_inputs")
+            break
         end
+        performRouteJobOperation(job)
+        job.operationCount = job.operationCount + 1
     end
+    return job.result
+end
 
-    if not finalNode then
-        result.reason = result.reason or "no_complete_route"
-        return result
+function addonTable.getCheapestProfessionRouteJobMetrics(job)
+    if type(job) ~= "table" then
+        return nil
     end
-
-    result.actions = reconstruct(finalNode)
-    result.segments = buildSegments(result.actions)
-    result.totalMarketCost = finalNode.totalMarketCost
-    result.totalGoldCost = finalNode.totalGoldCost
-    result.totalCurrentPurchaseCost = finalNode.totalCurrentPurchaseCost
-    result.quality = finalNode.quality
-    result.complete = true
-    result.fallbackToStaticGuide = false
-
-    for actionIndex = 1, table.getn(result.actions) do
-        if result.actions[actionIndex].type == "craft" then
-            result.totalExpectedCrafts = result.totalExpectedCrafts
-                + numberOrZero(result.actions[actionIndex].expectedCrafts)
-        end
-    end
-
-    return result
+    return {
+        status = job.status,
+        cancelReason = job.cancelReason,
+        sliceCount = tonumber(job.sliceCount) or 0,
+        largestSliceMs = tonumber(job.largestSliceMs) or 0,
+        totalWorkMs = tonumber(job.totalWorkMs) or 0,
+        elapsedMs = tonumber(job.elapsedMs) or 0,
+        operationCount = tonumber(job.operationCount) or 0,
+        exploredStates = job.result and tonumber(job.result.exploredStates) or 0,
+        memoryBeforeKb = job.memoryBeforeKb,
+        memoryAfterKb = job.memoryAfterKb,
+        memoryDeltaKb = job.memoryDeltaKb,
+        generationToken = job.generationToken,
+        released = job.current == nil
+            and job.recipes == nil
+            and job.options == nil,
+    }
 end
 
 function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, options)
@@ -612,23 +1009,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
     local maxStates = tonumber(options.maxStates) or DEFAULT_MAX_STATES
     local costRecipe = options.costRecipe or addonTable.calculateRecipeCost
 
-    local result = {
-        complete = false,
-        fallbackToStaticGuide = true,
-        startSkill = startSkill,
-        targetSkill = targetSkill,
-        optimizationMetric = metric,
-        actions = {},
-        segments = {},
-        totalMarketCost = nil,
-        totalGoldCost = nil,
-        totalCurrentPurchaseCost = nil,
-        totalExpectedCrafts = 0,
-        quality = "incomplete",
-        missingData = {},
-        exploredStates = 0,
-        reason = nil,
-    }
+    local result = newRouteResult(startSkill, targetSkill, metric)
 
     if targetSkill <= startSkill then
         result.complete = true
@@ -646,7 +1027,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
     end
 
     if options.layeredDynamicProgramming == true then
-        return solveLayeredProfessionRoute(
+        local job = createLayeredRouteJob(
             recipes,
             skillContext,
             state,
@@ -659,6 +1040,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
             maxStates,
             costRecipe
         )
+        return addonTable.runCheapestProfessionRouteJob(job)
     end
 
     local initialAcquired = copyMap(state.acquiredOneTime or state.acquiredReusable)

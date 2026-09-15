@@ -1373,19 +1373,12 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         costOptions,
         result.requireAvailableNow
     )
-    result.candidates = candidates or {}
-    for i = 1, table.getn(result.candidates) do
-        if result.candidates[i].availableNow then
-            table.insert(result.availableCandidates, result.candidates[i])
+    candidates = candidates or {}
+    local availableCandidates = {}
+    for i = 1, table.getn(candidates) do
+        if candidates[i].availableNow then
+            table.insert(availableCandidates, candidates[i])
         end
-    end
-
-    if fallbackSegment and fallbackSegment.recipeID then
-        result.currentSegment = fallbackSegment
-        result.currentCost = fallbackSegment.firstCost
-        result.available = true
-        result.fallbackToStaticGuide = false
-        result.reason = nil
     end
 
     local routeCostOptions = {}
@@ -1396,82 +1389,246 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     routeCostOptions.baseCostRecipe = cachedRecipeCost
     routeCostOptions.allowGreenRoute = state.fullCatalog == true
 
+    local routeOptions = {
+        startSkill = skillContext.baseSkill,
+        targetSkill = targetSkill,
+        optimizeFor = options.optimizeFor or "current",
+        maxStates = options.maxStates,
+        costRecipe = adaptiveRouteCost,
+        costOptions = routeCostOptions,
+        trainingSteps = state.trainingSteps,
+        candidateRecipesBySkill = candidateRecipesBySkill,
+        pruneDominatedRecipeSwitches = true,
+        layeredDynamicProgramming = true,
+        generationToken = cacheKey,
+        isJobCurrent = function(token)
+            return token == cacheKey and dependenciesStillCurrent()
+        end,
+        sliceBudgetMs = options.routeSliceBudgetMs,
+    }
+
+    local function finalizeRecommendation(route)
+        result._incremental = nil
+        result.calculating = false
+        result.candidates = candidates
+        result.availableCandidates = availableCandidates
+        result.currentSegment = nil
+        result.currentCost = nil
+        result.available = false
+        result.fallbackToStaticGuide = true
+        result.reason = nil
+        result.route = route
+        result.routeComplete = false
+        result.routeReason = nil
+        result.plan = nil
+        result.selectedRecipeLearned = false
+        result.requiresAcquisition = false
+        result.acquisition = nil
+        result.nextAction = nil
+
+        performanceSet("route_explored_states", route and route.exploredStates or 0)
+
+        if fallbackSegment and fallbackSegment.recipeID then
+            result.currentSegment = fallbackSegment
+            result.currentCost = fallbackSegment.firstCost
+            result.available = true
+            result.fallbackToStaticGuide = false
+        end
+
+        if not route or not route.complete then
+            result.routeReason = route and route.reason or "no_complete_route"
+            if not result.currentSegment then
+                result.reason = result.requireAvailableNow
+                    and "no_available_recipe"
+                    or "no_current_priced_recipe"
+            end
+            return cacheAndReturn(result)
+        end
+
+        local authoritative = route.segments and route.segments[1]
+        if authoritative and authoritative.recipeID then
+            result.currentSegment = authoritative
+            result.currentCost = authoritative.firstCost
+            result.available = true
+            result.fallbackToStaticGuide = false
+            result.reason = nil
+        end
+
+        if not result.currentSegment or not result.currentSegment.recipeID then
+            result.reason = "no_current_priced_recipe"
+            result.routeReason = result.reason
+            result.available = false
+            result.fallbackToStaticGuide = true
+            return cacheAndReturn(result)
+        end
+
+        result.selectedRecipeLearned = state.learnedRecipes[result.currentSegment.recipeID] == true
+        result.acquisition = result.currentCost and result.currentCost.acquisition or nil
+        result.requiresAcquisition = not result.selectedRecipeLearned
+            and result.acquisition ~= nil
+            and result.acquisition.alreadyAcquired ~= true
+        result.nextAction = result.requiresAcquisition and "acquire_recipe" or "craft"
+
+        local plan = measurePerformance(
+            "shopping_plan",
+            addonTable.buildProfessionShoppingPlan,
+            route,
+            state,
+            {
+                priceLookup = cachedPriceLookup,
+                unitPriceChooser = costOptions.unitPriceChooser,
+                priceRevision = options.priceRevision or providerRevision,
+                recipeRevision = options.recipeRevision or bookRevision,
+                acquisitionRevision = acquisitionRevision,
+                runtimeRevisions = capturedRevisions,
+            }
+        )
+        result.plan = plan
+
+        if not plan or not plan.complete then
+            result.routeReason = plan and plan.reason or "shopping_plan_incomplete"
+            result.plan = nil
+            return cacheAndReturn(result)
+        end
+
+        result.routeComplete = true
+        return cacheAndReturn(result)
+    end
+
+    if options.incrementalRoute == true
+        and type(addonTable.createCheapestProfessionRouteJob) == "function"
+        and type(addonTable.stepCheapestProfessionRouteJob) == "function"
+    then
+        local routeJob = addonTable.createCheapestProfessionRouteJob(
+            recipes,
+            skillContext,
+            state,
+            routeOptions
+        )
+
+        if routeJob and routeJob.status == "completed" then
+            return finalizeRecommendation(routeJob.result)
+        end
+
+        result.available = false
+        result.fallbackToStaticGuide = true
+        result.reason = "calculating"
+        result.calculating = true
+        result.currentSegment = nil
+        result.currentCost = nil
+        result.candidates = {}
+        result.availableCandidates = {}
+        result.route = nil
+        result.plan = nil
+        result._incremental = {
+            routeJob = routeJob,
+            finalize = finalizeRecommendation,
+        }
+        return result
+    end
+
     local route = measurePerformance(
         "route_solver",
         addonTable.solveCheapestProfessionRoute,
         recipes,
         skillContext,
         state,
-        {
-            startSkill = skillContext.baseSkill,
-            targetSkill = targetSkill,
-            optimizeFor = options.optimizeFor or "current",
-            maxStates = options.maxStates,
-            costRecipe = adaptiveRouteCost,
-            costOptions = routeCostOptions,
-            trainingSteps = state.trainingSteps,
-            candidateRecipesBySkill = candidateRecipesBySkill,
-            pruneDominatedRecipeSwitches = true,
-            layeredDynamicProgramming = true,
-        }
+        routeOptions
     )
-    result.route = route
-    performanceSet("route_explored_states", route and route.exploredStates or 0)
-
-    if not route or not route.complete then
-        result.routeReason = route and route.reason or "no_complete_route"
-        if not result.currentSegment then
-            result.reason = result.requireAvailableNow and "no_available_recipe" or "no_current_priced_recipe"
-        end
-        return cacheAndReturn(result)
-    end
-
-    local authoritative = route.segments and route.segments[1]
-    if authoritative and authoritative.recipeID then
-        result.currentSegment = authoritative
-        result.currentCost = authoritative.firstCost
-        result.available = true
-        result.fallbackToStaticGuide = false
-        result.reason = nil
-    end
-
-    if not result.currentSegment or not result.currentSegment.recipeID then
-        result.reason = "no_current_priced_recipe"
-        result.routeReason = result.reason
-        result.available = false
-        result.fallbackToStaticGuide = true
-        return cacheAndReturn(result)
-    end
-
-    result.selectedRecipeLearned = state.learnedRecipes[result.currentSegment.recipeID] == true
-    result.acquisition = result.currentCost and result.currentCost.acquisition or nil
-    result.requiresAcquisition = not result.selectedRecipeLearned
-        and result.acquisition ~= nil
-        and result.acquisition.alreadyAcquired ~= true
-    result.nextAction = result.requiresAcquisition and "acquire_recipe" or "craft"
-
-    local plan = measurePerformance(
-        "shopping_plan",
-        addonTable.buildProfessionShoppingPlan,
-        route,
-        state,
-        {
-            priceLookup = cachedPriceLookup,
-            unitPriceChooser = costOptions.unitPriceChooser,
-            priceRevision = options.priceRevision or providerRevision,
-            recipeRevision = options.recipeRevision or bookRevision,
-            acquisitionRevision = acquisitionRevision,
-            runtimeRevisions = capturedRevisions,
-        }
-    )
-    result.plan = plan
-
-    if not plan or not plan.complete then
-        result.routeReason = plan and plan.reason or "shopping_plan_incomplete"
-        result.plan = nil
-        return cacheAndReturn(result)
-    end
-
-    result.routeComplete = true
-    return cacheAndReturn(result)
+    return finalizeRecommendation(route)
 end
+
+function addonTable.stepDynamicProfessionRecommendation(pending, budgetMs, clock)
+    if type(pending) ~= "table" or pending.calculating ~= true then
+        return "completed", pending
+    end
+
+    local work = pending._incremental
+    if type(work) ~= "table" or type(work.routeJob) ~= "table" then
+        return "invalid", {
+            available = false,
+            fallbackToStaticGuide = true,
+            reason = "optimizer_error",
+            routeComplete = false,
+        }
+    end
+
+    local status, route = addonTable.stepCheapestProfessionRouteJob(
+        work.routeJob,
+        budgetMs,
+        clock
+    )
+
+    if status == "running" then
+        return status, pending
+    end
+
+    local metrics = type(addonTable.getCheapestProfessionRouteJobMetrics) == "function"
+        and addonTable.getCheapestProfessionRouteJobMetrics(work.routeJob)
+        or nil
+    if metrics and type(addonTable.recordRouteJobPerformance) == "function" then
+        addonTable.recordRouteJobPerformance(metrics)
+    end
+
+    pending._incremental = nil
+    pending.calculating = false
+
+    if status == "cancelled" then
+        return status, {
+            available = false,
+            fallbackToStaticGuide = true,
+            reason = "runtime_inputs_changed",
+            providerName = pending.providerName,
+            requireAvailableNow = pending.requireAvailableNow,
+            routeComplete = false,
+        }
+    end
+
+    if status ~= "completed" then
+        return status, {
+            available = false,
+            fallbackToStaticGuide = true,
+            reason = "optimizer_error",
+            providerName = pending.providerName,
+            requireAvailableNow = pending.requireAvailableNow,
+            routeComplete = false,
+        }
+    end
+
+    return "completed", work.finalize(route)
+end
+
+function addonTable.cancelDynamicProfessionRecommendation(pending, reason)
+    if type(pending) ~= "table" or pending.calculating ~= true then
+        return false
+    end
+
+    local work = pending._incremental
+    if type(work) == "table"
+        and type(work.routeJob) == "table"
+        and type(addonTable.cancelCheapestProfessionRouteJob) == "function"
+    then
+        addonTable.cancelCheapestProfessionRouteJob(
+            work.routeJob,
+            reason or "cancelled"
+        )
+        local metrics = type(addonTable.getCheapestProfessionRouteJobMetrics) == "function"
+            and addonTable.getCheapestProfessionRouteJobMetrics(work.routeJob)
+            or nil
+        if metrics and type(addonTable.recordRouteJobPerformance) == "function" then
+            addonTable.recordRouteJobPerformance(metrics)
+        end
+    end
+
+    pending._incremental = nil
+    pending.calculating = false
+    pending.recipes = nil
+    pending.state = nil
+    pending.priceLookup = nil
+    pending.candidates = {}
+    pending.availableCandidates = {}
+    pending.route = nil
+    pending.plan = nil
+    return true
+end
+

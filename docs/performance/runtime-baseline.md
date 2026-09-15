@@ -65,3 +65,19 @@ Route solver dominant on cold open: **undetermined until the real-client matrix 
 Event amplification present: **undetermined until BAG_UPDATE and skill-update cases are captured**.
 
 Task 33 must not begin from a performance assumption. Fill this report with the real-client measurements first, then use the dominant measured phase and event-amplification evidence to drive the next task.
+
+
+## Task 35 incremental-route before/after gate
+
+The instrumentation now exposes the values needed for the Task 35 comparison, but no real-client values are filled in here until they are captured in WoW 3.3.5.
+
+| Scenario | Before: frame refresh ms | After: frame refresh ms | Largest route slice | Exact result ready | Slices | Explored states | Route memory delta |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Enchanting ~352 Cheapest cold | pending | pending | pending | pending | pending | pending | pending |
+| Enchanting ~352 Available cold | pending | pending | pending | pending | pending | pending | pending |
+| Enchanting ~352 Cheapest warm | pending | pending | pending | pending | pending | pending | pending |
+| Jewelcrafting low-skill Cheapest cold | pending | pending | pending | pending | pending | pending | pending |
+
+Use `/pcapper perf reset`, perform one scenario, then `/pcapper perf`. The normal refresh `total=` value is the time before the frame can return to normal UI processing; the `route-job` line reports `largest`, `work`, `ready`, `slices`, `states`, and memory.
+
+Manual cancellation cases still required: close/reopen while calculating, move a reagent, switch Cheapest/Available/Static, update the provider revision, and cause a skill-up if practical. A cancelled/stale job must never replace the newer recommendation.

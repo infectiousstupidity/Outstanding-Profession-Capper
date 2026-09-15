@@ -6,6 +6,7 @@ local lastRefresh
 local professionClosed = true
 local lastProviderRevision
 local lastCompletedRequestCount = 0
+local lastRouteJob
 
 local function newTotals()
     return {
@@ -145,6 +146,7 @@ function addonTable.resetPerformance()
     professionClosed = true
     lastProviderRevision = nil
     lastCompletedRequestCount = 0
+    lastRouteJob = nil
     totals = newTotals()
     enabled = keepEnabled
 end
@@ -327,12 +329,25 @@ function addonTable.performanceSet(name, value)
     currentRefresh.values[tostring(name or "unnamed")] = value
 end
 
+function addonTable.recordRouteJobPerformance(metrics)
+    if not enabled or type(metrics) ~= "table" then
+        return
+    end
+
+    lastRouteJob = clone(metrics)
+    addNumber(totals.counters, "route_job_slices", metrics.sliceCount)
+    addNumber(totals.counters, "route_job_operations", metrics.operationCount)
+    addNumber(totals.counters, "route_job_completions", metrics.status == "completed" and 1 or 0)
+    addNumber(totals.counters, "route_job_cancellations", metrics.status == "cancelled" and 1 or 0)
+end
+
 function addonTable.getPerformanceSnapshot()
     return {
         enabled = enabled,
         active = currentRefresh ~= nil,
         current = clone(currentRefresh),
         last = clone(lastRefresh),
+        routeJob = clone(lastRouteJob),
         totals = clone(totals),
     }
 end
@@ -458,8 +473,20 @@ function addonTable.getPerformanceSummaryLines()
         .. " recipe=" .. cachePair(record, "recipe_cost")
         .. " material=" .. cachePair(record, "material_cost"))
 
+    if lastRouteJob then
+        table.insert(lines, "route-job status=" .. tostring(lastRouteJob.status or "unknown")
+            .. " slices=" .. tostring(lastRouteJob.sliceCount or 0)
+            .. " largest=" .. formatMilliseconds(lastRouteJob.largestSliceMs)
+            .. " work=" .. formatMilliseconds(lastRouteJob.totalWorkMs)
+            .. " ready=" .. formatMilliseconds(lastRouteJob.elapsedMs)
+            .. " states=" .. tostring(lastRouteJob.exploredStates or 0)
+            .. " memory=" .. formatMemoryDelta(lastRouteJob.memoryDeltaKb))
+    end
+
     table.insert(lines, "accumulated requests=" .. tostring(totals.refreshRequests)
         .. " expensive-refreshes=" .. tostring(totals.refreshes)
+        .. " route-slices=" .. tostring(totals.counters.route_job_slices or 0)
+        .. " route-cancel=" .. tostring(totals.counters.route_job_cancellations or 0)
         .. " | BAG_UPDATE=" .. tostring(totals.reasons.BAG_UPDATE or 0)
         .. " TRADE_SKILL_UPDATE=" .. tostring(totals.reasons.TRADE_SKILL_UPDATE or 0)
         .. " LEARNED_SPELL_IN_TAB=" .. tostring(totals.reasons.LEARNED_SPELL_IN_TAB or 0))

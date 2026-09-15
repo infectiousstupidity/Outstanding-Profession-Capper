@@ -44,10 +44,14 @@ jobs:
         run: lua5.1 tools/test_recipe_cost.lua
       - name: Test cheapest route solver
         run: lua5.1 tools/test_route_solver.lua
+      - name: Test incremental route execution
+        run: lua5.1 tools/test_incremental_route.lua
       - name: Test total cost and shopping plan
         run: lua5.1 tools/test_shopping_plan.lua
       - name: Test dynamic recommendation integration
         run: lua5.1 tools/test_dynamic_recommendations.lua
+      - name: Test incremental recommendations
+        run: lua5.1 tools/test_incremental_recommendations.lua
       - name: Test full-catalog adaptive routes
         run: lua5.1 tools/test_full_catalog_routes.lua
       - name: Test static full route
