@@ -7,11 +7,14 @@ Usage:
       creature_default_trainer.sql \
       wotlkNpcDB.lua \
       lookupZones.lua \
+      worldmaparea.csv \
       RecipeSourceLocations.lua
 """
 
 from __future__ import annotations
 
+import csv
+import io
 import re
 import sys
 from pathlib import Path
@@ -25,7 +28,7 @@ def lua_quote(value: str) -> str:
 
 
 def main() -> int:
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 7:
         print(__doc__.strip())
         return 2
 
@@ -33,7 +36,8 @@ def main() -> int:
     creature_default_trainer = Path(sys.argv[2]).read_text(encoding="utf-8")
     npc_db = Path(sys.argv[3]).read_text(encoding="utf-8")
     zone_db = Path(sys.argv[4]).read_text(encoding="utf-8")
-    output = Path(sys.argv[5])
+    world_map_areas = Path(sys.argv[5]).read_text(encoding="utf-8")
+    output = Path(sys.argv[6])
 
     trainer_ids: set[int] = set()
     npc_ids: set[int] = set()
@@ -62,8 +66,26 @@ def main() -> int:
             npc_ids.add(int(creature_id))
 
     zone_names: dict[int, str] = {}
-    for zone_id, name in re.findall(r'^\s*\[(\d+)\]\s*=\s*"((?:\\.|[^"])*)",?', zone_db, re.M):
+    zone_lookup_start = zone_db.find("l10n.zoneLookup = {")
+    zone_lookup_end = zone_db.find("\nl10n.zoneCategoryLookup", zone_lookup_start)
+    if zone_lookup_start < 0 or zone_lookup_end < 0:
+        raise ValueError("Could not isolate Questie l10n.zoneLookup table")
+    zone_lookup = zone_db[zone_lookup_start:zone_lookup_end]
+    for zone_id, name in re.findall(
+        r'^\s*\[(\d+)\]\s*=\s*"((?:\\.|[^"])*)",?',
+        zone_lookup,
+        re.M,
+    ):
         zone_names.setdefault(int(zone_id), name.replace('\\"', '"').replace("\\\\", "\\"))
+
+    map_ids: dict[int, int] = {}
+    for row in csv.DictReader(io.StringIO(world_map_areas)):
+        try:
+            area_id = int(row["AreaID"])
+            map_id = int(row["ID"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        map_ids.setdefault(area_id, map_id)
 
     npcs: dict[int, dict] = {}
     for line in npc_db.splitlines():
@@ -96,13 +118,13 @@ def main() -> int:
     lines = [
         "local addonName, addonTable = ...",
         "",
-        "-- Generated from Questie WotLK NPC spawn data plus AzerothCore trainer-group mappings.",
+        "-- Generated from Questie WotLK NPC spawn/map data plus AzerothCore trainer-group mappings.",
         "-- Sources:",
         f"--   Questie/Questie @ {QUESTIE_REVISION}",
         f"--   AzerothCore/azerothcore-wotlk @ {AZEROTHCORE_REVISION}",
         "-- Only NPCs referenced by bundled recipe acquisition metadata are included.",
         "",
-        'addonTable.recipeSourceLocationDataRevision = "questie-215b0c7+acore-f1bef3b"',
+        'addonTable.recipeSourceLocationDataRevision = "questie-215b0c7+acore-f1bef3b+map-v1"',
         "local npcLocations = {",
     ]
 
@@ -115,9 +137,12 @@ def main() -> int:
         lines.append("        locations = {")
         for zone_id in sorted(npc["locations"]):
             location = npc["locations"][zone_id]
+            map_id = map_ids.get(zone_id)
+            if map_id is None:
+                raise ValueError(f"Missing WorldMapAreaID for AreaTableID {zone_id}")
             lines.append(
-                "            { zone = %s, zoneID = %d, x = %.2f, y = %.2f },"
-                % (lua_quote(location["zone"]), zone_id, location["x"], location["y"])
+                "            { zone = %s, areaID = %d, mapID = %d, x = %.2f, y = %.2f },"
+                % (lua_quote(location["zone"]), zone_id, map_id, location["x"], location["y"])
             )
         lines.extend(["        },", "    },"])
 
@@ -145,7 +170,8 @@ def main() -> int:
         "            name = npc.name,",
         "            faction = npc.faction,",
         "            zone = source.zone,",
-        "            zoneID = source.zoneID,",
+        "            areaID = source.areaID,",
+        "            mapID = source.mapID,",
         "            coordinates = { x = source.x, y = source.y },",
         "        })",
         "    end",
