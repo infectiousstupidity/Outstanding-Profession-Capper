@@ -89,6 +89,19 @@ Source of truth: [UI polish plan](docs/UI-POLISH-PLAN.md)
 | [30 Precomputed adaptive-route runtime](docs/tasks/30-precomputed-route-runtime.md) | IN PROGRESS | Precompute static route topology and minimize runtime catalog, state, pricing and solver work when profession windows open. |
 | [31 In-frame route details and recipe source locations](docs/tasks/31-route-details-source-locations.md) | IN PROGRESS | Keep expanded route details inside the main frame and show physical trainer/vendor NPC locations. |
 
+### Phase 7 — Runtime performance hardening
+
+This phase addresses the remaining severe profession-window lag. It is deliberately ordered measurement-first so agents do not rewrite the solver or cache model based on assumptions.
+
+| Task | Status | Purpose |
+| --- | --- | --- |
+| [32 Runtime performance instrumentation and baseline](docs/tasks/32-performance-instrumentation-baseline.md) | QUEUED | Measure the real cold/warm open, refresh, solver, price, allocation, memory, and event costs before changing execution behavior. |
+| [33 Profession scan lifecycle and event invalidation](docs/tasks/33-profession-scan-lifecycle.md) | QUEUED | Stop bag/volatile-state changes from rediscovering the profession book; make recipe-book invalidation explicit. |
+| [34 Revisioned runtime caches and immutable optimizer inputs](docs/tasks/34-revisioned-runtime-caches.md) | QUEUED | Replace blanket invalidation/repeated object construction with bounded dependency-aware caches and persistent provider-revision pricing. |
+| [35 Incremental, cancellable exact-route execution](docs/tasks/35-incremental-route-execution.md) | QUEUED | Time-slice the existing layered route calculation without changing the authoritative global Cheapest result or allowing stale jobs to publish. |
+| [36 End-to-end performance regression hardening](docs/tasks/36-performance-regression-hardening.md) | QUEUED | Re-run the full event/mode matrix, add regression gates, clean transitional machinery, and record before/after performance. |
+| [37 Phase 7 holistic implementation review](docs/tasks/37-performance-hardening-review.md) | QUEUED | Independently review all Phase 7 work for stale caches/jobs, semantic drift, memory growth, code smells, and unsupported performance claims. |
+
 ## Dependency order
 
 `01 -> 02 -> 03`
@@ -121,6 +134,12 @@ Phase 6 full-recipe optimization order:
 
 `21 + 24 + 30 -> 31 -> 25`
 
+Phase 7 performance order:
+
+`29 + 30 -> 32 -> 33 -> 34 -> 35 -> 36 -> 37`
+
+Task 32 is a hard measurement gate: later performance tasks must use its recorded baseline rather than guessing. Tasks 33–34 must preserve current Cheapest/Available semantics. Task 35 must preserve the globally selected first route segment and must never publish stale work from an older input generation. Task 36 performs the full regression/performance matrix. Task 37 starts only after Tasks 32–36 have acceptance evidence and reviews the phase as one architecture.
+
 Task 21 removes the Ackis runtime dependency after bundled acquisition coverage is in place. Task 23 must not activate full-catalog recommendations until Tasks 20–22 provide complete conservative recipe/acquisition inputs.
 
 Do not start Task 19 until the preceding UI tasks have had their required in-game checks. Do not mark Task 25 complete until the unknown-recipe acquisition -> learning -> crafting transition has been verified in game.
@@ -134,3 +153,5 @@ Task 26 is now in implementation/manual acceptance: Available mode chooses the c
 Phase 5 Tasks 15–18 are accepted and complete. Task 19 is now in progress as the cleanup/compatibility pass. Task 27 is implemented in code and awaiting in-game verification of native output-item tooltips. Task 28 is implemented in code and awaiting in-game verification of the paged Static full route. The current cleanup makes Compare rows interactive with per-recipe material tooltips, removes meaningless Static-guide route-detail UI, suppresses the redundant 1 / 1 recipe counter, and avoids showing fake zero/unknown route-price coverage when no complete route exists. Final in-game verification of these cleanup changes is still required before Task 19 is marked DONE.
 
 Phase 6 Task 20 is complete: Profession Capper now ships a generated 3,552-record WotLK recipe catalog with static reagents/output/recipe-item data and live-book overlays. Task 21 is complete with generated trainer/vendor/reputation/limited-stock coverage plus explicit conservative manual fallbacks; Ackis is no longer a runtime dependency. Task 22 is complete: all static acquisition paths are evaluated against simulated profession skill and current character state, dynamic AH/owned-item paths are included, and the cheapest reliable source is selected while conditional alternatives are retained. Task 23 is complete: the optimizer now uses the full bundled catalog, future recipe unlocks and reachable profession-rank training while preserving the newer pass-local cost/price caches. Task 24 is implemented in code and awaiting its required in-game acquisition/learning transition checks. Task 29 fixes the reported full-catalog allocator/state explosion and is awaiting in-game Enchanting verification. Task 30 replaces most profession-open recomputation with generated route topology, candidate-scoped/lazy character state, a layered route solver, per-recipe material-cost reuse and completed-recommendation caching; automated validation passes, while the original in-game Enchanting open/close latency case remains the required manual acceptance. Task 31 fixes expanded Route details so they are bottom-anchored inside the main frame and adds bundled physical trainer/vendor NPC locations, including faction-aware zone/coordinate guidance in the main recommendation, Details, Compare and Full route tooltips. Automated validation is required; in-game layout/location verification remains manual acceptance. Task 25 remains queued for final full-recipe optimization coverage and acceptance.
+
+Phase 7 is now planned but not started. Task 32 is the required first task: instrument the real 3.3.5 client and record Enchanting/Jewelcrafting cold-open, warm-open, event-refresh, route, pricing, memory, and event-amplification baselines. Task 33 then separates profession-book scanning from volatile state. Task 34 introduces revisioned bounded caches. Task 35 time-slices the exact layered route solver with cancellation/generation safety. Task 36 performs end-to-end regression and measured hardening. Task 37 is the final independent review of everything implemented in Phase 7.
