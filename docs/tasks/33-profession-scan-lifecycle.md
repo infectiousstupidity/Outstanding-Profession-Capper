@@ -1,6 +1,6 @@
 # Task 33 — Profession scan lifecycle and event invalidation
 
-Status: QUEUED  
+Status: IN PROGRESS — code implemented; Task 32 baseline and in-game acceptance pending  
 Phase: 7 — Runtime performance hardening  
 Depends on: Task 32
 
@@ -113,3 +113,12 @@ Using Task 32 perf output:
 - Do not change TSM price caching here.
 - Do not make the route solver asynchronous here.
 - Do not change the meaning of Cheapest or Available.
+
+
+## Implementation status
+
+The code now keeps a session-level profession-book snapshot per profession. Full Blizzard trade-skill discovery is limited to cold opens, explicit profession switches, and learned-recipe invalidation. Unchanged reopens, bag-driven refreshes, price-driven recomputation, and +profession modifier changes reuse the snapshot.
+
+Base-skill changes refresh cached live difficulty/color from the bundled difficulty metadata instead of rediscovering recipe identity. Bag-dependent material ownership and craftable counts are refreshed from cached reagent identities with `GetItemCount`; they do not clear profession filters or expand headers.
+
+The snapshot is intentionally not marked accepted yet. Task 32's real-client baseline remains pending, and the manual scan-count/event-loop checks in this task still need to be performed in WoW 3.3.5 before this task can be marked DONE.
