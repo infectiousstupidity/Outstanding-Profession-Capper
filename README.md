@@ -16,6 +16,7 @@ This fork descends from SamuelLira99/Profession-Capper, DarkChimu/Improved-Profe
 - A vertical interactive materials list with item icons, owned/required counts, item tooltips, normal modified-item clicks, and Shift+Right-click Auction House search insertion.
 - Recipe discovery that works even when Blizzard's profession list is filtered or categories are collapsed.
 - Profession training-cap handling.
+- Exact recipe-source locations with all faction-compatible trainer/vendor alternatives and a native Show on map marker.
 - A compact panel attached to the Blizzard profession window by default.
 - Persistent attach/detach, lock and position settings.
 - English, Spanish and Russian UI strings plus localized recipe fallback names.
