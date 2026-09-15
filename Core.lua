@@ -20,6 +20,8 @@ local routePreviousButton
 local routeNextButton
 local enchantRepeatNotice
 local dynamicRecommendation
+local dynamicRecommendationJob
+local dynamicRecommendationDriver
 local dynamicOptimizerDisabled = false
 
 local MATERIAL_ROW_HEIGHT = 54
@@ -1642,6 +1644,8 @@ local function humanizeDynamicReason(reason)
         no_available_recipe = L["dynamic_reason_no_available_recipe"],
         materials_not_available_now = L["dynamic_reason_no_available_recipe"],
         optimizer_error = L["dynamic_reason_optimizer_error"],
+        calculating = L["dynamic_reason_calculating"],
+        runtime_inputs_changed = L["dynamic_reason_inputs_changed"],
     }
     return reasons[reason] or tostring(reason or L["dynamic_reason_unknown"])
 end
@@ -1919,6 +1923,11 @@ local function updateRecommendationSummary()
     end
 
     if isOptimizedMode(mode) then
+        if dynamicRecommendation and dynamicRecommendation.calculating then
+            txtPriceMeta:SetText(addonTable.L["dynamic_calculating"])
+            return
+        end
+
         local reason = dynamicRecommendation and dynamicRecommendation.reason or "unknown"
         local fallbackKey = mode == "available" and "available_fallback" or "dynamic_fallback"
         txtPriceMeta:SetText(string.format(
@@ -3156,8 +3165,162 @@ local function showStatus(message)
     MainFrameCore:SetHeight(MIN_PANEL_HEIGHT)
 end
 
+local function cancelDynamicRecommendationWork(reason)
+    local pending = dynamicRecommendationJob
+    dynamicRecommendationJob = nil
+
+    if pending
+        and type(addonTable.cancelDynamicProfessionRecommendation) == "function"
+    then
+        addonTable.cancelDynamicProfessionRecommendation(
+            pending,
+            reason or "superseded"
+        )
+    end
+
+    if dynamicRecommendationDriver then
+        dynamicRecommendationDriver:Hide()
+    end
+end
+
+local function applyCurrentRecommendationSelection()
+    if not professionContext then
+        return false
+    end
+
+    local handler = professionHandlers[professionContext.professionName]
+    if not handler then
+        MainFrameCore:Hide()
+        return false
+    end
+
+    local baseSkill = professionContext.baseSkill
+    if dynamicRecommendation and dynamicRecommendation.available then
+        local segment = dynamicRecommendation.currentSegment
+        shouldCraft = { segment.recipeID }
+        shouldCraftRecipe = {
+            segment.recipe and segment.recipe.name
+                or (recipeCache[segment.recipeID] and recipeCache[segment.recipeID].name)
+                or tostring(segment.recipeID)
+        }
+        targetSkill = segment.skillEnd
+    else
+        shouldCraft, shouldCraftRecipe, targetSkill = handler(baseSkill)
+    end
+
+    cacheRecommendedRecipeDetails()
+
+    if not shouldCraft or table.getn(shouldCraft) == 0 or not targetSkill then
+        showStatus(addonTable.L["no_guide_step"])
+        return false
+    end
+
+    local session = addonTable.getCraftSession()
+    if session and session.mode == "targeted_enchant" then
+        local recommendedID = shouldCraft[1]
+        if session.spellID ~= recommendedID then
+            enchantRepeatNotice = "recommendation_changed"
+            addonTable.clearCraftSession()
+        end
+    end
+
+    displayRecipe()
+    return true
+end
+
+local function ensureDynamicRecommendationDriver()
+    if dynamicRecommendationDriver then
+        return dynamicRecommendationDriver
+    end
+
+    dynamicRecommendationDriver = CreateFrame("Frame")
+    dynamicRecommendationDriver:Hide()
+    dynamicRecommendationDriver:SetScript("OnUpdate", function(self)
+        local pending = dynamicRecommendationJob
+        if not pending then
+            self:Hide()
+            return
+        end
+
+        local ok, status, recommendationOrError = pcall(
+            addonTable.stepDynamicProfessionRecommendation,
+            pending
+        )
+
+        if dynamicRecommendationJob ~= pending then
+            return
+        end
+
+        if not ok then
+            cancelDynamicRecommendationWork("optimizer_error")
+            dynamicOptimizerDisabled = true
+            dynamicRecommendation = {
+                available = false,
+                fallbackToStaticGuide = true,
+                reason = "optimizer_error",
+                routeReason = "optimizer_error",
+            }
+            if professionContext and MainFrameCore:IsShown() then
+                applyCurrentRecommendationSelection()
+            end
+            if type(geterrorhandler) == "function" then
+                geterrorhandler()(status)
+            end
+            return
+        end
+
+        if status == "running" then
+            return
+        end
+
+        dynamicRecommendationJob = nil
+        self:Hide()
+
+        if status == "completed" then
+            dynamicRecommendation = recommendationOrError
+            if professionContext
+                and MainFrameCore:IsShown()
+                and isOptimizedMode(getRecommendationMode())
+            then
+                applyCurrentRecommendationSelection()
+            end
+            return
+        end
+
+        if status == "cancelled" then
+            dynamicRecommendation = recommendationOrError
+            if professionContext
+                and MainFrameCore:IsShown()
+                and isOptimizedMode(getRecommendationMode())
+            then
+                if pendingProfessionRefresh then
+                    applyCurrentRecommendationSelection()
+                else
+                    GetCraftingToDo("ROUTE_JOB_STALE")
+                end
+            end
+            return
+        end
+
+        dynamicOptimizerDisabled = true
+        dynamicRecommendation = {
+            available = false,
+            fallbackToStaticGuide = true,
+            reason = "optimizer_error",
+            routeReason = "optimizer_error",
+        }
+        if professionContext and MainFrameCore:IsShown() then
+            applyCurrentRecommendationSelection()
+        end
+    end)
+
+    return dynamicRecommendationDriver
+end
+
 local function getCraftingToDoInternal()
     local L = addonTable.L
+
+    cancelDynamicRecommendationWork("superseded")
 
     if not professionContext then
         showStatus(L["no_guide_step"])
@@ -3253,11 +3416,21 @@ local function getCraftingToDoInternal()
                 addonTable.computeDynamicProfessionRecommendation,
                 recipeCache,
                 professionContext,
-                { requireAvailableNow = recommendationMode == "available" }
+                {
+                    requireAvailableNow = recommendationMode == "available",
+                    incrementalRoute = true,
+                }
             )
 
             if optimizerOK then
                 dynamicRecommendation = recommendationOrError
+                if dynamicRecommendation
+                    and dynamicRecommendation.calculating
+                    and type(addonTable.stepDynamicProfessionRecommendation) == "function"
+                then
+                    dynamicRecommendationJob = dynamicRecommendation
+                    ensureDynamicRecommendationDriver():Show()
+                end
             else
                 -- Dynamic optimization must never take the deterministic guide
                 -- down with it. Disable it for this UI session after a hard
@@ -3279,36 +3452,7 @@ local function getCraftingToDoInternal()
         end
     end
 
-    if dynamicRecommendation and dynamicRecommendation.available then
-        local segment = dynamicRecommendation.currentSegment
-        shouldCraft = { segment.recipeID }
-        shouldCraftRecipe = {
-            segment.recipe and segment.recipe.name
-                or (recipeCache[segment.recipeID] and recipeCache[segment.recipeID].name)
-                or tostring(segment.recipeID)
-        }
-        targetSkill = segment.skillEnd
-    else
-        shouldCraft, shouldCraftRecipe, targetSkill = handler(baseSkill)
-    end
-
-    cacheRecommendedRecipeDetails()
-
-    if not shouldCraft or table.getn(shouldCraft) == 0 or not targetSkill then
-        showStatus(L["no_guide_step"])
-        return
-    end
-
-    local session = addonTable.getCraftSession()
-    if session and session.mode == "targeted_enchant" then
-        local recommendedID = shouldCraft[1]
-        if session.spellID ~= recommendedID then
-            enchantRepeatNotice = "recommendation_changed"
-            addonTable.clearCraftSession()
-        end
-    end
-
-    displayRecipe()
+    applyCurrentRecommendationSelection()
 end
 
 function GetCraftingToDo(reason)
@@ -3699,6 +3843,7 @@ function fnOnEvent()
 
     if event == "TRADE_SKILL_CLOSE" then
         cancelScheduledProfessionRefresh()
+        cancelDynamicRecommendationWork("profession_closed")
         if type(addonTable.performanceMarkProfessionClosed) == "function" then
             addonTable.performanceMarkProfessionClosed()
         end
@@ -3870,11 +4015,15 @@ local function displayRecipeInternal()
             txtRecipeStatus:SetTextColor(0.45, 1, 0.35)
         elseif requestedDynamic then
             txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))
-            txtRecipeStatus:SetText(
-                recommendationMode == "available"
-                    and L["available_fallback_short"]
-                    or L["dynamic_fallback_short"]
-            )
+            if dynamicRecommendation and dynamicRecommendation.calculating then
+                txtRecipeStatus:SetText(L["dynamic_calculating_short"])
+            else
+                txtRecipeStatus:SetText(
+                    recommendationMode == "available"
+                        and L["available_fallback_short"]
+                        or L["dynamic_fallback_short"]
+                )
+            end
             txtRecipeStatus:SetTextColor(1, 0.72, 0.22)
         else
             txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))

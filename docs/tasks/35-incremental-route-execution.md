@@ -1,6 +1,6 @@
 # Task 35 — Incremental, cancellable exact-route execution
 
-Status: QUEUED  
+Status: IN PROGRESS — code implemented; Task 32/34 measurements and in-game acceptance pending  
 Phase: 7 — Runtime performance hardening  
 Depends on: Tasks 32, 33 and 34
 
@@ -148,3 +148,22 @@ Confirm stale work never overwrites the newer state.
 ## Scope guard
 
 Do not change the route's economics to make this easier. Inventory-sensitive Cheapest behavior remains as-is in this task.
+
+
+## Implementation status
+
+The layered exact-route solver now runs through one explicit state machine used by both synchronous tests and the incremental UI path. The job stores the current skill layer, ready/group/next-state maps, node/group/candidate cursors, missing-data reasons, explored-state count, and finalization state. No coroutine yielding is used.
+
+Production slices use `debugprofilestop()` when available, with a conservative internal default budget of 3 ms. `GetTime()` and `os.clock()` remain fallbacks. Tests can inject a deterministic fake clock.
+
+Each route job captures the Task 34 recommendation cache key as its generation token and receives a live dependency check covering profession-book, skill/modifier, inventory, eligibility, mode/manual generations, provider identity, and provider revision. A stale job is cancelled before another slice and cannot finalize/publish.
+
+The dynamic recommendation path now has an incremental mode used by `Core.lua`. A valid exact cached result is still returned immediately. On a cold miss, the frame shows an explicit “Calculating exact route · Static fallback” state; the local current-step ranking is retained only as internal work and is not published as authoritative Cheapest/Available. Compare/Route are hidden while pending. The exact result is applied atomically after the job completes and the dependency check still passes.
+
+Profession close, refresh supersession, mode/input changes, and explicit cancellation release the job's large state tables. Optimizer exceptions are caught at the existing UI fallback boundary and leave Static usable.
+
+Task 32 performance output now records async route-job slice count, largest slice, accumulated work time, wall time until exact result is ready, explored states, cancellation count, and memory delta.
+
+Automated coverage includes synchronous/incremental route equivalence, training boundaries, acquisition-first routes, reusable tools, future recipe switches, modifiers, state limits, fake-clock pause/resume, generation cancellation, stale-state release, exact Cheapest/Available equivalence, pending-state behavior, and inventory-generation cancellation.
+
+The task remains IN PROGRESS until the real-client Enchanting/Jewelcrafting matrix is rerun and the close/reopen, bag move, mode-switch, TSM revision, and skill-up cancellation checks are recorded.
