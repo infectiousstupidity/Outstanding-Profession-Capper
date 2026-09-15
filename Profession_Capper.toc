@@ -13,6 +13,7 @@ RecipeDifficulty.lua
 RecipeDifficultyData.lua
 GeneratedRouteData.lua
 Performance.lua
+ProfessionBook.lua
 RouteData.lua
 RecipeCatalog.lua
 RecipeCatalogData.lua

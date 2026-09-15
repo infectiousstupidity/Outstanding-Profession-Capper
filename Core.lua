@@ -424,13 +424,61 @@ local function cacheRecipeReagents(spellID)
     local data = recipeCache[spellID]
     local recipeIndex = transientSpellIndexMap[spellID]
 
-    if not data or not recipeIndex then
+    if not data then
         return
     end
 
     local cached = recipeReagentCache[spellID]
     if cached then
         data.reagents = copyCachedRecipeReagents(cached)
+        return
+    end
+
+    if not recipeIndex then
+        local catalog = type(addonTable.getRecipeCatalogRecord) == "function"
+            and addonTable.getRecipeCatalogRecord(spellID)
+            or nil
+        if not catalog or type(catalog.reagents) ~= "table" then
+            return
+        end
+
+        data.reagents = {}
+        local staticReagents = {}
+        for i = 1, table.getn(catalog.reagents) do
+            local catalogReagent = catalog.reagents[i]
+            local itemID = tonumber(catalogReagent.itemID)
+            local reagentName = catalogReagent.name
+            local itemLink
+            local reagentTexture
+            if itemID and type(GetItemInfo) == "function" then
+                local itemName, cachedLink, _, _, _, _, _, _, _, texture = GetItemInfo(itemID)
+                reagentName = reagentName or itemName
+                itemLink = cachedLink
+                reagentTexture = texture
+            end
+
+            reagentName = reagentName or (itemID and ("item " .. tostring(itemID))) or "Unknown"
+            itemLink = itemLink or (itemID and ("item:" .. tostring(itemID))) or nil
+            local reagent = {
+                name = reagentName,
+                texture = reagentTexture,
+                itemLink = itemLink,
+                itemID = itemID,
+                count = tonumber(catalogReagent.count) or 0,
+                owned = getOwnedItemCount(itemID, 0),
+            }
+            table.insert(data.reagents, reagent)
+            table.insert(staticReagents, {
+                name = reagent.name,
+                texture = reagent.texture,
+                itemLink = reagent.itemLink,
+                itemID = reagent.itemID,
+                count = reagent.count,
+                owned = 0,
+            })
+        end
+
+        recipeReagentCache[spellID] = staticReagents
         return
     end
 
@@ -484,13 +532,83 @@ local function cacheAllRecipeReagents()
     end
 end
 
+local SKILL_TYPE_BY_COLOR = {
+    orange = "optimal",
+    yellow = "medium",
+    green = "easy",
+    gray = "trivial",
+}
+
+local function refreshCachedRecipeDifficulty()
+    if not professionContext or type(addonTable.evaluateRecipeDifficulty) ~= "function" then
+        return
+    end
+
+    for spellID, data in pairs(recipeCache) do
+        local evaluated = addonTable.evaluateRecipeDifficulty(
+            spellID,
+            professionContext.baseSkill,
+            professionContext
+        )
+        local skillType = evaluated
+            and evaluated.metadataKnown
+            and SKILL_TYPE_BY_COLOR[evaluated.color]
+            or nil
+        if skillType and type(data) == "table" then
+            data.skillType = skillType
+        end
+    end
+end
+
+local function refreshRecipeAvailability(spellID)
+    local data = recipeCache[spellID]
+    if not data then
+        return 0
+    end
+
+    cacheRecipeReagents(spellID)
+    local reagents = data.reagents
+    if type(reagents) ~= "table" or table.getn(reagents) == 0 then
+        return tonumber(data.numAvailable) or 0
+    end
+
+    local craftable
+    for i = 1, table.getn(reagents) do
+        local reagent = reagents[i]
+        local quantity = math.max(0, tonumber(reagent.count) or 0)
+        local owned = getOwnedItemCount(reagent.itemID, reagent.owned)
+        reagent.owned = owned
+
+        if quantity > 0 then
+            local reusable = type(addonTable.isKnownReusableProfessionTool) == "function"
+                and addonTable.isKnownReusableProfessionTool(reagent.itemID)
+            if reusable then
+                if owned < quantity then
+                    craftable = 0
+                    break
+                end
+            else
+                local reagentCrafts = math.floor(owned / quantity)
+                craftable = craftable == nil
+                    and reagentCrafts
+                    or math.min(craftable, reagentCrafts)
+            end
+        end
+    end
+
+    if craftable ~= nil then
+        data.numAvailable = math.max(0, craftable)
+    end
+    return tonumber(data.numAvailable) or 0
+end
+
 local function cacheRecommendedRecipeDetails()
     if not shouldCraft then
         return
     end
 
     for i = 1, table.getn(shouldCraft) do
-        cacheRecipeReagents(shouldCraft[i])
+        refreshRecipeAvailability(shouldCraft[i])
     end
 end
 
@@ -586,8 +704,7 @@ local function updateRecommendationTooltipTarget(recipeID, recipe, recipeName, a
 end
 
 local function getNumAvailableForSpell(spellID)
-    local data = recipeCache[spellID]
-    return data and data.numAvailable or 0
+    return refreshRecipeAvailability(spellID)
 end
 
 function addonTable.sortRecipesByNumAvailable(recipes)
@@ -3056,79 +3173,122 @@ local function getCraftingToDoInternal()
         return
     end
 
-    local handler = professionHandlers[professionContext.professionName]
+    local professionName = professionContext.professionName
+    local handler = professionHandlers[professionName]
     if not handler then
         MainFrameCore:Hide()
         return
     end
 
-    dynamicRecommendation = nil
-    local scanned = withUnfilteredTradeSkill(function()
-        buildRecipeCache()
+    local decision = type(addonTable.prepareProfessionBook) == "function"
+        and addonTable.prepareProfessionBook(professionName, professionContext)
+        or { action = "scan", reason = "lifecycle_unavailable" }
+    local bookReady = true
 
-        local recommendationMode = getRecommendationMode()
-        if isOptimizedMode(recommendationMode)
-            and type(addonTable.computeDynamicProfessionRecommendation) == "function"
-        then
-            if dynamicOptimizerDisabled then
+    if decision.action == "scan" then
+        if type(addonTable.performanceCache) == "function" then
+            addonTable.performanceCache("profession_book", false)
+        end
+        if type(addonTable.performanceIncrement) == "function" then
+            addonTable.performanceIncrement("profession_book_full_scans", 1)
+        end
+
+        bookReady = withUnfilteredTradeSkill(function()
+            buildRecipeCache()
+        end)
+        transientSpellIndexMap = {}
+
+        if bookReady and type(addonTable.storeProfessionBookSnapshot) == "function" then
+            addonTable.storeProfessionBookSnapshot(
+                professionName,
+                recipeCache,
+                professionContext
+            )
+        end
+    else
+        if type(addonTable.performanceCache) == "function" then
+            addonTable.performanceCache("profession_book", true)
+        end
+        recipeCache = decision.snapshot or {}
+        transientSpellIndexMap = {}
+
+        if decision.action == "refresh_live" then
+            refreshCachedRecipeDifficulty()
+            if type(addonTable.markProfessionBookLiveCurrent) == "function" then
+                addonTable.markProfessionBookLiveCurrent(professionName, professionContext)
+            end
+            if type(addonTable.performanceIncrement) == "function" then
+                addonTable.performanceIncrement("profession_book_live_refreshes", 1)
+            end
+        end
+    end
+
+    if type(addonTable.performanceSet) == "function" then
+        addonTable.performanceSet("profession_book_action", decision.action)
+    end
+
+    if not bookReady then
+        showStatus(L["no_guide_step"])
+        return
+    end
+
+    dynamicRecommendation = nil
+    local recommendationMode = getRecommendationMode()
+    if isOptimizedMode(recommendationMode)
+        and type(addonTable.computeDynamicProfessionRecommendation) == "function"
+    then
+        if dynamicOptimizerDisabled then
+            dynamicRecommendation = {
+                available = false,
+                fallbackToStaticGuide = true,
+                reason = "optimizer_error",
+                routeReason = "optimizer_error",
+            }
+        else
+            local optimizerOK, recommendationOrError = pcall(
+                addonTable.computeDynamicProfessionRecommendation,
+                recipeCache,
+                professionContext,
+                { requireAvailableNow = recommendationMode == "available" }
+            )
+
+            if optimizerOK then
+                dynamicRecommendation = recommendationOrError
+            else
+                -- Dynamic optimization must never take the deterministic guide
+                -- down with it. Disable it for this UI session after a hard
+                -- failure so reopening the profession cannot repeat an OOM loop.
+                dynamicOptimizerDisabled = true
                 dynamicRecommendation = {
                     available = false,
                     fallbackToStaticGuide = true,
                     reason = "optimizer_error",
                     routeReason = "optimizer_error",
                 }
-            else
-                local optimizerOK, recommendationOrError = pcall(
-                    addonTable.computeDynamicProfessionRecommendation,
-                    recipeCache,
-                    professionContext,
-                    { requireAvailableNow = recommendationMode == "available" }
-                )
-
-                if optimizerOK then
-                    dynamicRecommendation = recommendationOrError
-                else
-                    -- Dynamic optimization must never take the deterministic guide
-                    -- down with it. Disable it for this UI session after a hard
-                    -- failure so reopening the profession cannot repeat an OOM loop.
-                    dynamicOptimizerDisabled = true
-                    dynamicRecommendation = {
-                        available = false,
-                        fallbackToStaticGuide = true,
-                        reason = "optimizer_error",
-                        routeReason = "optimizer_error",
-                    }
-                    if type(collectgarbage) == "function" then
-                        pcall(collectgarbage, "collect")
-                    end
-                    if type(geterrorhandler) == "function" then
-                        geterrorhandler()(recommendationOrError)
-                    end
+                if type(collectgarbage) == "function" then
+                    pcall(collectgarbage, "collect")
+                end
+                if type(geterrorhandler) == "function" then
+                    geterrorhandler()(recommendationOrError)
                 end
             end
         end
-        if dynamicRecommendation and dynamicRecommendation.available then
-            local segment = dynamicRecommendation.currentSegment
-            shouldCraft = { segment.recipeID }
-            shouldCraftRecipe = {
-                segment.recipe and segment.recipe.name
-                    or (recipeCache[segment.recipeID] and recipeCache[segment.recipeID].name)
-                    or tostring(segment.recipeID)
-            }
-            targetSkill = segment.skillEnd
-        else
-            shouldCraft, shouldCraftRecipe, targetSkill = handler(baseSkill)
-        end
-
-        cacheRecommendedRecipeDetails()
-    end)
-
-    transientSpellIndexMap = {}
-
-    if not scanned then
-        showStatus(L["no_guide_step"])
-        return
     end
+
+    if dynamicRecommendation and dynamicRecommendation.available then
+        local segment = dynamicRecommendation.currentSegment
+        shouldCraft = { segment.recipeID }
+        shouldCraftRecipe = {
+            segment.recipe and segment.recipe.name
+                or (recipeCache[segment.recipeID] and recipeCache[segment.recipeID].name)
+                or tostring(segment.recipeID)
+        }
+        targetSkill = segment.skillEnd
+    else
+        shouldCraft, shouldCraftRecipe, targetSkill = handler(baseSkill)
+    end
+
+    cacheRecommendedRecipeDetails()
 
     if not shouldCraft or table.getn(shouldCraft) == 0 or not targetSkill then
         showStatus(L["no_guide_step"])
@@ -3551,6 +3711,12 @@ function fnOnEvent()
     end
 
     if event == "LEARNED_SPELL_IN_TAB" then
+        if type(addonTable.noteProfessionBookEvent) == "function" then
+            addonTable.noteProfessionBookEvent(
+                "LEARNED_SPELL_IN_TAB",
+                professionContext and professionContext.professionName or nil
+            )
+        end
         if type(addonTable.invalidateDynamicRecommendationCache) == "function" then
             addonTable.invalidateDynamicRecommendationCache()
         end
@@ -3982,7 +4148,6 @@ function resetValues()
     targetSkill = nil
     craftRecipeOptionsIndex = 1
     previousRecipeKey = ""
-    recipeCache = {}
     transientSpellIndexMap = {}
     dynamicRecommendation = nil
     enchantRepeatNotice = nil
