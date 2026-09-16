@@ -416,24 +416,24 @@ assertEqual(exactReturn.totalCurrentPurchaseCost, 115, "recipe acquisition charg
 assertEqual(exactReturn.actions[1].acquisitionGoldCost, 10, "first use pays acquisition")
 assertEqual(exactReturn.actions[3].acquisitionGoldCost, 0, "return use does not repay acquisition")
 
-local legacyReturnOptions = {
+local defaultReturnOptions = {
     startSkill = 0,
     targetSkill = 3,
     optimizeFor = "current",
     costRecipe = acquireSwitchReturnFixture,
     pruneDominatedRecipeSwitches = true,
 }
-local legacyReturn = addonTable.solveCheapestProfessionRoute(
+local defaultReturn = addonTable.solveCheapestProfessionRoute(
     returnRecipes,
     nil,
     { currentCap = 3 },
-    legacyReturnOptions
+    defaultReturnOptions
 )
-assertEqual(legacyReturn.complete, true, "legacy acquire-switch-return route complete")
-assertEqual(legacyReturn.actions[1].recipeID, "B", "legacy route starts acquired recipe")
-assertEqual(legacyReturn.actions[2].recipeID, "A", "legacy route switches away")
-assertEqual(legacyReturn.actions[3].recipeID, "B", "legacy route returns without repayment")
-assertEqual(legacyReturn.totalCurrentPurchaseCost, 115, "legacy route acquisition charged once")
+assertEqual(defaultReturn.complete, true, "default synchronous acquire-switch-return route complete")
+assertEqual(defaultReturn.actions[1].recipeID, "B", "default synchronous route starts acquired recipe")
+assertEqual(defaultReturn.actions[2].recipeID, "A", "default synchronous route switches away")
+assertEqual(defaultReturn.actions[3].recipeID, "B", "default synchronous route returns without repayment")
+assertEqual(defaultReturn.totalCurrentPurchaseCost, 115, "default synchronous route acquisition charged once")
 
 local stressRecipes = {}
 local stressCandidates = {}

@@ -1,6 +1,6 @@
 # Task 39 — Consolidate route solver implementations
 
-Status: QUEUED  
+Status: DONE  
 Phase: 8 — Post-Phase-7 architecture cleanup  
 Depends on: Task 38
 
@@ -29,3 +29,13 @@ After Task 38 settles the authoritative acquisition-state model, prove the requi
 - Regression corpus passes.
 - Full repository validation passes.
 - Existing authoritative first-route-segment behavior is preserved for covered scenarios.
+
+
+## Implementation evidence
+
+- Caller inventory: production recommendation code uses the resumable route job directly; synchronous callers are regression tests/full-catalog helpers and now delegate to that same job state machine.
+- Pre-consolidation baseline: master validation run 35062351800 passed with both the default heap solver and layered job corpus present.
+- The duplicate heap queue and its craft/training transition loop were removed. `solveCheapestProfessionRoute` is now a synchronous wrapper around `createCheapestProfessionRouteJob` + `runCheapestProfessionRouteJob`.
+- The production-only `layeredDynamicProgramming` selector is removed; there is no second transition implementation to drift.
+- The regression corpus covers acquisition + switch/return reuse, reusable tools, training, future unlocks, skill modifiers, incomplete data, state limits, and current/market/gold objective behavior. Synchronous and incremental execution share the same transition code.
+- Task 38's acquisition-state implementation is already the code path under test. Its remaining real-client performance acceptance does not define different route-transition semantics, so this consolidation does not weaken or bypass that pending measurement gate.
