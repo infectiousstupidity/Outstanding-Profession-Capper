@@ -5,7 +5,7 @@ This file governs implementation work. Keep it current as work progresses.
 ## Execution rules
 
 - Work directly on `master`. Do not create feature branches or pull requests unless explicitly requested.
-- One implementation task = one commit = one push.
+- One implementation task = one commit = one push unless a task explicitly defines an independent review/fix gate.
 - Do not combine two task docs into one implementation commit.
 - Every task commit must update this `TASKS.md` in the same commit.
 - Mark a task `IN PROGRESS` only when implementation begins.
@@ -16,13 +16,17 @@ This file governs implementation work. Keep it current as work progresses.
 - Stay compatible with WoW 3.3.5 / Lua 5.1.
 - Run the repository validation workflow for every task.
 - Manual in-game checks that CI cannot prove must be recorded in the task doc before the task is marked `DONE`.
+- Phase 9 uses a strict three-agent gate per task: Agent 1 implements -> Agent 2 independently reviews -> Agent 3 fixes recorded findings if any -> only then may the next task start.
+- For a three-agent task, the implementation, review bookkeeping, and fix pass may be separate commits. Never combine work from two task numbers in one commit.
 
 ## Status values
 
 - `QUEUED` — ready but not started.
 - `BLOCKED` — cannot start until a dependency is resolved.
 - `IN PROGRESS` — current implementation task.
-- `DONE` — implemented, committed, pushed, and validated.
+- `REVIEW` — Agent 1 implementation is complete and awaiting independent Agent 2 review.
+- `FIX` — Agent 2 recorded concrete findings that Agent 3 must resolve before the task can close.
+- `DONE` — implemented, independently reviewed, any required fixes completed, pushed, and validated.
 
 ## Phases
 
@@ -109,6 +113,21 @@ This phase addresses the remaining severe profession-window lag. It is deliberat
 | [38 Restore one-time recipe acquisition without state explosion](docs/tasks/38-one-time-recipe-acquisition.md) | IN PROGRESS | Restore true one-time recipe learning costs without reintroducing the Task 29 acquisition-set state explosion. |
 | [39 Consolidate route solver implementations](docs/tasks/39-route-solver-consolidation.md) | QUEUED | Prove caller/equivalence requirements and consolidate duplicated legacy heap/layered route transition logic. |
 
+
+### Phase 9 — Resale-aware Smartest optimization
+
+This phase adds a deterministic Smartest objective without changing Cheapest. It starts only after Task 39 consolidates route-solver behavior. Every task uses the strict Agent 1 implement -> Agent 2 review -> Agent 3 fix-if-needed gate, and the next task may not start until the previous task is DONE.
+
+| Task | Status | Purpose |
+| --- | --- | --- |
+| [40 Deterministic enchant scroll and vellum metadata](docs/tasks/40-enchant-scroll-vellum-metadata.md) | BLOCKED | Generate reliable scroll/vellum compatibility data without runtime tooltip/name guessing. |
+| [41 Conservative resale valuation](docs/tasks/41-conservative-resale-valuation.md) | BLOCKED | Turn TSM listing data into conservative resale evidence without pretending listings are guaranteed sales. |
+| [42 Resale-aware Enchanting craft economics](docs/tasks/42-resale-aware-enchant-economics.md) | BLOCKED | Compare direct vs vellum execution, cap resale credit at gross craft cost, and track surplus separately. |
+| [43 Smartest objective and availability filter](docs/tasks/43-smartest-objective-and-availability-filter.md) | BLOCKED | Add lexicographic Smartest routing and make Available-now an orthogonal constraint. |
+| [44 Smartest mode UI and economic explanations](docs/tasks/44-smartest-ui-and-explanations.md) | BLOCKED | Expose Cheapest/Smartest/Static plus Available-now and explain the economics clearly. |
+| [45 Vellum execution and shopping-plan integration](docs/tasks/45-vellum-execution-and-shopping-plan.md) | BLOCKED | Make scroll recommendations actionable, reconcile vellums with shopping/availability, and verify repeat safety. |
+| [46 Smartest end-to-end regression and performance review](docs/tasks/46-smartest-regression-performance-review.md) | BLOCKED | Stress-test correctness, assumptions, UI, caches and performance before closing the phase. |
+
 ## Dependency order
 
 `01 -> 02 -> 03`
@@ -149,6 +168,12 @@ Post-review follow-up:
 
 `37 -> 38 -> 39`
 
+Phase 9 Smartest optimization:
+
+`39 -> 40 -> 41 -> 42 -> 43 -> 44 -> 45 -> 46`
+
+Each Phase 9 arrow is a hard handoff gate: the upstream task must be DONE after its independent review/fix cycle before the downstream task begins.
+
 Task 32 remains the real-client measurement gate. Under explicit continuation, Tasks 33–37 have code implemented or reviewed but must not be marked DONE until the required WoW evidence exists. Tasks 33–34 preserve current Cheapest/Available semantics. Task 35 preserves the globally selected first route segment and rejects stale work. Task 36 owns the full regression/performance matrix. Task 37 reviews the phase as one architecture and queues substantive follow-up work rather than hiding it inside the review.
 
 Task 21 removes the Ackis runtime dependency after bundled acquisition coverage is in place. Task 23 must not activate full-catalog recommendations until Tasks 20–22 provide complete conservative recipe/acquisition inputs.
@@ -166,3 +191,6 @@ Phase 5 Tasks 15–18 are accepted and complete. Task 19 is now in progress as t
 Phase 6 Task 20 is complete: Profession Capper now ships a generated 3,552-record WotLK recipe catalog with static reagents/output/recipe-item data and live-book overlays. Task 21 is complete with generated trainer/vendor/reputation/limited-stock coverage plus explicit conservative manual fallbacks; Ackis is no longer a runtime dependency. Task 22 is complete: all static acquisition paths are evaluated against simulated profession skill and current character state, dynamic AH/owned-item paths are included, and the cheapest reliable source is selected while conditional alternatives are retained. Task 23 is complete: the optimizer now uses the full bundled catalog, future recipe unlocks and reachable profession-rank training while preserving the newer pass-local cost/price caches. Task 24 is implemented in code and awaiting its required in-game acquisition/learning transition checks. Task 29 fixes the reported full-catalog allocator/state explosion and is awaiting in-game Enchanting verification. Task 30 replaces most profession-open recomputation with generated route topology, candidate-scoped/lazy character state, a layered route solver, per-recipe material-cost reuse and completed-recommendation caching; automated validation passes, while the original in-game Enchanting open/close latency case remains the required manual acceptance. Task 31 fixes expanded Route details so they are bottom-anchored inside the main frame and adds bundled physical trainer/vendor NPC locations, including faction-aware zone/coordinate guidance in the main recommendation, Details, Compare and Full route tooltips. Automated validation is required; in-game layout/location verification remains manual acceptance. Task 25 remains queued for final full-recipe optimization coverage and acceptance.
 
 Phase 7 is now in progress. Task 32 instrumentation is implemented in code with an opt-in /pcapper perf command, phase/counter/cache measurements, refresh-reason tracking, memory deltas, and automated instrumentation tests. The real 3.3.5 client baseline is still the hard acceptance gate: Enchanting/Jewelcrafting cold-open, warm-open, event-refresh, route, pricing, memory, and event-amplification measurements still need to be recorded. Under explicit continuation, Task 33's code is now implemented but remains IN PROGRESS pending that evidence and its in-game checks. It separates profession-book scanning from volatile state: same-profession reopens and BAG_UPDATE reuse the session snapshot, learned recipes invalidate it, profession switches force a scan, and base-skill changes refresh live difficulty without rediscovering recipe identity. Task 34's code is also now implemented and remains IN PROGRESS pending the same real-client gate: runtime dependencies have explicit generations, provider prices and recommendations are bounded/revisioned caches, BAG_UPDATE invalidates inventory-dependent outputs without destroying prices/static recipes, and bundled recipes use reusable canonical optimizer structures. Task 35's code is now implemented and remains IN PROGRESS pending real-client acceptance. The exact layered solver is an explicit resumable state machine with a 3 ms default time budget, generation/provider cancellation, exact-result-only publication, pending Static fallback UI, and synchronous/incremental equivalence tests. Task 36 automated hardening is implemented and remains IN PROGRESS pending the real-client matrix. Task 37's holistic code review is implemented and also remains IN PROGRESS pending that evidence. Task 38 is now implemented in code and remains IN PROGRESS pending the original Enchanting allocator/performance acceptance: recipe learning is tracked exactly with a candidate-scoped fixed-width bitset, obsolete recipe bits expire when they can no longer affect future choices, live layered state insertion is hard-capped, and pass-local recipe-cost caching distinguishes acquired vs not-acquired candidates. Deterministic acquire → switch → return tests verify acquisition is charged once. Task 39 remains queued to consolidate the duplicated legacy heap and layered transition implementations now that both use the same acquisition semantics. No real-client latency or retained-heap claim is considered proven yet.
+
+
+Phase 9 is planned but blocked on Task 39. The approved product model is: Static remains the deterministic fallback/path; Cheapest keeps current cost-minimizing semantics; Smartest is a separate deterministic resale-aware objective; Available-now becomes an orthogonal feasibility filter that can constrain Cheapest or Smartest. Smartest must never use negative route edges: resale credit can reduce variable material + vellum cost to zero, while any estimated surplus is tracked separately. Listing prices are market estimates, not guaranteed sale proceeds. Tasks 40–46 must execute strictly through the Agent 1 implementation -> Agent 2 independent review -> Agent 3 fix-if-needed workflow before proceeding to the next task.
