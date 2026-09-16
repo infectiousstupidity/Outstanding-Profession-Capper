@@ -120,7 +120,8 @@ addonTable.calculateRecipeCost = function(recipe, skill, context, state)
     end
 
     local material = recipe.spellID == 13 and 10 or 100
-    local acquired = state.routeActiveRecipeID == 13
+    local acquired = (state.learnedRecipes and state.learnedRecipes[13] == true)
+        or state.routeActiveRecipeID == 13
         or (state.acquiredOneTime and state.acquiredOneTime["recipe:13"])
     local oneTime = {}
     local acquisition
@@ -184,6 +185,7 @@ addonTable.buildProfessionShoppingPlan = function(route)
     }
 end
 
+assert(loadfile("RuntimeState.lua"))("Profession_Capper", addonTable)
 assert(loadfile("ProfessionTraining.lua"))("Profession_Capper", addonTable)
 assert(loadfile("RouteSolver.lua"))("Profession_Capper", addonTable)
 assert(loadfile("DynamicRecommendations.lua"))("Profession_Capper", addonTable)
@@ -261,8 +263,33 @@ assert(acquireFirst.requiresAcquisition == true, "unknown recommendation exposes
 assert(acquireFirst.nextAction == "acquire_recipe", "unknown recipe must be acquired before crafting")
 assert(acquireFirst.acquisition.sourceType == "trainer", "chosen acquisition retained for UI")
 
+local learnedCache = {
+    [10] = cache[10],
+    [13] = {
+        name = "Future trainer learned",
+        skillType = "optimal",
+        reagents = {{
+            name = "Dust",
+            itemID = 1001,
+            count = 1,
+            owned = 4,
+        }},
+    },
+}
+addonTable.noteRuntimeEligibilityChanged()
+local learnedRecommendation = addonTable.computeDynamicProfessionRecommendation(
+    learnedCache,
+    thresholdContext,
+    { targetSkill = 205 }
+)
+assert(learnedRecommendation.available == true, "learned recipe route remains available")
+assert(learnedRecommendation.currentSegment.recipeID == 13, "learned transition keeps selected recipe")
+assert(learnedRecommendation.selectedRecipeLearned == true, "learned live recipe is recognized")
+assert(learnedRecommendation.requiresAcquisition == false, "learned recipe removes acquisition guidance")
+assert(learnedRecommendation.nextAction == "craft", "learned recipe transitions from acquire to craft")
+
 unknownAcquisitionCost = 1000
-addonTable.invalidateDynamicRecommendationCache()
+addonTable.noteRuntimeEligibilityChanged()
 local expensive = addonTable.computeDynamicProfessionRecommendation(
     cache,
     context,
@@ -272,7 +299,7 @@ assert(expensive.available == true, "known route remains valid")
 assert(expensive.currentSegment.recipeID == 10, "expensive acquisition keeps known recipe")
 assert(table.getn(expensive.route.segments) == 1, "no unnecessary acquisition")
 unknownAcquisitionCost = 50
-addonTable.invalidateDynamicRecommendationCache()
+addonTable.noteRuntimeEligibilityChanged()
 
 local bloodElf = addonTable.computeDynamicProfessionRecommendation(cache, {
     professionName = "Enchanting",

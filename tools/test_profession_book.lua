@@ -1,4 +1,5 @@
 local addonTable = {}
+assert(loadfile("RuntimeState.lua"))("Profession_Capper", addonTable)
 assert(loadfile("ProfessionBook.lua"))("Profession_Capper", addonTable)
 
 local function assertEqual(actual, expected, label)
@@ -37,6 +38,7 @@ local enchanting = {
     professionName = "Enchanting",
     baseSkill = 352,
     activeSkillModifier = 10,
+    characterKey = "character:A",
 }
 
 local first = apply("Enchanting", enchanting)
@@ -68,6 +70,7 @@ local modifierChanged = {
     professionName = "Enchanting",
     baseSkill = 352,
     activeSkillModifier = 15,
+    characterKey = "character:A",
 }
 assertEqual(
     addonTable.noteProfessionBookEvent("PLAYER_EQUIPMENT_CHANGED", "Enchanting"),
@@ -82,6 +85,7 @@ local skillChanged = {
     professionName = "Enchanting",
     baseSkill = 353,
     activeSkillModifier = 15,
+    characterKey = "character:A",
 }
 local skill = apply("Enchanting", skillChanged)
 assertEqual(skill.action, "refresh_live", "base skill change refreshes live fields only")
@@ -99,6 +103,7 @@ local jewelcrafting = {
     professionName = "Jewelcrafting",
     baseSkill = 112,
     activeSkillModifier = 0,
+    characterKey = "character:A",
 }
 local switched = apply("Jewelcrafting", jewelcrafting)
 assertEqual(switched.action, "scan", "switching profession scans")
@@ -118,6 +123,32 @@ for _, mode in ipairs({ "static", "cheapest", "available" }) do
     local modeSnapshot = addonTable.getProfessionBookSnapshot("Enchanting")
     assert(modeSnapshot == shared, mode .. " must consume the same live profession snapshot")
 end
+
+local secondCharacter = {
+    professionName = "Enchanting",
+    baseSkill = 353,
+    activeSkillModifier = 0,
+    characterKey = "character:B",
+}
+local ownerRevisionBefore = addonTable.getRuntimeRevision("professionBook")
+local characterSwitch = addonTable.prepareProfessionBook("Enchanting", secondCharacter)
+assertEqual(characterSwitch.action, "scan", "character switch forces a new profession scan")
+assertEqual(characterSwitch.reason, "character_switch", "character switch reason is explicit")
+assert(
+    addonTable.getRuntimeRevision("professionBook") > ownerRevisionBefore,
+    "character switch advances profession-book generation so stale jobs cannot publish"
+)
+assertEqual(
+    addonTable.getProfessionBookSnapshot("Enchanting"),
+    nil,
+    "old character profession snapshot cannot leak into new character"
+)
+addonTable.storeProfessionBookSnapshot("Enchanting", {
+    [999] = { name = "Character B recipe", skillType = "optimal" },
+}, secondCharacter)
+local ownerStats = addonTable.getProfessionBookLifecycleStats()
+assertEqual(ownerStats.ownerKey, "character:B", "active owner key tracks current character")
+assertEqual(ownerStats.snapshotCount, 1, "only current-character snapshots are retained")
 
 addonTable.resetProfessionBookLifecycle()
 assertEqual(addonTable.getProfessionBookSnapshot("Enchanting"), nil, "reset clears snapshots")

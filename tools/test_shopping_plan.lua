@@ -189,46 +189,6 @@ assertEqual(essenceMaterial.directTotalCost, 1200, "shopping list exposes direct
 assertEqual(essenceMaterial.savings, 300, "shopping list exposes conversion savings")
 assertEqual(essenceMaterial.converted, true, "shopping list marks conversion")
 
-local context = {
-    professionName = "Enchanting",
-    baseSkill = 200,
-    effectiveSkill = 210,
-    activeSkillModifier = 10,
-    currentCap = 300,
-}
-local state = {
-    inventory = { [1001] = 2 },
-    learnedRecipes = { [123] = true },
-    acquiredOneTime = { tool = true },
-    irrelevant = "ignored",
-}
-local key1 = addonTable.getRouteRefreshKey(context, state, {
-    priceRevision = 10,
-    recipeRevision = 20,
-    acquisitionRevision = 30,
-})
-state.irrelevant = "changed"
-local key2 = addonTable.getRouteRefreshKey(context, state, {
-    priceRevision = 10,
-    recipeRevision = 20,
-    acquisitionRevision = 30,
-})
-assertEqual(key1, key2, "irrelevant state does not refresh")
-state.inventory[1001] = 3
-local key3 = addonTable.getRouteRefreshKey(context, state, {
-    priceRevision = 10,
-    recipeRevision = 20,
-    acquisitionRevision = 30,
-})
-assertEqual(key1 == key3, false, "inventory change refreshes")
-context.activeSkillModifier = 0
-local key4 = addonTable.getRouteRefreshKey(context, state, {
-    priceRevision = 10,
-    recipeRevision = 20,
-    acquisitionRevision = 30,
-})
-assertEqual(key3 == key4, false, "modifier change refreshes")
-
 local acquisitionRoute = {
     complete = true,
     actions = {

@@ -49,9 +49,7 @@ local DETAILS_PANEL_GAP = 10
 
 local tradeSkillStateMutation = false
 local suppressTradeSkillUpdatesUntil = 0
-local pendingProfessionRefresh = false
-local pendingProfessionRefreshReason
-local professionRefreshDeadline = 0
+local professionRefreshCoordinator = addonTable.createRefreshCoordinator()
 local professionRefreshDriver
 local recommendationTooltipTarget
 local acquisitionWhereSummary
@@ -3293,7 +3291,7 @@ local function ensureDynamicRecommendationDriver()
                 and MainFrameCore:IsShown()
                 and isOptimizedMode(getRecommendationMode())
             then
-                if pendingProfessionRefresh then
+                if professionRefreshCoordinator:isPending() then
                     applyCurrentRecommendationSelection()
                 else
                     GetCraftingToDo("ROUTE_JOB_STALE")
@@ -3717,9 +3715,7 @@ local function refreshProfessionState(forceRefresh, reason, requestRecorded)
 end
 
 local function cancelScheduledProfessionRefresh()
-    pendingProfessionRefresh = false
-    pendingProfessionRefreshReason = nil
-    professionRefreshDeadline = 0
+    professionRefreshCoordinator:cancel()
     if professionRefreshDriver then
         professionRefreshDriver:Hide()
     end
@@ -3740,40 +3736,34 @@ local function scheduleProfessionRefresh(delay, reason)
         professionRefreshDriver = CreateFrame("Frame")
         professionRefreshDriver:Hide()
         professionRefreshDriver:SetScript("OnUpdate", function(self)
-            if not pendingProfessionRefresh then
+            if not professionRefreshCoordinator:isPending() then
                 self:Hide()
                 return
             end
 
             local now = GetTime()
             if tradeSkillStateMutation or now < suppressTradeSkillUpdatesUntil then
-                professionRefreshDeadline = math.max(
-                    professionRefreshDeadline,
+                professionRefreshCoordinator:deferUntil(
                     suppressTradeSkillUpdatesUntil + 0.02
                 )
                 return
             end
 
-            if now < professionRefreshDeadline then
+            local refreshReason = professionRefreshCoordinator:takeIfDue(now)
+            if not refreshReason then
                 return
             end
 
-            local refreshReason = pendingProfessionRefreshReason or "SCHEDULED"
-            pendingProfessionRefresh = false
-            pendingProfessionRefreshReason = nil
-            professionRefreshDeadline = 0
             self:Hide()
             refreshProfessionState(true, refreshReason, true)
         end)
     end
 
-    if not pendingProfessionRefresh then
-        pendingProfessionRefreshReason = reason
-    elseif pendingProfessionRefreshReason ~= reason then
-        pendingProfessionRefreshReason = "MULTIPLE_EVENTS"
-    end
-    pendingProfessionRefresh = true
-    professionRefreshDeadline = GetTime() + math.max(0, tonumber(delay) or PROFESSION_REFRESH_DEBOUNCE)
+    professionRefreshCoordinator:schedule(
+        GetTime(),
+        math.max(0, tonumber(delay) or PROFESSION_REFRESH_DEBOUNCE),
+        reason
+    )
     professionRefreshDriver:Show()
 end
 
@@ -3900,8 +3890,9 @@ function fnOnEvent()
     end
 
     if event == "TRADE_SKILL_UPDATE" then
-        local refreshReason = pendingProfessionRefreshReason or "TRADE_SKILL_UPDATE"
-        local requestRecorded = pendingProfessionRefreshReason ~= nil
+        local pendingReason = professionRefreshCoordinator:getReason()
+        local refreshReason = pendingReason or "TRADE_SKILL_UPDATE"
+        local requestRecorded = pendingReason ~= nil
         if requestRecorded and type(addonTable.performanceRecordRefreshRequest) == "function" then
             addonTable.performanceRecordRefreshRequest("TRADE_SKILL_UPDATE")
         end

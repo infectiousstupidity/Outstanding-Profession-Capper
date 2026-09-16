@@ -22,6 +22,8 @@ jobs:
         run: lua5.1 tools/test_performance.lua
       - name: Test profession book lifecycle
         run: lua5.1 tools/test_profession_book.lua
+      - name: Test refresh event coalescing
+        run: lua5.1 tools/test_refresh_coordinator.lua
       - name: Test revisioned runtime caches
         run: lua5.1 tools/test_runtime_caches.lua
       - name: Test recipe difficulty metadata
@@ -62,6 +64,8 @@ jobs:
         run: lua5.1 tools/test_enchant_confirmation.lua
       - name: Test Enchanting rod ownership
         run: lua5.1 tools/test_enchanting_rods.lua
+      - name: Validate Phase 7 performance guards
+        run: python3 tools/validate_phase7_guards.py
       - name: Validate addon structure
         run: python3 tools/validate_addon.py
       - name: Validate profession guides

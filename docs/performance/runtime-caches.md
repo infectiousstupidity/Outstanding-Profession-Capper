@@ -10,7 +10,6 @@ Task 34 makes runtime reuse dependency-aware instead of clearing all dynamic sta
 - `inventory` — incremented by `BAG_UPDATE`;
 - `eligibility` — learned-spell, player-level, or reputation eligibility changed;
 - `mode` — recommendation mode changed;
-- `manual` — explicit exceptional invalidation;
 - `professionBook` — mirrored whenever Task 33 stores a new profession-book snapshot.
 
 The Task 33 profession-book snapshot also exposes its own per-snapshot generation. Recommendation keys use that profession-specific generation when available.
@@ -45,7 +44,7 @@ Cardinality is bounded by the bundled catalog itself (currently 3,552 records); 
 
 Owner: `DynamicRecommendations.lua`.
 
-The key explicitly includes profession-book, skill, inventory, eligibility, mode/manual generations, provider identity/revision, availability mode, optimization objective, target skill, and acquisition-data revision.
+The key explicitly includes profession-book, skill, inventory, eligibility, mode generation, provider identity/revision, availability mode, optimization objective, target skill, and acquisition-data revision.
 
 The cache retains at most 8 recommendation results and each result has a 15-second reuse TTL. The TTL also prevents time-sensitive availability/freshness presentation from remaining indefinitely unchanged even when a provider revision is stable.
 

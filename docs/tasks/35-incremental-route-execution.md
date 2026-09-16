@@ -156,7 +156,7 @@ The layered exact-route solver now runs through one explicit state machine used 
 
 Production slices use `debugprofilestop()` when available, with a conservative internal default budget of 3 ms. `GetTime()` and `os.clock()` remain fallbacks. Tests can inject a deterministic fake clock.
 
-Each route job captures the Task 34 recommendation cache key as its generation token and receives a live dependency check covering profession-book, skill/modifier, inventory, eligibility, mode/manual generations, provider identity, and provider revision. A stale job is cancelled before another slice and cannot finalize/publish.
+Each route job captures the Task 34 recommendation cache key as its generation token and receives a live dependency check covering profession-book, skill/modifier, inventory, eligibility, and mode generations, plus provider identity and provider revision. A stale job is cancelled before another slice and cannot finalize/publish.
 
 The dynamic recommendation path now has an incremental mode used by `Core.lua`. A valid exact cached result is still returned immediately. On a cold miss, the frame shows an explicit “Calculating exact route · Static fallback” state; the local current-step ranking is retained only as internal work and is not published as authoritative Cheapest/Available. Compare/Route are hidden while pending. The exact result is applied atomically after the job completes and the dependency check still passes.
 

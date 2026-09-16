@@ -74,15 +74,6 @@ local function learnedRecipeSignature(recipeCache)
     return table.concat(parts, ",")
 end
 
-local function clearRecommendationCache()
-    recommendationCache = {}
-    recommendationCacheOrder = {}
-    recommendationCacheHead = 1
-    recommendationCacheTail = 0
-    recommendationCacheEntries = 0
-    recommendationCacheToken = 0
-end
-
 local function removeRecommendationCacheKey(key)
     if recommendationCache[key] ~= nil then
         recommendationCache[key] = nil
@@ -134,13 +125,6 @@ local function storeRecommendationCache(key, entry)
         > RECOMMENDATION_CACHE_MAX_ENTRIES * 4
     then
         rebuildRecommendationCacheOrder()
-    end
-end
-
-function addonTable.invalidateDynamicRecommendationCache()
-    clearRecommendationCache()
-    if type(addonTable.bumpRuntimeRevision) == "function" then
-        addonTable.bumpRuntimeRevision("manual")
     end
 end
 
@@ -1213,7 +1197,6 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     local inventoryRevision = revisions.inventory or "legacy"
     local eligibilityRevision = revisions.eligibility or "legacy"
     local modeRevision = revisions.mode or "legacy"
-    local manualRevision = revisions.manual or "legacy"
     local acquisitionRevision = options.acquisitionRevision
         or addonTable.recipeAcquisitionDataRevision
         or "static"
@@ -1227,7 +1210,6 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         tostring(inventoryRevision),
         tostring(eligibilityRevision),
         tostring(modeRevision),
-        tostring(manualRevision),
         result.requireAvailableNow and "available" or "cheapest",
         tostring(options.optimizeFor or "current"),
         tostring(options.targetSkill or ""),
@@ -1256,7 +1238,6 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
                 "inventory",
                 "eligibility",
                 "mode",
-                "manual",
             }) do
                 if current[key] ~= capturedRevisions[key] then
                     return false

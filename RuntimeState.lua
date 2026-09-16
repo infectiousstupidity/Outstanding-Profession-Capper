@@ -8,7 +8,6 @@ local revisions = {
     inventory = 0,
     eligibility = 0,
     mode = 0,
-    manual = 0,
 }
 
 local skillSignature
@@ -136,7 +135,6 @@ function addonTable.resetRuntimeStateForTests()
         inventory = 0,
         eligibility = 0,
         mode = 0,
-        manual = 0,
     }
     skillSignature = nil
     inventoryCache = {}

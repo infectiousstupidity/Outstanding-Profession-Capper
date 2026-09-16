@@ -64,7 +64,7 @@ Route solver dominant on cold open: **undetermined until the real-client matrix 
 
 Event amplification present: **undetermined until BAG_UPDATE and skill-update cases are captured**.
 
-Task 33 must not begin from a performance assumption. Fill this report with the real-client measurements first, then use the dominant measured phase and event-amplification evidence to drive the next task.
+The real-client baseline remains unfilled. Tasks 33–36 were implemented under explicit continuation, but none of their manual performance acceptance criteria are considered satisfied until these measurements are captured.
 
 
 ## Task 35 incremental-route before/after gate
@@ -81,3 +81,10 @@ The instrumentation now exposes the values needed for the Task 35 comparison, bu
 Use `/pcapper perf reset`, perform one scenario, then `/pcapper perf`. The normal refresh `total=` value is the time before the frame can return to normal UI processing; the `route-job` line reports `largest`, `work`, `ready`, `slices`, `states`, and memory.
 
 Manual cancellation cases still required: close/reopen while calculating, move a reagent, switch Cheapest/Available/Static, update the provider revision, and cause a skill-up if practical. A cancelled/stale job must never replace the newer recommendation.
+
+
+## Task 36 final regression matrix
+
+The consolidated automated gates, retained-cache reporting, repeated-open memory table, cancellation matrix, UI/fallback checks, and final before/after acceptance record are in [phase7-regression-report.md](phase7-regression-report.md).
+
+No absolute latency threshold has been invented while the real-client baseline is still pending.
