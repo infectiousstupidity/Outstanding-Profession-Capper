@@ -146,4 +146,53 @@ assertEqual(explicitUnavailable.available, false, "explicit unavailable")
 assertEqual(explicitUnavailable.unavailableReason, "not_scanned", "explicit unavailable reason")
 assertEqual(explicitUnavailable.freshness, "unavailable", "explicit unavailable freshness")
 
+local sameRevision = "stable"
+local firstReplacementCalls = 0
+local firstReplacementProvider = {
+    getRevision = function()
+        return sameRevision
+    end,
+    getItemPrice = function(self, item)
+        firstReplacementCalls = firstReplacementCalls + 1
+        return {
+            item = item,
+            minBuyout = 111,
+            source = "replaceable",
+        }
+    end,
+}
+assert(addonTable.registerPriceProvider("replaceable", firstReplacementProvider, 50))
+assert(addonTable.selectPriceProvider("replaceable"))
+local firstIdentity = addonTable.getActivePriceProviderIdentity()
+local capturedLookup = addonTable.createRevisionedPriceLookup("replaceable", sameRevision)
+assertEqual(addonTable.lookupItemPrice(777).minBuyout, 111, "first provider instance price")
+assertEqual(firstReplacementCalls, 1, "first provider queried once")
+
+local secondReplacementCalls = 0
+local secondReplacementProvider = {
+    getRevision = function()
+        return sameRevision
+    end,
+    getItemPrice = function(self, item)
+        secondReplacementCalls = secondReplacementCalls + 1
+        return {
+            item = item,
+            minBuyout = 222,
+            source = "replaceable",
+        }
+    end,
+}
+assert(addonTable.registerPriceProvider("replaceable", secondReplacementProvider, 50))
+assert(addonTable.selectPriceProvider("replaceable"))
+local secondIdentity = addonTable.getActivePriceProviderIdentity()
+assert(firstIdentity ~= secondIdentity, "re-registering a provider changes its instance identity")
+
+local replacementPrice = addonTable.lookupItemPrice(777)
+assertEqual(replacementPrice.minBuyout, 222, "same-name same-revision replacement cannot reuse stale raw price")
+assertEqual(secondReplacementCalls, 1, "replacement provider is queried for its own cache namespace")
+
+local capturedAfterReplacement = capturedLookup(777)
+assertEqual(capturedAfterReplacement.available, false, "old captured lookup rejects replacement provider")
+assertEqual(capturedAfterReplacement.unavailableReason, "provider_changed", "provider instance change reason")
+
 print("Price provider abstraction tests passed.")

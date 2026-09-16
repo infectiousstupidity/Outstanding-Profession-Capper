@@ -113,6 +113,27 @@ def main() -> int:
         "incremental route solver must retain stale-generation cancellation",
         errors,
     )
+    require(
+        "getActivePriceProviderState" in dynamic
+        and "providerIdentity" in dynamic,
+        "recommendation dependencies must include provider instance identity",
+        errors,
+    )
+
+    price_provider = read("PriceProvider.lua")
+    route_data = read("RouteData.lua")
+    require(
+        "providerInstanceCounter" in price_provider
+        and "getActivePriceProviderIdentity" in price_provider,
+        "provider cache namespace must change when a provider object is replaced",
+        errors,
+    )
+    require(
+        "CANDIDATE_INDEX_CACHE_MAX_ENTRIES" in route_data
+        and "getGeneratedRouteCandidateCacheStats" in route_data,
+        "generated route candidate indexes must remain explicitly bounded",
+        errors,
+    )
 
     if errors:
         print("Phase 7 structural guard validation failed:")

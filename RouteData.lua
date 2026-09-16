@@ -1,6 +1,48 @@
 local addonName, addonTable = ...
 
 local candidateIndexCache = {}
+local candidateIndexOrder = {}
+local candidateIndexHead = 1
+local candidateIndexTail = 0
+local candidateIndexEntries = 0
+local CANDIDATE_INDEX_CACHE_MAX_ENTRIES = 16
+
+local function rebuildCandidateIndexOrder()
+    local compacted = {}
+    local count = 0
+    for key in pairs(candidateIndexCache) do
+        count = count + 1
+        compacted[count] = key
+    end
+    candidateIndexOrder = compacted
+    candidateIndexHead = 1
+    candidateIndexTail = count
+end
+
+local function storeCandidateIndex(key, index)
+    if candidateIndexCache[key] == nil then
+        candidateIndexEntries = candidateIndexEntries + 1
+    end
+    candidateIndexCache[key] = index
+    candidateIndexTail = candidateIndexTail + 1
+    candidateIndexOrder[candidateIndexTail] = key
+
+    while candidateIndexEntries > CANDIDATE_INDEX_CACHE_MAX_ENTRIES do
+        local oldestKey = candidateIndexOrder[candidateIndexHead]
+        candidateIndexOrder[candidateIndexHead] = nil
+        candidateIndexHead = candidateIndexHead + 1
+        if oldestKey and candidateIndexCache[oldestKey] ~= nil then
+            candidateIndexCache[oldestKey] = nil
+            candidateIndexEntries = candidateIndexEntries - 1
+        end
+    end
+
+    if candidateIndexTail - candidateIndexHead + 1
+        > CANDIDATE_INDEX_CACHE_MAX_ENTRIES * 4
+    then
+        rebuildCandidateIndexOrder()
+    end
+end
 
 local function normalizedModifier(value)
     value = math.floor(tonumber(value) or 0)
@@ -83,7 +125,7 @@ local function buildCandidateIndex(profession, modifier)
         index = constructIndex()
     end
 
-    candidateIndexCache[cacheKey] = index
+    storeCandidateIndex(cacheKey, index)
     return index
 end
 
@@ -112,6 +154,19 @@ function addonTable.getGeneratedRouteCandidateSet(profession, startSkill, target
     return result
 end
 
+function addonTable.getGeneratedRouteCandidateCacheStats()
+    return {
+        entries = candidateIndexEntries,
+        maxEntries = CANDIDATE_INDEX_CACHE_MAX_ENTRIES,
+        queueEntries = math.max(0, candidateIndexTail - candidateIndexHead + 1),
+        maxQueueEntries = CANDIDATE_INDEX_CACHE_MAX_ENTRIES * 4,
+    }
+end
+
 function addonTable.clearGeneratedRouteCandidateCache()
     candidateIndexCache = {}
+    candidateIndexOrder = {}
+    candidateIndexHead = 1
+    candidateIndexTail = 0
+    candidateIndexEntries = 0
 end
