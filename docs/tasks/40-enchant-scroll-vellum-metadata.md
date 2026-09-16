@@ -1,6 +1,6 @@
 # Task 40 — Deterministic enchant scroll and vellum metadata
 
-Status: FIX  
+Status: DONE  
 Phase: 9 — Resale-aware Smartest optimization  
 Depends on: Task 39
 
@@ -187,4 +187,9 @@ Implemented the recorded tier-classification finding only.
 - Added regression coverage for a Classic enchant requiring tier II, a TBC enchant requiring tier III, a Wrath enchant requiring tier II, and Enchant Gloves - Angler requiring tier I.
 - The generator treats `minimumVellumItemID` as optional for records that are intentionally excluded from vellum eligibility; eligible records still require and validate the exact mapping.
 
-Validation pending the pushed fix commit's full `Validate addon` workflow. Task remains FIX until that workflow succeeds.
+Validation:
+- Fix commit `ebe897a1d41e2e844849267df5a1d4cd5d74324a` exposed one generator validation bug: excluded records do not carry `minimumVellumItemID`, so direct indexing raised a `KeyError` during generated-file verification.
+- Follow-up fix commit `b5a1282493819790d36969291aa0d138e59d3f92` changed that validation read to optional access while still requiring exact mappings for all eligible records.
+- GitHub Actions `Validate addon` run 106 completed successfully for `b5a1282493819790d36969291aa0d138e59d3f92`, including generated metadata verification, Lua 5.1 metadata tests, and the full repository validation suite.
+
+Task 40 is DONE. Task 41 may begin.
