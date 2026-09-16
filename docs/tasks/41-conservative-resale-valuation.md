@@ -1,6 +1,6 @@
 # Task 41 — Conservative resale valuation
 
-Status: IN PROGRESS  
+Status: REVIEW  
 Phase: 9 — Resale-aware Smartest optimization  
 Depends on: Task 40
 
@@ -144,7 +144,13 @@ API:
 
 Coverage added in `tools/test_resale_value.lua` for the required current, stale, too-old, suspicious, historical-only, missing, revision-change, repeated-cache, invalid-number, and explanation cases.
 
-Task remains IN PROGRESS until the pushed implementation passes the full `Validate addon` workflow.
+Validation evidence:
+- Implementation commit: `abbdd28b46a35e086484dc69eed15e35f160203d` (`feat: add conservative resale valuation`).
+- GitHub Actions `Validate addon` run 108 completed successfully.
+- The new `tools/test_resale_value.lua` suite passed, including fresh market/min-buyout capping, fresh min-buyout-only, fresh market-only, stale, too-old, suspicious low/high ratios, historical-only, recent-only context, missing data, unknown freshness, invalid numeric values, repeated cached lookups, and provider revision changes.
+- Existing price-provider, TSM AuctionDB, recipe-cost, route, shopping-plan, dynamic recommendation, performance guard, structure, and guide validation all remained green.
+
+Task 41 is now at REVIEW for the required independent Agent 2 pass. Task 42 must not begin yet.
 
 ### Agent 2 review
 
