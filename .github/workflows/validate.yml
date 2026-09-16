@@ -44,6 +44,8 @@ jobs:
         run: lua5.1 tools/test_recipe_source_locations.lua
       - name: Test price provider abstraction
         run: lua5.1 tools/test_price_provider.lua
+      - name: Test conservative resale valuation
+        run: lua5.1 tools/test_resale_value.lua
       - name: Test TSM AuctionDB provider
         run: lua5.1 tools/test_tsm_price_provider.lua
       - name: Test recipe cost engine

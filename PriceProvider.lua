@@ -686,3 +686,143 @@ function addonTable.chooseUsableUnitPrice(result, purpose)
 
     return nil, "unknown_price_purpose"
 end
+
+local function safeResaleNumber(value)
+    local number = tonumber(value)
+    if not number
+        or number <= 0
+        or number ~= number
+        or number == math.huge
+        or number == -math.huge
+    then
+        return nil
+    end
+    return number
+end
+
+local function newResaleValueResult(result)
+    result = type(result) == "table" and result or nil
+    return {
+        item = result and result.item or nil,
+        itemID = result and result.itemID or nil,
+        itemLink = result and result.itemLink or nil,
+        source = result and result.source or nil,
+        providerVersion = result and result.providerVersion or nil,
+        providerBackend = result and result.providerBackend or nil,
+        estimatedResaleValue = nil,
+        optimizationCredit = 0,
+        creditGranted = false,
+        confidence = "none",
+        reason = nil,
+        sourcePriceType = nil,
+        freshness = result and result.freshness or "unavailable",
+        updatedAt = result and result.updatedAt or nil,
+        ageSeconds = result and result.ageSeconds or nil,
+        isFresh = result and result.isFresh and true or false,
+        isStale = result and result.isStale and true or false,
+        isTooOld = result and result.isTooOld and true or false,
+        isSuspicious = result and result.isSuspicious and true or false,
+        suspiciousReason = result and result.suspiciousReason or nil,
+        marketRatio = result and result.marketRatio or nil,
+        numAuctions = result and result.numAuctions or nil,
+        marketValue = result and safeResaleNumber(result.marketValue) or nil,
+        minBuyout = result and safeResaleNumber(result.minBuyout) or nil,
+        recentValue = result and safeResaleNumber(result.recentValue) or nil,
+        historicalValue = result and safeResaleNumber(result.historicalValue) or nil,
+        beforeAuctionHouseFees = true,
+        auctionHouseFeeApplied = false,
+        feeReason = "auction_house_fee_unverified",
+    }
+end
+
+-- Conservative resale policy for optimization:
+-- * DBMarket and DBMinBuyout are the only current listing evidence that can grant credit.
+-- * When both exist, the gross estimate/credit is min(DBMarket, DBMinBuyout).
+-- * A single fresh current source may be used on its own.
+-- * DBRecent and DBHistorical are context-only fallbacks and never grant credit.
+-- * Suspicious, stale, too-old, or unknown-freshness evidence grants zero credit.
+-- * Auction count is passed through for explanation only; it never changes confidence or credit.
+-- * Values are gross estimates before AH fees. No sale probability or sell-through is inferred.
+-- confidence below describes the shape of price evidence, not the chance that an item will sell.
+function addonTable.evaluateResaleValue(result)
+    local resale = newResaleValueResult(result)
+    if type(result) ~= "table" or not result.available then
+        resale.reason = type(result) == "table"
+            and (result.unavailableReason or "price_unavailable")
+            or "price_unavailable"
+        return resale
+    end
+
+    local marketValue = resale.marketValue
+    local minBuyout = resale.minBuyout
+    local recentValue = resale.recentValue
+    local historicalValue = resale.historicalValue
+    local hasCurrentEvidence = marketValue ~= nil or minBuyout ~= nil
+
+    if marketValue and minBuyout then
+        resale.estimatedResaleValue = math.min(marketValue, minBuyout)
+        resale.sourcePriceType = "market_capped_by_min_buyout"
+        resale.confidence = "two_current_sources"
+    elseif marketValue then
+        resale.estimatedResaleValue = marketValue
+        resale.sourcePriceType = "market"
+        resale.confidence = "single_current_source"
+    elseif minBuyout then
+        resale.estimatedResaleValue = minBuyout
+        resale.sourcePriceType = "min_buyout"
+        resale.confidence = "single_current_source"
+    elseif recentValue then
+        resale.estimatedResaleValue = recentValue
+        resale.sourcePriceType = "recent"
+        resale.confidence = "context_only"
+    elseif historicalValue then
+        resale.estimatedResaleValue = historicalValue
+        resale.sourcePriceType = "historical"
+        resale.confidence = "context_only"
+    else
+        resale.reason = "no_resale_price_evidence"
+        return resale
+    end
+
+    if resale.isSuspicious then
+        resale.reason = "suspicious_price"
+        return resale
+    end
+
+    if resale.isTooOld then
+        resale.reason = "price_too_old"
+        return resale
+    end
+
+    if not resale.isFresh then
+        resale.reason = resale.isStale and "stale_price" or "freshness_unknown"
+        return resale
+    end
+
+    if not hasCurrentEvidence then
+        resale.reason = recentValue
+            and "recent_only_context"
+            or "historical_only_context"
+        return resale
+    end
+
+    resale.optimizationCredit = safeResaleNumber(resale.estimatedResaleValue) or 0
+    resale.creditGranted = resale.optimizationCredit > 0
+
+    if marketValue and minBuyout then
+        resale.reason = "fresh_market_capped_by_min_buyout"
+    elseif marketValue then
+        resale.reason = "fresh_market_value"
+    else
+        resale.reason = "fresh_min_buyout"
+    end
+
+    return resale
+end
+
+function addonTable.lookupItemResaleValue(item, nowOverride)
+    return addonTable.evaluateResaleValue(
+        addonTable.lookupItemPrice(item, nowOverride)
+    )
+end
+

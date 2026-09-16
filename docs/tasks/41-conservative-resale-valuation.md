@@ -1,6 +1,6 @@
 # Task 41 — Conservative resale valuation
 
-Status: BLOCKED  
+Status: IN PROGRESS  
 Phase: 9 — Resale-aware Smartest optimization  
 Depends on: Task 40
 
@@ -125,7 +125,26 @@ Substantial new demand/sales modeling belongs in a new task.
 
 ### Agent 1 implementation
 
-Pending.
+Implementation committed; full CI validation pending before handoff to Agent 2.
+
+Policy implemented in `PriceProvider.lua`:
+
+- `DBMarket` and `DBMinBuyout` are the only sources eligible for optimization credit in this initial policy.
+- When both fresh current values exist, `estimatedResaleValue = optimizationCredit = min(DBMarket, DBMinBuyout)`.
+- When only one of those fresh current values exists, that value is used.
+- Suspicious, stale, too-old, or unknown-freshness evidence receives zero optimization credit.
+- `DBRecent` and `DBHistorical` may supply a context-only estimated value but always receive zero optimization credit.
+- Auction count is passed through only as context and never changes confidence or credit.
+- Values are explicitly gross estimates before Auction House fees; no fee is deducted because the exact realm configuration has not been verified.
+- No sale probability, sale rate, days-to-sell, regional demand, or guaranteed proceeds are modeled.
+
+API:
+- `evaluateResaleValue(normalizedPriceResult)` is a pure evaluation helper.
+- `lookupItemResaleValue(item, nowOverride)` delegates to the existing revisioned/bounded `lookupItemPrice` cache, then evaluates the normalized result. No resale cache was added.
+
+Coverage added in `tools/test_resale_value.lua` for the required current, stale, too-old, suspicious, historical-only, missing, revision-change, repeated-cache, invalid-number, and explanation cases.
+
+Task remains IN PROGRESS until the pushed implementation passes the full `Validate addon` workflow.
 
 ### Agent 2 review
 
