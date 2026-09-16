@@ -1,6 +1,6 @@
 # Task 41 — Conservative resale valuation
 
-Status: REVIEW  
+Status: FIX  
 Phase: 9 — Resale-aware Smartest optimization  
 Depends on: Task 40
 
@@ -154,7 +154,32 @@ Task 41 is now at REVIEW for the required independent Agent 2 pass. Task 42 must
 
 ### Agent 2 review
 
-Pending.
+Reviewed independently against the Task 41 acceptance criteria, the implementation commit `abbdd28b46a35e086484dc69eed15e35f160203d`, successful validation run 108, the current price-provider/cache code, and the pinned hugetiny TSM 3.3.5 backport schema.
+
+Findings:
+
+1. **UI-facing confidence metadata can contradict freshness state.**
+   - `evaluateResaleValue()` assigns `single_current_source` / `two_current_sources` before it rejects suspicious, stale, too-old, or unknown-freshness evidence.
+   - A stale or too-old result therefore keeps a confidence value that literally says the evidence is "current" while `optimizationCredit = 0` and `reason` says `stale_price` / `price_too_old`.
+   - This does not incorrectly reduce route cost, but it violates the acceptance requirement that UI-facing metadata accurately explain why credit was or was not granted.
+   - Agent 3 should either make the confidence vocabulary freshness-neutral (for example, evidence-shape wording) or assign confidence after the eligibility gates, and add regression assertions for stale, too-old, suspicious, and unknown-freshness metadata.
+
+2. **The TSM revision test fixture does not match the actual pinned backport schema.**
+   - `tools/test_tsm_price_provider.lua` injects a top-level `lastScan = 99000` and expects `getActivePriceProviderRevision() == "99000"`.
+   - In hugetiny/TradeSkillMaster-3.3.5-backport at master commit `45d7c70818dd12fc8fc866fbd77cc5359d671863`, AuctionDB schema v4 stores `ts` on each item record; `TSM_AuctionDB_RecordScan()` writes `existing.ts = now`; and `TSM_AuctionDB_GetRealmData()` returns `TSM_AuctionDB.realms[key]` directly. It does not add a realm-level `lastScan` field.
+   - Therefore the real `TSMPriceProvider:getRevision()` path currently returns nil for this backend and price caching uses the existing 15-second unknown-revision TTL. The generic revisioned-provider test in `tools/test_resale_value.lua` proves that resale lookup rekeys when a provider really exposes a revision, but the TSM-specific fixture overstates what the real integration provides.
+   - Agent 3 should make the TSM fixture/evidence match the real schema. If a real cheap TSM revision signal is available, use and test it; otherwise explicitly test/document the TTL fallback rather than fabricating a realm-level field. Do not add an O(all-auctions) scan on each lookup just to synthesize a revision.
+
+What passed:
+- The conservative credit formula itself is deterministic: fresh non-suspicious `DBMarket` and `DBMinBuyout` are eligible, both are capped with `min()`, and `DBRecent` / `DBHistorical` remain context-only.
+- Missing, suspicious, stale, too-old, and unknown-freshness inputs correctly receive zero optimization credit.
+- Auction count does not affect credit or sell-through assumptions.
+- Invalid/NaN/infinite/negative resale values do not produce negative or NaN credit.
+- Resale lookup reuses the existing bounded price cache; no second resale cache was introduced.
+- No route-selection code consumes the new resale API yet.
+- GitHub Actions `Validate addon` run 108 completed successfully, including the new resale suite.
+
+Review outcome: **FIX**. Task 42 remains blocked until Agent 3 resolves the findings and the full validation workflow passes.
 
 ### Agent 3 fixes
 
