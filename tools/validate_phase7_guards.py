@@ -134,6 +134,19 @@ def main() -> int:
         "generated route candidate indexes must remain explicitly bounded",
         errors,
     )
+    require(
+        "buildRecipeAcquisitionCodec" in route_solver
+        and "recipeMask" in route_solver
+        and "normalizeRecipeMask" in route_solver,
+        "route solver must retain compact exact recipe-acquisition history",
+        errors,
+    )
+    require(
+        "peakLayerStates" in route_solver
+        and 'reason = "state_limit_exceeded"' in route_solver,
+        "route solver must hard-bound live exact acquisition states",
+        errors,
+    )
 
     if errors:
         print("Phase 7 structural guard validation failed:")

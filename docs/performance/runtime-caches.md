@@ -67,11 +67,12 @@ Equipment/aura refreshes rely on the skill-context comparison. They advance the 
 `PLAYER_LEVEL_UP` and `UPDATE_FACTION` advance eligibility and schedule a normal recommendation refresh.
 
 
-## Known route-state approximation
+## Exact route acquisition state
 
-Task 29 intentionally stopped carrying every learned recipe acquisition in the route-state set because the full learned-recipe set caused combinatorial state growth. As a result, recipe acquisition is currently modeled as a segment activation:
+Task 38 restores true one-time recipe acquisition without returning recipe IDs to the general acquisition map.
 
-- continuing the same unlearned recipe does not repay acquisition;
-- switching away and later returning can conservatively pay acquisition again.
+Each route job builds a fixed-width candidate-scoped recipe bitset. Route state keys include that binary bitset, while reusable tools/training remain in the existing small map. Bits are discarded once their recipe cannot appear at the current or any future skill.
 
-This is a semantic approximation, not a cache-invalidation rule. Task 38 is queued to restore true one-time recipe acquisition semantics without reintroducing the state explosion.
+The layered solver also enforces its state ceiling before a ready/next layer can exceed the configured maximum. Exact routing therefore either completes with correct one-time acquisition semantics or fails safely with `state_limit_exceeded`; it does not silently fall back to segment-scoped acquisition.
+
+The pass-local recipe-cost cache includes the candidate recipe's acquired/not-acquired state but does not serialize the whole bitset.

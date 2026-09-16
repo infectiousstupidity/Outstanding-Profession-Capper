@@ -857,11 +857,16 @@ local function createCachedRecipeCost(baseCostRecipe)
         local continuingRecipe = state
             and state.routeActiveRecipeID ~= nil
             and tostring(state.routeActiveRecipeID) == tostring(recipeID)
+        local recipeKey = "recipe:" .. tostring(recipeID)
+        local recipeAcquired = state
+            and type(state.acquiredOneTime) == "table"
+            and state.acquiredOneTime[recipeKey] == true
         local key = table.concat({
             tostring(recipeID),
             tostring(tonumber(skill) or 0),
             acquiredSignature(state),
             continuingRecipe and "continue" or "new",
+            recipeAcquired and "acquired" or "not-acquired",
         }, "|")
 
         local cachedCost = cache[key]

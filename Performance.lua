@@ -511,6 +511,9 @@ function addonTable.getPerformanceSummaryLines()
             .. " work=" .. formatMilliseconds(lastRouteJob.totalWorkMs)
             .. " ready=" .. formatMilliseconds(lastRouteJob.elapsedMs)
             .. " states=" .. tostring(lastRouteJob.exploredStates or 0)
+            .. " peak-layer=" .. tostring(lastRouteJob.peakLayerStates or 0)
+            .. " acquired-recipes=" .. tostring(lastRouteJob.recipeAcquisitionBits or 0)
+                .. "/" .. tostring(lastRouteJob.recipeAcquisitionBytes or 0) .. "B"
             .. " memory=" .. formatMemoryDelta(lastRouteJob.memoryDeltaKb))
     end
 
