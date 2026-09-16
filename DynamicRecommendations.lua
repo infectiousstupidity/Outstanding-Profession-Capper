@@ -1415,7 +1415,6 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         trainingSteps = state.trainingSteps,
         candidateRecipesBySkill = candidateRecipesBySkill,
         pruneDominatedRecipeSwitches = true,
-        layeredDynamicProgramming = true,
         generationToken = cacheKey,
         isJobCurrent = function(token)
             return token == cacheKey and dependenciesStillCurrent()
