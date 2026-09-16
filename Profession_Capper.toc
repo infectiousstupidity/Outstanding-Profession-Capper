@@ -19,6 +19,7 @@ ProfessionBook.lua
 RouteData.lua
 RecipeCatalog.lua
 RecipeCatalogData.lua
+EnchantScrollData.lua
 RecipeSourceLocations.lua
 MapLocations.lua
 RecipeAcquisition.lua

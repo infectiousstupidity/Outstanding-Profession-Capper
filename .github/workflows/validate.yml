@@ -34,6 +34,10 @@ jobs:
         run: lua5.1 tools/test_route_data.lua
       - name: Test bundled recipe catalog
         run: lua5.1 tools/test_recipe_catalog.lua
+      - name: Verify generated enchant scroll metadata
+        run: python3 tools/generate_enchant_scroll_metadata.py --check
+      - name: Test enchant scroll metadata
+        run: lua5.1 tools/test_enchant_scroll_metadata.lua
       - name: Test recipe acquisition model
         run: lua5.1 tools/test_recipe_acquisition.lua
       - name: Test recipe source locations

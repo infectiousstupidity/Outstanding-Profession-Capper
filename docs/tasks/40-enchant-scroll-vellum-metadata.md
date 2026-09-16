@@ -1,6 +1,6 @@
 # Task 40 — Deterministic enchant scroll and vellum metadata
 
-Status: BLOCKED  
+Status: REVIEW  
 Phase: 9 — Resale-aware Smartest optimization  
 Depends on: Task 39
 
@@ -143,7 +143,28 @@ If the review exposes a larger design problem, queue a new task instead of hidin
 
 ### Agent 1 implementation
 
-Pending.
+Implemented after Task 39 reached DONE and its validation workflow passed.
+
+Source and provenance:
+- Primary WotLK recipe/output data is the pinned `Hoizame/AtlasLootClassic` commit `8e99341e4e779328460bf7684c0d5b22ce50ddf1`, the same 3.3.5-aligned source already used by `RecipeCatalogData.lua`.
+- AzerothCore WotLK commit `f1bef3bc0a2f6396175e184c2cac70df77b46d11` provides the runtime semantics: permanent Enchanting spells create the effect's numeric item type when cast on a vellum, and vellum acceptance is based on numeric armor/weapon item class.
+- AzerothCore does not bundle the client Spell.dbc values in this repository. The additional pinned numeric cross-check is `b-morgan/Skillet-Classic` commit `add4400eb38d7e0839d02de0bbe10c3a162354f6`, `EnchantData5.lua`, filtered to the exact 301 WotLK Enchanting spell IDs. It is used only for equipped-item class/slot classification and a spell-to-scroll ID cross-check, never for localized names.
+- Vellum tiers are derived deterministically from the first source expansion in the pinned WotLK profession dataset: Classic -> tier I, TBC -> tier II, Wrath -> tier III. Higher tiers remain compatible. Agent 2 must review this tier rule explicitly.
+
+Implementation:
+- Added `tools/data/enchant_scroll_metadata_source.json`, a compact pinned-source snapshot covering all 301 bundled Enchanting records.
+- Added `tools/generate_enchant_scroll_metadata.py` and generated `EnchantScrollData.lua`.
+- Generated output has 240 eligible sellable-scroll enchants. Personal/ring enchants, normal Enchanting crafts such as runed rods, and records without output items are explicitly excluded.
+- Spell 33996 has conflicting pinned output evidence and remains `source_conflict` / ineligible instead of being guessed into eligibility.
+- Runtime lookup is a direct numeric spell-ID table lookup. Compatible vellums reuse one shared armor/weapon table plus `minVellumTier`; no runtime DBC scan, tooltip parsing, localized-name matching, repeated GetSpellInfo work, or unbounded cache was added.
+- Added deterministic source/catalog consistency checks, generated-file `--check`, Lua 5.1 edge-case tests, and CI steps.
+
+Validation:
+- `python3 tools/generate_enchant_scroll_metadata.py --check`
+- `lua5.1 tools/test_enchant_scroll_metadata.lua`
+- full repository `Validate addon` workflow
+
+Task remains REVIEW until Agent 2 independently verifies the pinned-source interpretation, tier rule, deliberate 33996 unknown, Lua 5.1 behavior, and full validation.
 
 ### Agent 2 review
 
