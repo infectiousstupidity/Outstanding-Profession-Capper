@@ -1,6 +1,6 @@
 # Task 40 — Deterministic enchant scroll and vellum metadata
 
-Status: REVIEW  
+Status: FIX  
 Phase: 9 — Resale-aware Smartest optimization  
 Depends on: Task 39
 
@@ -168,8 +168,22 @@ Task remains REVIEW until Agent 2 independently verifies the pinned-source inter
 
 ### Agent 2 review
 
-Pending.
+Finding requiring a fix:
+
+- The implementation derived `minVellumTier` from the expansion in which an enchant first appeared. That is not the WotLK vellum compatibility rule and produces false minimums in both directions. A pinned direct spell-to-vellum mapping shows concrete counterexamples: spell 25086 is Classic data but requires Armor Vellum II; 27958 is TBC data but requires Armor Vellum III; 44595 is Wrath data but only requires Weapon Vellum II; and 63746/71692 are Wrath data that use Armor Vellum I.
+- This violates the acceptance criterion that the data identify the minimum compatible vellum rather than a conservative expansion proxy.
+- The rest of the reviewed shape was sound: numeric spell-ID lookup, scroll/output conflict handling, personal-enchant exclusion, non-vellum craft exclusion, localization independence, bounded static tables, deterministic generation, and the Task 40 CI run all passed.
+
+Task 40 moved to FIX for Agent 3. No Task 41 work may begin until the corrected mapping passes validation.
 
 ### Agent 3 fixes
 
-Pending.
+Implemented the recorded tier-classification finding only.
+
+- Added a pinned direct spell-to-vellum source: `SamuelGreen07/Addons` commit `97a5215d8674b1ce79294813f3ac7984bfb56a75`, `Skillet-Classic/SkilletData2.lua`, specifically its numeric `Skillet.vellumData2` mapping.
+- The source snapshot now records the mapped minimum vellum item ID. All 240 sellable-scroll records have a mapping and the armor/weapon vellum family matches the numeric equipped-item class.
+- Removed the expansion-to-tier heuristic. The generator now converts the pinned vellum item ID to tier I/II/III.
+- Corrected seven records whose true minimum differs from the expansion proxy: 25086, 27958, 42974, 44595, 46578, 63746, and 71692.
+- Added regression coverage for a Classic enchant requiring tier II, a TBC enchant requiring tier III, a Wrath enchant requiring tier II, and Enchant Gloves - Angler requiring tier I.
+
+Validation pending the pushed fix commit's full `Validate addon` workflow. Task remains FIX until that workflow succeeds.

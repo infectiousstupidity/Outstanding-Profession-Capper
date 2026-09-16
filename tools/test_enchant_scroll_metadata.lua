@@ -95,6 +95,18 @@ local classicEnchant = addonTable.getEnchantScrollMetadata(7428)
 assertEqual(classicEnchant.vellumEligible, true, "classic enchant eligible")
 assertEqual(classicEnchant.minVellumTier, 1, "classic enchant tier")
 
+local classicHighLevel = addonTable.getEnchantScrollMetadata(25086)
+assertEqual(classicHighLevel.minVellumTier, 2, "classic high-level enchant needs tier II")
+
+local bccHighLevel = addonTable.getEnchantScrollMetadata(27958)
+assertEqual(bccHighLevel.minVellumTier, 3, "TBC high-level enchant needs tier III")
+
+local wrathTierTwo = addonTable.getEnchantScrollMetadata(44595)
+assertEqual(wrathTierTwo.minVellumTier, 2, "Wrath Scourgebane uses tier II")
+
+local wrathTierOne = addonTable.getEnchantScrollMetadata(71692)
+assertEqual(wrathTierOne.minVellumTier, 1, "Wrath Angler uses tier I")
+
 local personal = addonTable.getEnchantScrollMetadata(27920)
 assertEqual(personal.vellumEligible, false, "ring enchant excluded")
 assertEqual(personal.classification, "personal_enchant", "ring classification")
