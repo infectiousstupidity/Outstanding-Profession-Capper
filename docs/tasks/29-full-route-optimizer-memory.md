@@ -30,15 +30,19 @@ The `No guide step` message is a secondary error: dynamic optimization and stati
 
 ### Bounded route state
 
-Recipe acquisition is now modeled as a segment activation rather than a permanent member of the route-state set.
+Task 29 originally solved the allocator failure by modeling recipe acquisition as a segment activation instead of carrying the full learned-recipe set.
 
-- Continuing the same unlearned recipe does not repay its acquisition cost.
-- Switching to a different unlearned recipe pays that recipe's acquisition cost.
-- Returning to a previously abandoned unlearned recipe conservatively pays acquisition again rather than carrying an exponential learned-recipe set.
-- Reusable profession tools/rods still persist in route state.
-- Profession-rank training remains represented by trained cap/state.
+That removed the combinatorial Lua-table state that caused the freeze, but it meant a route could conservatively repay an acquisition after switching away and later returning.
 
-This keeps route state polynomial while preserving the behavior that matters for leveling recommendations: the optimizer can still decide to stop crafting, go learn/buy a better recipe, and then continue with it.
+Task 38 supersedes that approximation with a compact candidate-scoped bitset:
+
+- learned/acquired recipes are remembered exactly while they can still affect future route choices;
+- expired recipe bits are removed once the recipe can never appear again;
+- reusable profession tools/rods remain in the existing small acquisition map;
+- profession-rank training remains represented by trained cap/state;
+- live layered states are hard-capped before a next layer can exceed `maxStates`.
+
+A completed route therefore has true one-time recipe acquisition semantics again without restoring arbitrary recipe-ID Lua sets.
 
 ### Skill-range recipe index
 
@@ -52,7 +56,7 @@ The live profession-book color remains authoritative for the current skill.
 
 The pass-local recipe-cost cache is capped at 4,096 entries.
 
-Its key now distinguishes only whether the candidate recipe is the currently active route recipe, rather than embedding arbitrary route acquisition sets.
+After Task 38 its key distinguishes the candidate recipe's exact acquired/not-acquired state in addition to current recipe/skill/reusable state. The compact bitset itself is not serialized into the cache key.
 
 ### Static fallback isolation
 

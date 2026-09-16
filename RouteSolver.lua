@@ -12,14 +12,33 @@ local function copyMap(source)
     return result
 end
 
-local function copyState(baseState, acquired)
+local recipeMaskHas
+
+local function copyState(baseState, acquired, recipeMask, codec, candidateRecipeID)
     local result = {}
     if type(baseState) == "table" then
         for key, value in pairs(baseState) do
             result[key] = value
         end
     end
-    result.acquiredOneTime = acquired
+
+    local candidateKey = candidateRecipeID ~= nil
+        and ("recipe:" .. tostring(candidateRecipeID))
+        or nil
+    local candidateBit = candidateRecipeID ~= nil
+        and codec.indexByRecipeID[tostring(candidateRecipeID)]
+        or nil
+
+    if candidateKey and candidateBit and recipeMaskHas(recipeMask, candidateBit) then
+        local acquiredView = copyMap(acquired)
+        acquiredView[candidateKey] = true
+        result.acquiredOneTime = acquiredView
+    else
+        result.acquiredOneTime = acquired
+    end
+
+    result.routeAcquiredRecipeMask = recipeMask
+    result.routeRecipeAcquisitionCodec = codec
     return result
 end
 
@@ -51,16 +70,178 @@ local function acquiredKey(set)
     return key
 end
 
-local function routeStateKey(skill, trainedCap, acquired)
+local function getRecipeID(recipe, index)
+    return recipe.spellID or recipe.recipeID or recipe.id or index
+end
+
+recipeMaskHas = function(mask, bitIndex)
+    if type(mask) ~= "string" or not bitIndex then
+        return false
+    end
+
+    local byteIndex = math.floor((bitIndex - 1) / 8) + 1
+    local bitValue = 2 ^ ((bitIndex - 1) % 8)
+    local value = string.byte(mask, byteIndex) or 0
+    return value % (bitValue * 2) >= bitValue
+end
+
+local function recipeMaskSet(mask, bitIndex)
+    if not bitIndex or recipeMaskHas(mask, bitIndex) then
+        return mask
+    end
+
+    local byteIndex = math.floor((bitIndex - 1) / 8) + 1
+    local bitValue = 2 ^ ((bitIndex - 1) % 8)
+    local value = (string.byte(mask, byteIndex) or 0) + bitValue
+    return string.sub(mask, 1, byteIndex - 1)
+        .. string.char(value)
+        .. string.sub(mask, byteIndex + 1)
+end
+
+local function recipeMaskIntersect(left, right)
+    if type(left) ~= "string" or type(right) ~= "string" then
+        return left or ""
+    end
+
+    local count = math.min(string.len(left), string.len(right))
+    local bytes = {}
+    for index = 1, count do
+        local a = string.byte(left, index) or 0
+        local b = string.byte(right, index) or 0
+        local value = 0
+        local bitValue = 1
+        for _ = 1, 8 do
+            if a % (bitValue * 2) >= bitValue
+                and b % (bitValue * 2) >= bitValue
+            then
+                value = value + bitValue
+            end
+            bitValue = bitValue * 2
+        end
+        bytes[index] = string.char(value)
+    end
+    return table.concat(bytes)
+end
+
+local function recipeIDKey(recipe, index)
+    return tostring(getRecipeID(recipe, index))
+end
+
+local function buildRecipeAcquisitionCodec(recipes, state, options, startSkill, targetSkill)
+    local candidateBySkill = options and options.candidateRecipesBySkill
+    local indexByRecipeID = {}
+    local recipeCount = 0
+
+    local function addRecipe(recipe, index)
+        local recipeID = getRecipeID(recipe, index)
+        local key = tostring(recipeID)
+        if indexByRecipeID[key] == nil then
+            recipeCount = recipeCount + 1
+            indexByRecipeID[key] = recipeCount
+        end
+    end
+
+    if type(candidateBySkill) == "table" then
+        for skill = startSkill, math.max(startSkill, targetSkill - 1) do
+            local candidates = candidateBySkill[skill] or {}
+            for index = 1, table.getn(candidates) do
+                addRecipe(candidates[index], index)
+            end
+        end
+    else
+        for index = 1, table.getn(recipes or {}) do
+            addRecipe(recipes[index], index)
+        end
+    end
+
+    local byteCount = math.ceil(recipeCount / 8)
+    local emptyMask = string.rep(string.char(0), byteCount)
+    local futureMaskBySkill = {}
+
+    if byteCount > 0 then
+        local bytes = {}
+        for index = 1, byteCount do
+            bytes[index] = 0
+        end
+
+        local function addFutureRecipe(recipe, index)
+            local bitIndex = indexByRecipeID[recipeIDKey(recipe, index)]
+            if not bitIndex then
+                return
+            end
+            local byteIndex = math.floor((bitIndex - 1) / 8) + 1
+            local bitValue = 2 ^ ((bitIndex - 1) % 8)
+            if bytes[byteIndex] % (bitValue * 2) < bitValue then
+                bytes[byteIndex] = bytes[byteIndex] + bitValue
+            end
+        end
+
+        local function snapshotBytes()
+            local chars = {}
+            for index = 1, byteCount do
+                chars[index] = string.char(bytes[index])
+            end
+            return table.concat(chars)
+        end
+
+        for skill = targetSkill - 1, startSkill, -1 do
+            local candidates = type(candidateBySkill) == "table"
+                and (candidateBySkill[skill] or {})
+                or recipes
+            for index = 1, table.getn(candidates or {}) do
+                addFutureRecipe(candidates[index], index)
+            end
+            futureMaskBySkill[skill] = snapshotBytes()
+        end
+        futureMaskBySkill[targetSkill] = emptyMask
+    end
+
+    return {
+        indexByRecipeID = indexByRecipeID,
+        recipeCount = recipeCount,
+        byteCount = byteCount,
+        emptyMask = emptyMask,
+        futureMaskBySkill = futureMaskBySkill,
+    }
+end
+
+local function initialRecipeMask(codec, state)
+    local mask = codec.emptyMask
+    if codec.byteCount == 0 or type(state.acquiredOneTime) ~= "table" then
+        return mask
+    end
+
+    for key, value in pairs(state.acquiredOneTime) do
+        if value and type(key) == "string" then
+            local recipeID = string.match(key, "^recipe:(.+)$")
+            local bitIndex = recipeID and codec.indexByRecipeID[recipeID] or nil
+            if bitIndex then
+                mask = recipeMaskSet(mask, bitIndex)
+            end
+        end
+    end
+    return mask
+end
+
+local function normalizeRecipeMask(codec, mask, skill)
+    local futureMask = codec.futureMaskBySkill[skill]
+    if futureMask then
+        return recipeMaskIntersect(mask, futureMask)
+    end
+    return mask
+end
+
+local function routeStateKey(skill, trainedCap, acquired, recipeMask)
     return table.concat({
         tostring(skill),
         tostring(trainedCap),
         acquiredKey(acquired),
+        recipeMask or "",
     }, ":")
 end
 
-local function nodeKey(skill, trainedCap, acquired, lastRecipeID)
-    return routeStateKey(skill, trainedCap, acquired)
+local function nodeKey(skill, trainedCap, acquired, recipeMask, lastRecipeID)
+    return routeStateKey(skill, trainedCap, acquired, recipeMask)
         .. ":" .. tostring(lastRecipeID or "")
 end
 
@@ -121,10 +302,6 @@ local function numberOrZero(value)
     return tonumber(value) or 0
 end
 
-local function getRecipeID(recipe, index)
-    return recipe.spellID or recipe.recipeID or recipe.id or index
-end
-
 local function resolveMetricCost(cost, metric)
     if metric == "gold" then
         return cost.expectedGoldNeededNowPerSkillUp
@@ -142,8 +319,9 @@ local function oneTimeMetricCost(oneTime, metric)
     return numberOrZero(oneTime.marketCost ~= nil and oneTime.marketCost or oneTime.goldCost)
 end
 
-local function applyCostOneTime(acquired, cost, metric)
+local function applyCostOneTime(acquired, recipeMask, codec, cost, metric)
     local nextAcquired = copyMap(acquired)
+    local nextRecipeMask = recipeMask
     local extraCost = 0
     local extraMarketCost = 0
     local extraGoldCost = 0
@@ -152,25 +330,37 @@ local function applyCostOneTime(acquired, cost, metric)
     for i = 1, table.getn(cost.oneTimeCosts or {}) do
         local oneTime = cost.oneTimeCosts[i]
         local key = oneTime.key and tostring(oneTime.key) or nil
-        if key and not nextAcquired[key] then
+        local recipeID = oneTime.kind == "recipe_acquisition"
+            and key
+            and string.match(key, "^recipe:(.+)$")
+            or nil
+        local recipeBit = recipeID and codec.indexByRecipeID[recipeID] or nil
+        local alreadyAcquired = recipeBit
+            and recipeMaskHas(nextRecipeMask, recipeBit)
+            or (key and nextAcquired[key] == true)
+
+        if key and not alreadyAcquired then
             table.insert(acquiredNow, oneTime)
 
-            -- Recipe learning is modeled as a segment activation. Persisting every
-            -- recipe key in the route state creates a combinatorial state explosion
-            -- on the full catalog. Reusable tools still persist normally.
             if oneTime.kind == "recipe_acquisition" then
                 extraCost = extraCost + oneTimeMetricCost(oneTime, metric)
                 extraMarketCost = extraMarketCost + numberOrZero(
                     oneTime.marketCost ~= nil and oneTime.marketCost or oneTime.goldCost
                 )
                 extraGoldCost = extraGoldCost + numberOrZero(oneTime.goldCost)
+
+                if recipeBit then
+                    nextRecipeMask = recipeMaskSet(nextRecipeMask, recipeBit)
+                end
             else
+                -- Reusable/tool one-time costs are already included by RecipeCost.
+                -- The solver only persists their acquired state here.
                 nextAcquired[key] = true
             end
         end
     end
 
-    return nextAcquired, extraCost, extraMarketCost, extraGoldCost, acquiredNow
+    return nextAcquired, nextRecipeMask, extraCost, extraMarketCost, extraGoldCost, acquiredNow
 end
 
 local function applyProducedKeys(acquired, recipe)
@@ -398,10 +588,15 @@ local function releaseRouteJobState(job)
     job.candidates = nil
     job.candidateByID = nil
     job.trainingSteps = nil
+    job.recipeCodec = nil
     job.isCurrent = nil
 end
 
 local function finishRouteJobMetrics(job)
+    if job.recipeCodec then
+        job.recipeAcquisitionBits = tonumber(job.recipeCodec.recipeCount) or 0
+        job.recipeAcquisitionBytes = tonumber(job.recipeCodec.byteCount) or 0
+    end
     if job.finishedAtMs == nil then
         job.finishedAtMs = routeNowMilliseconds()
     end
@@ -416,12 +611,36 @@ local function finishRouteJobMetrics(job)
     end
 end
 
-local function jobRelax(target, node)
-    local key = nodeKey(node.skill, node.trainedCap, node.acquired, node.lastRecipeID)
+local function jobRelax(job, target, node, countField)
+    local key = nodeKey(
+        node.skill,
+        node.trainedCap,
+        node.acquired,
+        node.recipeMask,
+        node.lastRecipeID
+    )
     local existing = target[key]
-    if not existing or node.totalCost < existing.totalCost then
-        target[key] = node
+    if existing and existing.totalCost <= node.totalCost then
+        return true
     end
+
+    if not existing then
+        local count = tonumber(job[countField]) or 0
+        if count >= job.maxStates then
+            job.result.reason = "state_limit_exceeded"
+            addMissingReason(job.missing, "state_limit_exceeded")
+            job.phase = "finalize"
+            return false
+        end
+        count = count + 1
+        job[countField] = count
+        if count > (tonumber(job.peakLayerStates) or 0) then
+            job.peakLayerStates = count
+        end
+    end
+
+    target[key] = node
+    return true
 end
 
 local function jobAdvanceTraining(job, node)
@@ -473,6 +692,7 @@ local function jobAdvanceTraining(job, node)
             skill = cursor.skill,
             trainedCap = chosenCap,
             acquired = nextAcquired,
+            recipeMask = cursor.recipeMask,
             totalCost = cursor.totalCost + chosenMetric,
             totalMarketCost = cursor.totalMarketCost + chosenMarket,
             totalGoldCost = cursor.totalGoldCost + chosenGold,
@@ -499,7 +719,13 @@ end
 
 local function jobEvaluateCraft(job, node, recipe, recipeIndex)
     local recipeID = getRecipeID(recipe, recipeIndex)
-    local routeState = copyState(job.state, node.acquired)
+    local routeState = copyState(
+        job.state,
+        node.acquired,
+        node.recipeMask,
+        job.recipeCodec,
+        recipeID
+    )
     routeState.routeActiveRecipeID = node.lastRecipeID
     local cost = job.costRecipe(
         recipe,
@@ -521,8 +747,10 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
         return
     end
 
-    local nextAcquired, extraMetric, extraMarket, extraGold, acquiredNow = applyCostOneTime(
+    local nextAcquired, nextRecipeMask, extraMetric, extraMarket, extraGold, acquiredNow = applyCostOneTime(
         node.acquired,
+        node.recipeMask,
+        job.recipeCodec,
         cost,
         job.metric
     )
@@ -536,6 +764,7 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
     ) + extraGold
     local edgeMetric = numberOrZero(metricCost) + extraMetric
     local nextSkill = math.min(job.targetSkill, node.skill + 1)
+    nextRecipeMask = normalizeRecipeMask(job.recipeCodec, nextRecipeMask, nextSkill)
 
     local acquisitionGoldCost = 0
     for acquiredIndex = 1, table.getn(acquiredNow) do
@@ -545,10 +774,11 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
         end
     end
 
-    jobRelax(job.nextStates, {
+    jobRelax(job, job.nextStates, {
         skill = nextSkill,
         trainedCap = node.trainedCap,
         acquired = nextAcquired,
+        recipeMask = nextRecipeMask,
         totalCost = node.totalCost + edgeMetric,
         totalMarketCost = node.totalMarketCost + edgeMarket,
         totalGoldCost = node.totalGoldCost + edgeGold,
@@ -573,7 +803,7 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
             quality = cost.quality,
             cost = cost,
         },
-    })
+    }, "nextCount")
 end
 
 local function beginRouteLayer(job)
@@ -585,6 +815,7 @@ local function beginRouteLayer(job)
     job.currentEntries = mapValues(job.current)
     job.currentCursor = 1
     job.readyStates = {}
+    job.readyCount = 0
     job.phase = "prepare_ready"
 end
 
@@ -655,7 +886,7 @@ local function performRouteJobOperation(job)
 
         local ready = jobAdvanceTraining(job, node)
         if ready and ready.skill == job.skill and ready.skill < ready.trainedCap then
-            jobRelax(job.readyStates, ready)
+            jobRelax(job, job.readyStates, ready, "readyCount")
         end
         job.currentCursor = job.currentCursor + 1
         return
@@ -669,6 +900,7 @@ local function performRouteJobOperation(job)
             job.groupNodeCursor = 1
             job.candidateCursor = 1
             job.nextStates = {}
+            job.nextCount = 0
             job.candidates = getCandidateRecipes(job.recipes, job.options, job.skill)
             job.candidateByID = {}
             for recipeIndex = 1, table.getn(job.candidates) do
@@ -690,7 +922,12 @@ local function performRouteJobOperation(job)
             return
         end
 
-        local groupKey = routeStateKey(node.skill, node.trainedCap, node.acquired)
+        local groupKey = routeStateKey(
+            node.skill,
+            node.trainedCap,
+            node.acquired,
+            node.recipeMask
+        )
         local group = job.groups[groupKey]
         if not group then
             group = { nodes = {}, bestSwitchNode = node }
@@ -707,6 +944,7 @@ local function performRouteJobOperation(job)
         local group = job.groupEntries[job.groupCursor]
         if not group then
             job.current = job.nextStates
+            job.currentCount = job.nextCount or 0
             job.skill = job.skill + 1
             job.currentEntries = nil
             job.readyStates = nil
@@ -773,10 +1011,27 @@ local function createLayeredRouteJob(
     costRecipe
 )
     local initialAcquired = copyMap(state.acquiredOneTime or state.acquiredReusable)
+    for key in pairs(initialAcquired) do
+        if type(key) == "string" and string.match(key, "^recipe:") then
+            initialAcquired[key] = nil
+        end
+    end
+
+    local recipeCodec = buildRecipeAcquisitionCodec(
+        recipes,
+        state,
+        options,
+        startSkill,
+        targetSkill
+    )
+    local initialRecipeBits = initialRecipeMask(recipeCodec, state)
+    initialRecipeBits = normalizeRecipeMask(recipeCodec, initialRecipeBits, startSkill)
+
     local startNode = {
         skill = startSkill,
         trainedCap = startingCap,
         acquired = initialAcquired,
+        recipeMask = initialRecipeBits,
         totalCost = 0,
         totalMarketCost = 0,
         totalGoldCost = 0,
@@ -787,7 +1042,13 @@ local function createLayeredRouteJob(
         lastRecipeID = nil,
     }
     local current = {}
-    current[nodeKey(startSkill, startingCap, initialAcquired, nil)] = startNode
+    current[nodeKey(
+        startSkill,
+        startingCap,
+        initialAcquired,
+        initialRecipeBits,
+        nil
+    )] = startNode
 
     local job = {
         status = "running",
@@ -803,7 +1064,10 @@ local function createLayeredRouteJob(
         metric = metric,
         maxStates = maxStates,
         costRecipe = costRecipe,
+        recipeCodec = recipeCodec,
         current = current,
+        currentCount = 1,
+        peakLayerStates = 1,
         skill = startSkill,
         missing = {},
         trainingSteps = options.trainingSteps or state.trainingSteps or {},
@@ -980,6 +1244,15 @@ function addonTable.getCheapestProfessionRouteJobMetrics(job)
         elapsedMs = tonumber(job.elapsedMs) or 0,
         operationCount = tonumber(job.operationCount) or 0,
         exploredStates = job.result and tonumber(job.result.exploredStates) or 0,
+        peakLayerStates = tonumber(job.peakLayerStates) or 0,
+        recipeAcquisitionBits = job.recipeCodec
+            and tonumber(job.recipeCodec.recipeCount)
+            or tonumber(job.recipeAcquisitionBits)
+            or 0,
+        recipeAcquisitionBytes = job.recipeCodec
+            and tonumber(job.recipeCodec.byteCount)
+            or tonumber(job.recipeAcquisitionBytes)
+            or 0,
         memoryBeforeKb = job.memoryBeforeKb,
         memoryAfterKb = job.memoryAfterKb,
         memoryDeltaKb = job.memoryDeltaKb,
@@ -1044,12 +1317,30 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
     end
 
     local initialAcquired = copyMap(state.acquiredOneTime or state.acquiredReusable)
+    for key in pairs(initialAcquired) do
+        if type(key) == "string" and string.match(key, "^recipe:") then
+            initialAcquired[key] = nil
+        end
+    end
+    local recipeCodec = buildRecipeAcquisitionCodec(
+        recipes,
+        state,
+        options,
+        startSkill,
+        targetSkill
+    )
+    local initialRecipeBits = initialRecipeMask(recipeCodec, state)
+    initialRecipeBits = normalizeRecipeMask(recipeCodec, initialRecipeBits, startSkill)
+
     local heap = {}
     local best = {}
+    local bestEntries = 1
+    local stateLimitReached = false
     local startNode = {
         skill = startSkill,
         trainedCap = startingCap,
         acquired = initialAcquired,
+        recipeMask = initialRecipeBits,
         totalCost = 0,
         totalMarketCost = 0,
         totalGoldCost = 0,
@@ -1059,7 +1350,13 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
         quality = "complete",
         lastRecipeID = nil,
     }
-    local startKey = nodeKey(startSkill, startingCap, initialAcquired, nil)
+    local startKey = nodeKey(
+        startSkill,
+        startingCap,
+        initialAcquired,
+        initialRecipeBits,
+        nil
+    )
     best[startKey] = startNode
     heapPush(heap, startNode)
 
@@ -1068,9 +1365,15 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
     local craftExpansionGroups = {}
     local pruneDominatedRecipeSwitches = options.pruneDominatedRecipeSwitches == true
 
-    while table.getn(heap) > 0 do
+    while table.getn(heap) > 0 and not stateLimitReached do
         local node = heapPop(heap)
-        local key = nodeKey(node.skill, node.trainedCap, node.acquired, node.lastRecipeID)
+        local key = nodeKey(
+            node.skill,
+            node.trainedCap,
+            node.acquired,
+            node.recipeMask,
+            node.lastRecipeID
+        )
         if best[key] == node then
             result.exploredStates = result.exploredStates + 1
             if result.exploredStates > maxStates then
@@ -1087,7 +1390,12 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
             if node.skill < node.trainedCap then
                 local expandAllCandidates = true
                 if pruneDominatedRecipeSwitches then
-                    local craftGroupKey = routeStateKey(node.skill, node.trainedCap, node.acquired)
+                    local craftGroupKey = routeStateKey(
+                        node.skill,
+                        node.trainedCap,
+                        node.acquired,
+                        node.recipeMask
+                    )
                     expandAllCandidates = craftExpansionGroups[craftGroupKey] ~= true
                     if expandAllCandidates then
                         craftExpansionGroups[craftGroupKey] = true
@@ -1103,15 +1411,23 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                             and tostring(recipeID) == tostring(node.lastRecipeID))
 
                     if evaluateCandidate then
-                        local routeState = copyState(state, node.acquired)
+                        local routeState = copyState(
+                            state,
+                            node.acquired,
+                            node.recipeMask,
+                            recipeCodec,
+                            recipeID
+                        )
                         routeState.routeActiveRecipeID = node.lastRecipeID
                         local cost = costRecipe(recipe, node.skill, skillContext, routeState, options.costOptions or {})
 
                         if cost and cost.available and cost.useful and cost.expectedCraftsPerSkillUp then
                             local metricCost = resolveMetricCost(cost, metric)
                             if metricCost ~= nil then
-                                local nextAcquired, extraMetric, extraMarket, extraGold, acquiredNow = applyCostOneTime(
+                                local nextAcquired, nextRecipeMask, extraMetric, extraMarket, extraGold, acquiredNow = applyCostOneTime(
                                     node.acquired,
+                                    node.recipeMask,
+                                    recipeCodec,
                                     cost,
                                     metric
                                 )
@@ -1125,9 +1441,27 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                 ) + extraGold
                                 local edgeMetric = numberOrZero(metricCost) + extraMetric
                                 local nextSkill = math.min(targetSkill, node.skill + 1)
+                                nextRecipeMask = normalizeRecipeMask(
+                                    recipeCodec,
+                                    nextRecipeMask,
+                                    nextSkill
+                                )
                                 local totalCost = node.totalCost + edgeMetric
-                                local nextKey = nodeKey(nextSkill, node.trainedCap, nextAcquired, recipeID)
+                                local nextKey = nodeKey(
+                                    nextSkill,
+                                    node.trainedCap,
+                                    nextAcquired,
+                                    nextRecipeMask,
+                                    recipeID
+                                )
                                 local existing = best[nextKey]
+
+                                if not existing and bestEntries >= maxStates then
+                                    result.reason = "state_limit_exceeded"
+                                    addMissingReason(missing, "state_limit_exceeded")
+                                    stateLimitReached = true
+                                    break
+                                end
 
                                 if not existing or totalCost < existing.totalCost then
                                     local acquisitionGoldCost = 0
@@ -1141,6 +1475,7 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                         skill = nextSkill,
                                         trainedCap = node.trainedCap,
                                         acquired = nextAcquired,
+                                        recipeMask = nextRecipeMask,
                                         totalCost = totalCost,
                                         totalMarketCost = node.totalMarketCost + edgeMarket,
                                         totalGoldCost = node.totalGoldCost + edgeGold,
@@ -1164,6 +1499,9 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                             cost = cost,
                                         },
                                     }
+                                    if not existing then
+                                        bestEntries = bestEntries + 1
+                                    end
                                     best[nextKey] = nextNode
                                     heapPush(heap, nextNode)
                                 end
@@ -1175,7 +1513,10 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                 end
             end
 
-            if node.skill >= node.trainedCap and node.skill < targetSkill then
+            if not stateLimitReached
+                and node.skill >= node.trainedCap
+                and node.skill < targetSkill
+            then
                 local trainingSteps = options.trainingSteps or state.trainingSteps or {}
                 local foundTraining = false
                 for trainingIndex = 1, table.getn(trainingSteps) do
@@ -1190,14 +1531,28 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                 nextAcquired[keyName] = true
                                 local newCap = tonumber(action.newCap or action.targetCap)
                                 local totalCost = node.totalCost + trainingMetric
-                                local nextKey = nodeKey(node.skill, newCap, nextAcquired, node.lastRecipeID)
+                                local nextKey = nodeKey(
+                                    node.skill,
+                                    newCap,
+                                    nextAcquired,
+                                    node.recipeMask,
+                                    node.lastRecipeID
+                                )
                                 local existing = best[nextKey]
+
+                                if not existing and bestEntries >= maxStates then
+                                    result.reason = "state_limit_exceeded"
+                                    addMissingReason(missing, "state_limit_exceeded")
+                                    stateLimitReached = true
+                                    break
+                                end
 
                                 if not existing or totalCost < existing.totalCost then
                                     local nextNode = {
                                         skill = node.skill,
                                         trainedCap = newCap,
                                         acquired = nextAcquired,
+                                        recipeMask = node.recipeMask,
                                         totalCost = totalCost,
                                         totalMarketCost = node.totalMarketCost + trainingMarket,
                                         totalGoldCost = node.totalGoldCost + trainingGold,
@@ -1218,6 +1573,9 @@ function addonTable.solveCheapestProfessionRoute(recipes, skillContext, state, o
                                             quality = "complete",
                                         },
                                     }
+                                    if not existing then
+                                        bestEntries = bestEntries + 1
+                                    end
                                     best[nextKey] = nextNode
                                     heapPush(heap, nextNode)
                                 end

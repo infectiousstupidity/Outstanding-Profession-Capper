@@ -340,7 +340,7 @@ local scalable = addonTable.solveCheapestProfessionRoute(
     {
         startSkill = 0,
         targetSkill = 30,
-        maxStates = 2000,
+        maxStates = 10000,
         optimizeFor = "current",
         costRecipe = manyRecipeFixture,
         candidateRecipesBySkill = indexedCandidates,
@@ -351,7 +351,140 @@ local scalable = addonTable.solveCheapestProfessionRoute(
 assertEqual(scalable.complete, true, "full-catalog style route completes within bounded state space")
 assertEqual(scalable.actions[1].recipeID, "recipe-1", "cheapest activation wins")
 assertEqual(scalable.totalCurrentPurchaseCost, 31, "recipe acquisition is charged once for a continuous segment")
-assert(scalable.exploredStates < 500, "indexed route should not explode state count")
-assert(manyCostCalls < 280, "layered DP should bound recipe-cost evaluations")
+assert(scalable.exploredStates < 6000, "exact indexed route stays below production state ceiling")
+assert(manyCostCalls < 12000, "exact layered DP keeps cost evaluations bounded")
+
+local returnRecipes = {
+    { id = "A" },
+    { id = "B" },
+}
+
+local returnCosts = {
+    A = { [0] = 2, [1] = 3, [2] = 200 },
+    B = { [0] = 1, [1] = 100, [2] = 101 },
+}
+
+local function acquireSwitchReturnFixture(recipe, skill, context, state)
+    local acquired = state.acquiredOneTime
+        and state.acquiredOneTime["recipe:" .. tostring(recipe.id)] == true
+    local continuing = state.routeActiveRecipeID ~= nil
+        and tostring(state.routeActiveRecipeID) == tostring(recipe.id)
+    local oneTimeCosts = {}
+
+    if recipe.id == "B" and not acquired and not continuing then
+        oneTimeCosts = {{
+            key = "recipe:B",
+            kind = "recipe_acquisition",
+            marketCost = 10,
+            goldCost = 10,
+        }}
+    end
+
+    local material = returnCosts[recipe.id][skill]
+    return {
+        available = material ~= nil,
+        useful = material ~= nil,
+        expectedCraftsPerSkillUp = 1,
+        expectedMarketCostPerSkillUp = material,
+        expectedGoldNeededNowPerSkillUp = material,
+        expectedCurrentPurchaseCostPerSkillUp = material,
+        oneTimeCosts = oneTimeCosts,
+        quality = "complete",
+        skillUpChance = 1,
+    }
+end
+
+local returnOptions = {
+    startSkill = 0,
+    targetSkill = 3,
+    optimizeFor = "current",
+    costRecipe = acquireSwitchReturnFixture,
+    pruneDominatedRecipeSwitches = true,
+    layeredDynamicProgramming = true,
+}
+local exactReturn = addonTable.solveCheapestProfessionRoute(
+    returnRecipes,
+    nil,
+    { currentCap = 3 },
+    returnOptions
+)
+assertEqual(exactReturn.complete, true, "acquire-switch-return route complete")
+assertEqual(exactReturn.actions[1].recipeID, "B", "acquired recipe starts exact route")
+assertEqual(exactReturn.actions[2].recipeID, "A", "exact route can switch away")
+assertEqual(exactReturn.actions[3].recipeID, "B", "exact route can return to learned recipe")
+assertEqual(exactReturn.totalCurrentPurchaseCost, 115, "recipe acquisition charged exactly once")
+assertEqual(exactReturn.actions[1].acquisitionGoldCost, 10, "first use pays acquisition")
+assertEqual(exactReturn.actions[3].acquisitionGoldCost, 0, "return use does not repay acquisition")
+
+local legacyReturnOptions = {
+    startSkill = 0,
+    targetSkill = 3,
+    optimizeFor = "current",
+    costRecipe = acquireSwitchReturnFixture,
+    pruneDominatedRecipeSwitches = true,
+}
+local legacyReturn = addonTable.solveCheapestProfessionRoute(
+    returnRecipes,
+    nil,
+    { currentCap = 3 },
+    legacyReturnOptions
+)
+assertEqual(legacyReturn.complete, true, "legacy acquire-switch-return route complete")
+assertEqual(legacyReturn.actions[1].recipeID, "B", "legacy route starts acquired recipe")
+assertEqual(legacyReturn.actions[2].recipeID, "A", "legacy route switches away")
+assertEqual(legacyReturn.actions[3].recipeID, "B", "legacy route returns without repayment")
+assertEqual(legacyReturn.totalCurrentPurchaseCost, 115, "legacy route acquisition charged once")
+
+local stressRecipes = {}
+local stressCandidates = {}
+for index = 1, 12 do
+    stressRecipes[index] = { id = "stress-" .. tostring(index) }
+end
+for skill = 0, 7 do
+    stressCandidates[skill] = stressRecipes
+end
+
+local function acquisitionStressFixture(recipe, skill, context, state)
+    local key = "recipe:" .. tostring(recipe.id)
+    local acquired = state.acquiredOneTime and state.acquiredOneTime[key] == true
+    return {
+        available = true,
+        useful = true,
+        expectedCraftsPerSkillUp = 1,
+        expectedMarketCostPerSkillUp = 1,
+        expectedGoldNeededNowPerSkillUp = 1,
+        expectedCurrentPurchaseCostPerSkillUp = 1,
+        oneTimeCosts = acquired and {} or {{
+            key = key,
+            kind = "recipe_acquisition",
+            marketCost = 1,
+            goldCost = 1,
+        }},
+        quality = "complete",
+        skillUpChance = 1,
+    }
+end
+
+local stressJob = addonTable.createCheapestProfessionRouteJob(
+    stressRecipes,
+    nil,
+    { currentCap = 8 },
+    {
+        startSkill = 0,
+        targetSkill = 8,
+        maxStates = 64,
+        optimizeFor = "current",
+        costRecipe = acquisitionStressFixture,
+        candidateRecipesBySkill = stressCandidates,
+        pruneDominatedRecipeSwitches = true,
+    }
+)
+local stressResult = addonTable.runCheapestProfessionRouteJob(stressJob)
+local stressMetrics = addonTable.getCheapestProfessionRouteJobMetrics(stressJob)
+assertEqual(stressResult.complete, false, "acquisition stress stops before state explosion")
+assertEqual(stressResult.reason, "state_limit_exceeded", "acquisition stress hits deterministic state bound")
+assert(stressMetrics.peakLayerStates <= 64, "live layered state count never exceeds hard bound")
+assertEqual(stressMetrics.recipeAcquisitionBits, 12, "stress route tracks only candidate recipe bits")
+assertEqual(stressMetrics.recipeAcquisitionBytes, 2, "candidate acquisition history uses compact fixed-width bitset")
 
 print("Cheapest route solver tests passed.")

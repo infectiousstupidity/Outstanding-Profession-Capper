@@ -100,6 +100,71 @@ assertEqual(signature(incremental), signature(sync), "acquisition-first route eq
 assert(metrics.sliceCount > 1, "fake clock forces pause/resume across slices")
 assertEqual(incremental.actions[1].recipeID, "B", "global exact first segment preserved")
 
+local returnRecipes = {
+    { id = "A" },
+    { id = "B" },
+}
+local returnCosts = {
+    A = { [0] = 2, [1] = 3, [2] = 200 },
+    B = { [0] = 1, [1] = 100, [2] = 101 },
+}
+local function returnFixture(recipe, skill, context, state)
+    local acquired = state.acquiredOneTime
+        and state.acquiredOneTime["recipe:" .. tostring(recipe.id)] == true
+    local continuing = state.routeActiveRecipeID ~= nil
+        and tostring(state.routeActiveRecipeID) == tostring(recipe.id)
+    local oneTimeCosts = {}
+    if recipe.id == "B" and not acquired and not continuing then
+        oneTimeCosts = {{
+            key = "recipe:B",
+            kind = "recipe_acquisition",
+            marketCost = 10,
+            goldCost = 10,
+        }}
+    end
+
+    local material = returnCosts[recipe.id][skill]
+    return {
+        available = material ~= nil,
+        useful = material ~= nil,
+        expectedCraftsPerSkillUp = 1,
+        expectedMarketCostPerSkillUp = material,
+        expectedGoldNeededNowPerSkillUp = material,
+        expectedCurrentPurchaseCostPerSkillUp = material,
+        oneTimeCosts = oneTimeCosts,
+        quality = "complete",
+        skillUpChance = 1,
+    }
+end
+local returnOptions = {
+    startSkill = 0,
+    targetSkill = 3,
+    optimizeFor = "current",
+    costRecipe = returnFixture,
+    pruneDominatedRecipeSwitches = true,
+    layeredDynamicProgramming = true,
+}
+local returnSync = addonTable.solveCheapestProfessionRoute(
+    returnRecipes,
+    nil,
+    { currentCap = 3 },
+    returnOptions
+)
+local returnIncremental, returnMetrics = runIncremental(
+    returnRecipes,
+    nil,
+    { currentCap = 3 },
+    returnOptions
+)
+assertEqual(signature(returnIncremental), signature(returnSync), "acquire-switch-return incremental equivalence")
+assertEqual(returnIncremental.actions[1].recipeID, "B", "return route acquires B")
+assertEqual(returnIncremental.actions[2].recipeID, "A", "return route switches to A")
+assertEqual(returnIncremental.actions[3].recipeID, "B", "return route reuses B")
+assertEqual(returnIncremental.totalCurrentPurchaseCost, 115, "incremental route charges acquisition once")
+assertEqual(returnIncremental.actions[3].acquisitionGoldCost, 0, "incremental return does not reacquire")
+assertEqual(returnMetrics.recipeAcquisitionBits, 2, "incremental job reports candidate recipe bit count")
+assertEqual(returnMetrics.recipeAcquisitionBytes, 1, "two recipe candidates fit one acquisition byte")
+
 local function trainingFixture()
     return {
         available = true,

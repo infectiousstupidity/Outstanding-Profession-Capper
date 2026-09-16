@@ -166,3 +166,14 @@ Remaining risks:
 - duplicated route solver implementations remain until Task 39;
 - unknown-revision providers necessarily rely on TTL;
 - Cheapest ordinary-inventory route state remains intentionally approximate.
+
+
+## Task 38 follow-up status
+
+The recipe-acquisition semantic issue identified by this review has now been addressed in code by Task 38.
+
+The replacement does not restore arbitrary learned-recipe Lua sets. It uses a fixed-width candidate-scoped bitset, expires bits that cannot affect any future route choice, and hard-bounds live layered states before a next layer can exceed `maxStates`.
+
+Deterministic tests now prove acquire → switch → return pays a recipe acquisition only once and that the dynamic pass-local cost cache preserves that distinction.
+
+Task 38 still requires the original real-client Enchanting allocator/performance acceptance before the review can consider that risk closed operationally.

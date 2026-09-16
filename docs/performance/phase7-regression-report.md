@@ -166,3 +166,15 @@ The review fixed two concrete Phase 7 defects:
 The review also found a larger semantic issue introduced deliberately by Task 29: recipe learning is modeled as a segment activation instead of permanent one-time route state. That avoids state explosion, but a route that learns recipe B, switches to A, and later returns to B can conservatively pay the acquisition cost again. Task 38 is queued to restore true one-time acquisition semantics without returning to the old combinatorial state model.
 
 A separate maintainability follow-up, Task 39, is queued for the duplicated legacy heap solver versus the layered job engine.
+
+
+## Task 38 exact acquisition-state measurements
+
+When re-running the Enchanting matrix after Task 38, also capture the route-job fields:
+
+- `peak-layer`;
+- `acquired-recipes=<bits>/<bytes>B`;
+- explored states;
+- route memory delta.
+
+The compact bitset and hard live-layer ceiling are covered by deterministic tests, but only the real 3.3.5 client can prove that the restored exact semantics stay within acceptable allocator/frame behavior on the original Enchanting workload.

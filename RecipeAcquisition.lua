@@ -203,10 +203,10 @@ local function acquiredInRoute(spellID, state)
         return false
     end
 
-    -- The optimizer models recipe learning as a segment activation rather than
-    -- carrying every learned recipe in the route-state key. Continuing the same
-    -- recipe therefore remains acquired without creating an exponential set of
-    -- recipe-acquisition states.
+    -- RouteSolver keeps exact learned-recipe history in a compact candidate-
+    -- scoped bitset and materializes the current recipe as acquiredOneTime below.
+    -- routeActiveRecipeID remains a compatibility fast path for a continuous
+    -- recipe segment and for callers outside the compact route solver.
     if state.routeActiveRecipeID ~= nil
         and tostring(state.routeActiveRecipeID) == tostring(spellID)
     then

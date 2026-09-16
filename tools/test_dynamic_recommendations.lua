@@ -287,4 +287,122 @@ assert(converted.savings == 300, "converted savings exposed")
 assert(addonTable.formatCopperShort(123456) == "12g 34s", "compact money formatting")
 assert(addonTable.formatPriceAge(7200) == "2h old", "scan age formatting")
 
+providerName = "fixture"
+assert(loadfile("RouteSolver.lua"))("Profession_Capper", addonTable)
+
+local reviewRecipes = {
+    { spellID = 101, name = "Review bridge", profession = "Enchanting", reagents = {} },
+    { spellID = 102, name = "Review acquired", profession = "Enchanting", reagents = {} },
+}
+local reviewCosts = {
+    [101] = { [0] = 2, [1] = 3, [2] = 200 },
+    [102] = { [0] = 1, [1] = 100, [2] = 101 },
+}
+
+addonTable.isRecipeEligibleForDynamicOptimization = function()
+    return true
+end
+
+addonTable.getRecipeDifficultyMetadata = function()
+    return {
+        requiredSkill = 0,
+        yellowSkill = 4,
+        greenSkill = 4,
+        graySkill = 4,
+    }
+end
+
+addonTable.buildFullProfessionOptimizationInput = function()
+    return reviewRecipes, {
+        baseSkill = 0,
+        currentCap = 3,
+        reachableCap = 3,
+        inventory = {},
+        learnedRecipes = {
+            [101] = true,
+            [102] = false,
+        },
+        acquiredOneTime = {},
+        trainingSteps = {},
+        fullCatalog = true,
+    }
+end
+
+addonTable.calculateRecipeCost = function(recipe, skill, _, state)
+    local key = "recipe:" .. tostring(recipe.spellID)
+    local acquired = state.acquiredOneTime and state.acquiredOneTime[key] == true
+    local continuing = state.routeActiveRecipeID ~= nil
+        and tostring(state.routeActiveRecipeID) == tostring(recipe.spellID)
+    local oneTimeCosts = {}
+
+    if recipe.spellID == 102 and not acquired and not continuing then
+        oneTimeCosts = {{
+            key = key,
+            kind = "recipe_acquisition",
+            marketCost = 10,
+            goldCost = 10,
+        }}
+    end
+
+    local material = reviewCosts[recipe.spellID][skill]
+    return {
+        available = material ~= nil,
+        useful = material ~= nil,
+        difficulty = "orange",
+        skillUpChance = 1,
+        expectedCraftsPerSkillUp = 1,
+        currentPurchaseCostPerCraft = material,
+        expectedCurrentPurchaseCostPerSkillUp = material,
+        materialMarketValuePerCraft = material,
+        expectedMarketCostPerSkillUp = material,
+        goldNeededNowPerCraft = material,
+        expectedGoldNeededNowPerSkillUp = material,
+        oneTimeCosts = oneTimeCosts,
+        reagentCosts = {},
+        quality = "complete",
+        availableNow = true,
+    }
+end
+
+addonTable.buildProfessionShoppingPlan = function(route)
+    return {
+        complete = route.complete,
+        estimatedCurrentPurchaseCost = route.totalCurrentPurchaseCost,
+        estimatedMarketValueCost = route.totalMarketCost,
+        estimatedGoldNeededNow = route.totalGoldCost,
+        totalExpectedCrafts = route.totalExpectedCrafts,
+        stalePriceCount = 0,
+        missingPriceCount = 0,
+    }
+end
+
+local exactAcquisitionRecommendation = addonTable.computeDynamicProfessionRecommendation(
+    {},
+    {
+        professionName = "Enchanting",
+        baseSkill = 0,
+        effectiveSkill = 0,
+        activeSkillModifier = 0,
+        currentCap = 3,
+    },
+    {
+        targetSkill = 3,
+        optimizeFor = "current",
+    }
+)
+
+assert(exactAcquisitionRecommendation.routeComplete == true, "exact acquisition route completes")
+assert(table.getn(exactAcquisitionRecommendation.route.actions) == 3, "exact acquisition route has three crafts")
+assert(exactAcquisitionRecommendation.route.actions[1].recipeID == 102, "dynamic route acquires recipe first")
+assert(exactAcquisitionRecommendation.route.actions[2].recipeID == 101, "dynamic route switches away")
+assert(exactAcquisitionRecommendation.route.actions[3].recipeID == 102, "dynamic route returns to learned recipe")
+assert(
+    exactAcquisitionRecommendation.route.totalCurrentPurchaseCost == 115,
+    "dynamic pass-local cost cache preserves one-time acquisition state"
+)
+assert(
+    exactAcquisitionRecommendation.route.actions[3].acquisitionGoldCost == 0,
+    "dynamic return segment does not repay recipe acquisition"
+)
+
 print("Dynamic recommendation integration tests passed.")
