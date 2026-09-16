@@ -17,6 +17,7 @@ REQUIRED_ORDER = [
     "GeneratedRouteData.lua",
     "Performance.lua",
     "RuntimeState.lua",
+    "RefreshCoordinator.lua",
     "ProfessionBook.lua",
     "RouteData.lua",
     "RecipeCatalog.lua",

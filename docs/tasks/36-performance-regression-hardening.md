@@ -1,6 +1,6 @@
 # Task 36 — End-to-end performance regression hardening
 
-Status: QUEUED  
+Status: IN PROGRESS — automated hardening implemented; real-client performance matrix pending  
 Phase: 7 — Runtime performance hardening  
 Depends on: Tasks 32, 33, 34 and 35
 
@@ -113,3 +113,47 @@ If changing Cheapest to market-route optimization with inventory applied only to
 - Memory remains stable across repeated open/close cycles.
 - Performance report contains clear before/after measurements.
 - Any remaining bottleneck is documented with evidence and a queued follow-up task rather than hidden.
+
+
+## Implementation status
+
+The deterministic hardening portion is implemented.
+
+### New regression boundaries
+
+- Refresh scheduling is now owned by `RefreshCoordinator.lua`, a small testable coalescer. Repeated equivalent events keep one pending expensive refresh; mixed event bursts collapse to one `MULTIPLE_EVENTS` refresh.
+- Profession-book snapshots are explicitly scoped to the active character owner. If the owner key changes, all old profession snapshots are discarded, the profession-book revision advances, and the next open is a `character_switch` scan.
+- `/pcapper perf` now reports retained heap plus current profession-book, inventory, provider-price, recommendation, and canonical-recipe cache counts. These values are only collected when the diagnostic summary is requested.
+- The obsolete blanket `invalidateDynamicRecommendationCache()` path is removed. Tests and production now advance the concrete dependency revision that changed.
+- The obsolete serialized `getRouteRefreshKey()` / `routeRefreshNeeded()` shopping-plan path is removed.
+- The unused exceptional/manual runtime generation is removed.
+
+### Automated Phase 7 gates
+
+CI now explicitly verifies:
+
+- BAG_UPDATE preserves profession identity and cannot directly call profession scanning;
+- duplicate scheduled events coalesce to one dispatch;
+- same-character unchanged profession opens reuse the profession snapshot;
+- profession switching cannot reuse the wrong active snapshot;
+- character-owner switching clears old snapshots;
+- a warm exact recommendation does not rerun the route solver;
+- inventory generation changes invalidate inventory-dependent Cheapest results;
+- provider revision changes invalidate cached provider prices;
+- the same item/provider/revision does not repeatedly query the provider;
+- provider, inventory, recommendation, and eviction queues remain within bounds;
+- stale incremental jobs cannot publish and release their large working state;
+- synchronous and incremental Cheapest/Available route semantics match;
+- current live difficulty overrides static difficulty at the current skill;
+- learning a previously acquisition-first recipe removes acquisition guidance and changes the next action to craft;
+- the optimized UI retains a protected Static fallback boundary;
+- the production optimized UI cannot directly call the synchronous full route solver;
+- trainer/vendor source-location and route-detail test suites remain in the full validation workflow.
+
+`tools/validate_phase7_guards.py` also rejects reintroduction of the removed blanket invalidation/serialized-refresh paths or bypassing the incremental route job from the UI.
+
+### Manual acceptance still required
+
+CI cannot prove actual WoW 3.3.5 UI-thread latency, retained Lua heap behavior over real close/open cycles, TSM scan timing, or visual/map interaction. The complete real-client matrix and before/after values are tracked in `docs/performance/phase7-regression-report.md`.
+
+Task 36 remains IN PROGRESS until those measurements show that the original Enchanting lag is materially reduced and no real-client correctness regression appears.

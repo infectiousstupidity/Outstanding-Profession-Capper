@@ -150,7 +150,7 @@ local syncCheapest = addonTable.computeDynamicProfessionRecommendation(
 )
 assertEqual(syncCheapest.currentSegment.recipeID, 10, "synchronous Cheapest semantics")
 
-addonTable.invalidateDynamicRecommendationCache()
+addonTable.noteRuntimeInventoryChanged()
 local pendingCheapest = addonTable.computeDynamicProfessionRecommendation(
     cache,
     context,
@@ -177,7 +177,7 @@ local syncAvailable = addonTable.computeDynamicProfessionRecommendation(
 )
 assertEqual(syncAvailable.currentSegment.recipeID, 11, "synchronous Available semantics")
 
-addonTable.invalidateDynamicRecommendationCache()
+addonTable.noteRuntimeInventoryChanged()
 local pendingAvailable = addonTable.computeDynamicProfessionRecommendation(
     cache,
     context,
@@ -192,7 +192,7 @@ local asyncAvailable = finishPending(pendingAvailable)
 assertEqual(asyncAvailable.currentSegment.recipeID, syncAvailable.currentSegment.recipeID, "Available exact equivalence")
 assertEqual(asyncAvailable.routeComplete, true, "Available exact route complete")
 
-addonTable.invalidateDynamicRecommendationCache()
+addonTable.noteRuntimeInventoryChanged()
 local stalePending = addonTable.computeDynamicProfessionRecommendation(
     cache,
     context,
@@ -211,7 +211,7 @@ assertEqual(staleStatus, "cancelled", "inventory generation cancels old recommen
 assertEqual(staleResult.reason, "runtime_inputs_changed", "stale job cannot publish")
 assert(stalePending._incremental == nil, "cancelled recommendation drops job closure")
 
-addonTable.invalidateDynamicRecommendationCache()
+addonTable.noteRuntimeInventoryChanged()
 local explicitPending = addonTable.computeDynamicProfessionRecommendation(
     cache,
     context,

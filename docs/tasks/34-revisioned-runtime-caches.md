@@ -134,7 +134,7 @@ Do not change the optimization objective. In particular, do not remove inventory
 
 ## Implementation status
 
-The runtime now uses explicit generations for profession-book, skill/context, inventory, character eligibility, recommendation mode, and exceptional/manual invalidation. The recommendation key also contains provider identity/revision, target inputs, availability mode, optimization objective, and acquisition-data revision.
+The runtime now uses explicit generations for profession-book, skill/context, inventory, character eligibility, and recommendation mode. The recommendation key also contains provider identity/revision, target inputs, availability mode, optimization objective, and acquisition-data revision.
 
 Task 33's profession-book snapshot remains the learned/live overlay. Bundled catalog recipes are converted lazily to canonical immutable optimizer structures and static/unknown recipes reuse those structures across passes. Inventory counts are cached only within the current inventory generation.
 

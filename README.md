@@ -29,6 +29,9 @@ This fork descends from SamuelLira99/Profession-Capper, DarkChimu/Improved-Profe
 - /pcapper attach / /pcapper detach
 - /pcapper lock / /pcapper unlock
 - /pcapper reset — restore default settings and attach the panel again.
+- /pcapper perf — enable performance instrumentation if needed and print the latest runtime summary.
+- /pcapper perf on / /pcapper perf off
+- /pcapper perf reset — clear performance samples and counters while leaving instrumentation enabled.
 - /pcapper help
 
 Dragging an attached, unlocked panel automatically detaches it and saves its new position.

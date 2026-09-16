@@ -411,6 +411,34 @@ local function cachePair(record, name)
     return tostring(tonumber(cache.hits) or 0) .. "/" .. tostring(tonumber(cache.misses) or 0)
 end
 
+local function safeStats(functionName)
+    local callback = addonTable[functionName]
+    if type(callback) ~= "function" then
+        return {}
+    end
+    local ok, value = pcall(callback)
+    return ok and type(value) == "table" and value or {}
+end
+
+function addonTable.getRuntimeCacheFootprint()
+    local book = safeStats("getProfessionBookLifecycleStats")
+    local runtime = safeStats("getRuntimeStateCacheStats")
+    local price = safeStats("getPriceCacheStats")
+    local dynamic = safeStats("getDynamicRuntimeCacheStats")
+
+    return {
+        heapKb = memoryKilobytes(),
+        professionBookSnapshots = tonumber(book.snapshotCount) or 0,
+        inventoryEntries = tonumber(runtime.inventoryEntries) or 0,
+        maxInventoryEntries = tonumber(runtime.maxInventoryEntries) or 0,
+        priceEntries = tonumber(price.entries) or 0,
+        maxPriceEntries = tonumber(price.maxEntries) or 0,
+        recommendationEntries = tonumber(dynamic.recommendationEntries) or 0,
+        maxRecommendationEntries = tonumber(dynamic.maxRecommendationEntries) or 0,
+        canonicalRecipeEntries = tonumber(dynamic.canonicalRecipeEntries) or 0,
+    }
+end
+
 function addonTable.getPerformanceSummaryLines()
     local lines = {}
 
@@ -482,6 +510,19 @@ function addonTable.getPerformanceSummaryLines()
             .. " states=" .. tostring(lastRouteJob.exploredStates or 0)
             .. " memory=" .. formatMemoryDelta(lastRouteJob.memoryDeltaKb))
     end
+
+    local footprint = addonTable.getRuntimeCacheFootprint()
+    table.insert(lines, "retained heap=" .. (
+            footprint.heapKb and string.format("%.0fKB", footprint.heapKb) or "n/a"
+        )
+        .. " | book=" .. tostring(footprint.professionBookSnapshots)
+        .. " inventory=" .. tostring(footprint.inventoryEntries)
+            .. "/" .. tostring(footprint.maxInventoryEntries)
+        .. " price=" .. tostring(footprint.priceEntries)
+            .. "/" .. tostring(footprint.maxPriceEntries)
+        .. " recommendations=" .. tostring(footprint.recommendationEntries)
+            .. "/" .. tostring(footprint.maxRecommendationEntries)
+        .. " canonical=" .. tostring(footprint.canonicalRecipeEntries))
 
     table.insert(lines, "accumulated requests=" .. tostring(totals.refreshRequests)
         .. " expensive-refreshes=" .. tostring(totals.refreshes)

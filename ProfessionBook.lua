@@ -2,6 +2,7 @@ local addonName, addonTable = ...
 
 local snapshots = {}
 local lastOpenedProfession
+local activeOwnerKey
 local generation = 0
 
 local function professionName(value)
@@ -18,9 +19,69 @@ local function baseSkill(context)
     return tonumber(context) or 0
 end
 
+local function currentOwnerKey(context)
+    if type(context) == "table"
+        and type(context.characterKey) == "string"
+        and context.characterKey ~= ""
+    then
+        return context.characterKey
+    end
+
+    if type(UnitGUID) == "function" then
+        local ok, guid = pcall(UnitGUID, "player")
+        if ok and type(guid) == "string" and guid ~= "" then
+            return "guid:" .. guid
+        end
+    end
+
+    local name
+    if type(UnitName) == "function" then
+        local ok, value = pcall(UnitName, "player")
+        if ok and type(value) == "string" and value ~= "" then
+            name = value
+        end
+    end
+
+    if name then
+        local realm
+        if type(GetRealmName) == "function" then
+            local ok, value = pcall(GetRealmName)
+            if ok and type(value) == "string" and value ~= "" then
+                realm = value
+            end
+        end
+        return "name:" .. name .. "@" .. tostring(realm or "")
+    end
+
+    return "session"
+end
+
+local function bumpBookRevision()
+    generation = generation + 1
+    if type(addonTable.bumpRuntimeRevision) == "function" then
+        addonTable.bumpRuntimeRevision("professionBook")
+    end
+end
+
+local function syncOwner(context)
+    local ownerKey = currentOwnerKey(context)
+    local changed = activeOwnerKey ~= nil and activeOwnerKey ~= ownerKey
+    if changed then
+        snapshots = {}
+        lastOpenedProfession = nil
+        bumpBookRevision()
+    end
+    activeOwnerKey = ownerKey
+    return ownerKey, changed
+end
+
 local function snapshotFor(profession)
     profession = professionName(profession)
-    return profession and snapshots[profession] or nil
+    local entry = profession and snapshots[profession] or nil
+    if entry and entry.ownerKey ~= activeOwnerKey then
+        return nil
+    end
+    return entry
 end
 
 function addonTable.prepareProfessionBook(profession, context)
@@ -32,10 +93,21 @@ function addonTable.prepareProfessionBook(profession, context)
         }
     end
 
+    local ownerKey, ownerChanged = syncOwner(context)
     local entry = snapshots[profession]
+    if entry and entry.ownerKey ~= ownerKey then
+        entry = nil
+    end
     local switched = lastOpenedProfession ~= nil
         and lastOpenedProfession ~= profession
     lastOpenedProfession = profession
+
+    if ownerChanged then
+        return {
+            action = "scan",
+            reason = "character_switch",
+        }
+    end
 
     if switched then
         return {
@@ -82,11 +154,10 @@ function addonTable.storeProfessionBookSnapshot(profession, recipes, context)
         return nil
     end
 
-    generation = generation + 1
-    if type(addonTable.bumpRuntimeRevision) == "function" then
-        addonTable.bumpRuntimeRevision("professionBook")
-    end
+    local ownerKey = syncOwner(context)
+    bumpBookRevision()
     snapshots[profession] = {
+        ownerKey = ownerKey,
         profession = profession,
         recipes = recipes,
         baseSkill = baseSkill(context),
@@ -164,7 +235,24 @@ function addonTable.getProfessionBookLifecycleState(profession)
         identityInvalid = entry.identityInvalid and true or false,
         invalidationReason = entry.invalidationReason,
         generation = entry.generation,
+        ownerKey = entry.ownerKey,
         recipes = entry.recipes,
+        lastOpenedProfession = lastOpenedProfession,
+    }
+end
+
+function addonTable.getProfessionBookLifecycleStats()
+    local snapshotCount = 0
+    for _, entry in pairs(snapshots) do
+        if entry.ownerKey == activeOwnerKey then
+            snapshotCount = snapshotCount + 1
+        end
+    end
+
+    return {
+        ownerKey = activeOwnerKey,
+        snapshotCount = snapshotCount,
+        generation = generation,
         lastOpenedProfession = lastOpenedProfession,
     }
 end
@@ -172,5 +260,6 @@ end
 function addonTable.resetProfessionBookLifecycle()
     snapshots = {}
     lastOpenedProfession = nil
+    activeOwnerKey = nil
     generation = 0
 end
