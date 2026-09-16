@@ -120,7 +120,7 @@ This phase adds a deterministic Smartest objective without changing Cheapest. It
 
 | Task | Status | Purpose |
 | --- | --- | --- |
-| [40 Deterministic enchant scroll and vellum metadata](docs/tasks/40-enchant-scroll-vellum-metadata.md) | REVIEW | Generate reliable scroll/vellum compatibility data without runtime tooltip/name guessing. |
+| [40 Deterministic enchant scroll and vellum metadata](docs/tasks/40-enchant-scroll-vellum-metadata.md) | FIX | Generate reliable scroll/vellum compatibility data without runtime tooltip/name guessing. |
 | [41 Conservative resale valuation](docs/tasks/41-conservative-resale-valuation.md) | BLOCKED | Turn TSM listing data into conservative resale evidence without pretending listings are guaranteed sales. |
 | [42 Resale-aware Enchanting craft economics](docs/tasks/42-resale-aware-enchant-economics.md) | BLOCKED | Compare direct vs vellum execution, cap resale credit at gross craft cost, and track surplus separately. |
 | [43 Smartest objective and availability filter](docs/tasks/43-smartest-objective-and-availability-filter.md) | BLOCKED | Add lexicographic Smartest routing and make Available-now an orthogonal constraint. |

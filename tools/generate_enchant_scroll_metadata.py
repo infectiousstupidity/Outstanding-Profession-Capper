@@ -18,7 +18,8 @@ SOURCE = ROOT / "tools" / "data" / "enchant_scroll_metadata_source.json"
 CATALOG = ROOT / "RecipeCatalogData.lua"
 OUTPUT = ROOT / "EnchantScrollData.lua"
 
-TIER_BY_EXPANSION = {"classic": 1, "bcc": 2, "wrath": 3}
+VELLUM_TIER_BY_ITEM = {38682: 1, 37602: 2, 43145: 3, 39349: 1, 39350: 2, 43146: 3}
+VELLUM_TARGET_BY_ITEM = {38682: "armor", 37602: "armor", 43145: "armor", 39349: "weapon", 39350: "weapon", 43146: "weapon"}
 
 
 def lua_string(value):
@@ -58,11 +59,17 @@ def classify(record):
     if item_class in (2, 4):
         if output_item_id is None:
             return {"vellumEligible": False, "classification": "no_scroll_output"}
+        target_type = "weapon" if item_class == 2 else "armor"
+        vellum_item_id = record.get("minimumVellumItemID")
+        if vellum_item_id not in VELLUM_TIER_BY_ITEM:
+            return {"vellumEligible": False, "classification": "vellum_mapping_missing"}
+        if VELLUM_TARGET_BY_ITEM[vellum_item_id] != target_type:
+            return {"vellumEligible": False, "classification": "vellum_target_mismatch"}
         return {
             "vellumEligible": True,
             "scrollItemID": output_item_id,
-            "targetType": "weapon" if item_class == 2 else "armor",
-            "minVellumTier": TIER_BY_EXPANSION[record["expansion"]],
+            "targetType": target_type,
+            "minVellumTier": VELLUM_TIER_BY_ITEM[vellum_item_id],
         }
 
     if output_item_id is None:
@@ -96,7 +103,7 @@ def validate_source(source):
             raise RuntimeError("duplicate source spell ID %d" % spell_id)
         seen.add(spell_id)
 
-        if record["expansion"] not in TIER_BY_EXPANSION:
+        if record["expansion"] not in ("classic", "bcc", "wrath"):
             raise RuntimeError("invalid expansion for spell %d" % spell_id)
         if record["catalogOutputItemID"] != catalog[spell_id]:
             raise RuntimeError("catalog output changed for spell %d" % spell_id)
@@ -105,6 +112,7 @@ def validate_source(source):
             "catalogOutputItemID",
             "scrollCrosscheckItemID",
             "equippedItemClass",
+            "minimumVellumItemID",
         ):
             value = record[field]
             if value is not None and (not isinstance(value, int) or value <= 0):
@@ -125,6 +133,7 @@ def render(source):
     primary = provenance["primaryCatalog"]
     crosscheck = provenance["numericTargetCrosscheck"]
     core = provenance["coreSemantics"]
+    vellum = provenance["vellumCompatibilityCrosscheck"]
 
     lines = [
         "local addonName, addonTable = ...",
@@ -147,9 +156,15 @@ def render(source):
             lua_string(crosscheck["commit"]),
             lua_string(crosscheck["file"]),
         ),
+        "    vellumCompatibilityCrosscheck = { repository = %s, commit = %s, file = %s },"
+        % (
+            lua_string(vellum["repository"]),
+            lua_string(vellum["commit"]),
+            lua_string(vellum["file"]),
+        ),
         "    coreSemantics = { repository = %s, commit = %s },"
         % (lua_string(core["repository"]), lua_string(core["commit"])),
-        '    tierRule = "first source expansion: classic=1, bcc=2, wrath=3; compatible vellums are minVellumTier and higher",',
+        '    tierRule = "pinned spell-to-vellum mapping; compatible vellums are minVellumTier and higher",',
         "}",
         "",
         "addonTable.enchantVellumCatalog = {",

@@ -21,6 +21,12 @@
         "src/server/game/Entities/Item/Item.cpp",
         "src/server/game/Entities/Item/ItemTemplate.h"
       ]
+    },
+    "vellumCompatibilityCrosscheck": {
+      "repository": "SamuelGreen07/Addons",
+      "commit": "97a5215d8674b1ce79294813f3ac7984bfb56a75",
+      "file": "Skillet-Classic/SkilletData2.lua",
+      "note": "Pinned direct spell-to-vellum mapping from Skillet.vellumData2; used for minimum compatible vellum rank instead of expansion heuristics."
     }
   },
   "records": [
@@ -32,7 +38,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7420,
@@ -42,7 +49,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7421,
@@ -62,7 +70,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7428,
@@ -72,7 +81,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7443,
@@ -82,7 +92,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7451,
@@ -102,7 +113,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7457,
@@ -112,7 +124,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7745,
@@ -122,7 +135,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1378,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 7748,
@@ -132,7 +146,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7766,
@@ -142,7 +157,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7771,
@@ -152,7 +168,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7776,
@@ -162,7 +179,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7779,
@@ -172,7 +190,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7782,
@@ -182,7 +201,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7786,
@@ -192,7 +212,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 7788,
@@ -202,7 +223,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 7793,
@@ -212,7 +234,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1378,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 7795,
@@ -232,7 +255,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7859,
@@ -242,7 +266,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7861,
@@ -252,7 +277,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7863,
@@ -262,7 +288,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 7867,
@@ -272,7 +299,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13378,
@@ -282,7 +310,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13380,
@@ -292,7 +321,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1378,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 13419,
@@ -302,7 +332,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13421,
@@ -312,7 +343,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 0,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13464,
@@ -322,7 +354,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13485,
@@ -332,7 +365,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13501,
@@ -342,7 +376,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13503,
@@ -352,7 +387,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 13522,
@@ -362,7 +398,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13529,
@@ -372,7 +409,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1378,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 13536,
@@ -382,7 +420,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13538,
@@ -392,7 +431,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13607,
@@ -402,7 +442,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13612,
@@ -412,7 +453,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13617,
@@ -422,7 +464,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13620,
@@ -432,7 +475,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13622,
@@ -442,7 +486,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13626,
@@ -452,7 +497,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13628,
@@ -472,7 +518,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13635,
@@ -482,7 +529,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13637,
@@ -492,7 +540,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13640,
@@ -502,7 +551,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13642,
@@ -512,7 +562,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13644,
@@ -522,7 +573,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13646,
@@ -532,7 +584,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13648,
@@ -542,7 +595,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13653,
@@ -552,7 +606,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 13655,
@@ -562,7 +617,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 13657,
@@ -572,7 +628,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13659,
@@ -582,7 +639,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13661,
@@ -592,7 +650,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13663,
@@ -602,7 +661,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13687,
@@ -612,7 +672,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13689,
@@ -622,7 +683,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13693,
@@ -632,7 +694,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 13695,
@@ -642,7 +705,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1378,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 13698,
@@ -652,7 +716,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13700,
@@ -662,7 +727,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13702,
@@ -682,7 +748,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13794,
@@ -692,7 +759,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13815,
@@ -702,7 +770,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13817,
@@ -712,7 +781,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13822,
@@ -722,7 +792,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13836,
@@ -732,7 +803,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13841,
@@ -742,7 +814,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13846,
@@ -752,7 +825,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13858,
@@ -762,7 +836,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13868,
@@ -772,7 +847,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13882,
@@ -782,7 +858,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13887,
@@ -792,7 +869,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13890,
@@ -802,7 +880,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13898,
@@ -812,7 +891,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 13905,
@@ -822,7 +902,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13915,
@@ -832,7 +913,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 13917,
@@ -842,7 +924,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13931,
@@ -852,7 +935,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13933,
@@ -862,7 +946,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13935,
@@ -872,7 +957,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13937,
@@ -882,7 +968,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1378,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 13939,
@@ -892,7 +979,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13941,
@@ -902,7 +990,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13943,
@@ -912,7 +1001,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 13945,
@@ -922,7 +1012,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13947,
@@ -932,7 +1023,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 13948,
@@ -942,7 +1034,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 14293,
@@ -1022,7 +1115,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20009,
@@ -1032,7 +1126,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20010,
@@ -1042,7 +1137,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20011,
@@ -1052,7 +1148,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20012,
@@ -1062,7 +1159,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20013,
@@ -1072,7 +1170,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20014,
@@ -1082,7 +1181,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20015,
@@ -1092,7 +1192,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20016,
@@ -1102,7 +1203,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20017,
@@ -1112,7 +1214,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20020,
@@ -1122,7 +1225,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20023,
@@ -1132,7 +1236,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20024,
@@ -1142,7 +1247,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20025,
@@ -1152,7 +1258,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20026,
@@ -1162,7 +1269,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20028,
@@ -1172,7 +1280,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 20029,
@@ -1182,7 +1291,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 20030,
@@ -1192,7 +1302,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1378,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 20031,
@@ -1202,7 +1313,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 20032,
@@ -1212,7 +1324,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 20033,
@@ -1222,7 +1335,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 20034,
@@ -1232,7 +1346,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 20035,
@@ -1242,7 +1357,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1378,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 20036,
@@ -1252,7 +1368,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1378,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 20051,
@@ -1272,7 +1389,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 720371,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 22434,
@@ -1292,7 +1410,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 583155,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 22750,
@@ -1302,7 +1421,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 583155,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 23799,
@@ -1312,7 +1432,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 583155,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 23800,
@@ -1322,7 +1443,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 583155,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 23801,
@@ -1332,7 +1454,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 23802,
@@ -1342,7 +1465,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 23803,
@@ -1352,7 +1476,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 583155,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 23804,
@@ -1362,7 +1487,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 583155,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 25072,
@@ -1372,7 +1498,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 25073,
@@ -1382,7 +1509,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 25074,
@@ -1392,7 +1520,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 25078,
@@ -1402,7 +1531,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 25079,
@@ -1412,7 +1542,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 25080,
@@ -1422,7 +1553,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 25081,
@@ -1432,7 +1564,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 25082,
@@ -1442,7 +1575,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 25083,
@@ -1452,7 +1586,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 25084,
@@ -1462,7 +1597,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 25086,
@@ -1472,7 +1608,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 25124,
@@ -1552,7 +1689,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1378,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39349
     },
     {
       "spellID": 27899,
@@ -1562,7 +1700,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27905,
@@ -1572,7 +1711,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27906,
@@ -1582,7 +1722,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27911,
@@ -1592,7 +1733,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27913,
@@ -1602,7 +1744,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27914,
@@ -1612,7 +1755,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27917,
@@ -1622,7 +1766,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27920,
@@ -1672,7 +1817,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27945,
@@ -1682,7 +1828,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27946,
@@ -1692,7 +1839,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27947,
@@ -1702,7 +1850,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27948,
@@ -1712,7 +1861,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27950,
@@ -1722,7 +1872,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27951,
@@ -1732,7 +1883,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27954,
@@ -1742,7 +1894,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27957,
@@ -1752,7 +1905,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27958,
@@ -1762,7 +1916,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 27960,
@@ -1772,7 +1927,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27961,
@@ -1782,7 +1938,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27962,
@@ -1792,7 +1949,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 27967,
@@ -1802,7 +1960,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 27968,
@@ -1812,7 +1971,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 583155,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 27971,
@@ -1822,7 +1982,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 132450,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 27972,
@@ -1832,7 +1993,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 27975,
@@ -1842,7 +2004,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 697843,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 27977,
@@ -1852,7 +2015,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 132450,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 27981,
@@ -1862,7 +2026,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 27982,
@@ -1872,7 +2037,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 27984,
@@ -1882,7 +2048,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 28003,
@@ -1892,7 +2059,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 28004,
@@ -1902,7 +2070,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 28016,
@@ -2002,7 +2171,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 33991,
@@ -2012,7 +2182,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 33992,
@@ -2022,7 +2193,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 33993,
@@ -2032,7 +2204,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 33994,
@@ -2042,7 +2215,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 33995,
@@ -2052,7 +2226,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 33996,
@@ -2062,7 +2237,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 33997,
@@ -2072,7 +2248,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 33999,
@@ -2082,7 +2259,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 34001,
@@ -2092,7 +2270,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 34002,
@@ -2102,7 +2281,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 34003,
@@ -2112,7 +2292,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 34004,
@@ -2122,7 +2303,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 34005,
@@ -2132,7 +2314,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 34006,
@@ -2142,7 +2325,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 34007,
@@ -2152,7 +2336,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 34008,
@@ -2162,7 +2347,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 34009,
@@ -2172,7 +2358,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 34010,
@@ -2182,7 +2369,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 42613,
@@ -2212,7 +2400,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 42974,
@@ -2222,7 +2411,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 44383,
@@ -2232,7 +2422,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 44483,
@@ -2242,7 +2433,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44484,
@@ -2252,7 +2444,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44488,
@@ -2262,7 +2455,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44489,
@@ -2272,7 +2466,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44492,
@@ -2282,7 +2477,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44494,
@@ -2292,7 +2488,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44500,
@@ -2302,7 +2499,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44506,
@@ -2312,7 +2510,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44508,
@@ -2322,7 +2521,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44509,
@@ -2332,7 +2532,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44510,
@@ -2342,7 +2543,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 701939,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 44513,
@@ -2352,7 +2554,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44524,
@@ -2362,7 +2565,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 701939,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 44528,
@@ -2372,7 +2576,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44529,
@@ -2382,7 +2587,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44555,
@@ -2392,7 +2598,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44556,
@@ -2402,7 +2609,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44575,
@@ -2412,7 +2620,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44576,
@@ -2422,7 +2631,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 697843,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 44582,
@@ -2432,7 +2642,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44584,
@@ -2442,7 +2653,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44588,
@@ -2452,7 +2664,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44589,
@@ -2462,7 +2675,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44590,
@@ -2472,7 +2686,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44591,
@@ -2482,7 +2697,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44592,
@@ -2492,7 +2708,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44593,
@@ -2502,7 +2719,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44595,
@@ -2512,7 +2730,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 132450,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 39350
     },
     {
       "spellID": 44596,
@@ -2522,7 +2741,8 @@
       "equippedItemClass": null,
       "equippedItemSubClassMask": null,
       "equippedItemInventoryTypeMask": null,
-      "slot": null
+      "slot": null,
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44598,
@@ -2532,7 +2752,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44612,
@@ -2542,7 +2763,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44616,
@@ -2552,7 +2774,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44621,
@@ -2562,7 +2785,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 697843,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 44623,
@@ -2572,7 +2796,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44625,
@@ -2582,7 +2807,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44629,
@@ -2592,7 +2818,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 701939,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 44630,
@@ -2602,7 +2829,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 132450,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 44631,
@@ -2612,7 +2840,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44633,
@@ -2622,7 +2851,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 701939,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 44635,
@@ -2632,7 +2862,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 44636,
@@ -2672,7 +2903,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 46594,
@@ -2682,7 +2914,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 47051,
@@ -2692,7 +2925,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 37602
     },
     {
       "spellID": 47672,
@@ -2702,7 +2936,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 47766,
@@ -2712,7 +2947,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 47898,
@@ -2722,7 +2958,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 47899,
@@ -2732,7 +2969,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 47900,
@@ -2742,7 +2980,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 47901,
@@ -2752,7 +2991,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 59619,
@@ -2762,7 +3002,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 701939,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 59621,
@@ -2772,7 +3013,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 697843,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 59625,
@@ -2782,7 +3024,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 697843,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 59636,
@@ -2802,7 +3045,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 60609,
@@ -2812,7 +3056,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 60616,
@@ -2822,7 +3067,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 60619,
@@ -2842,7 +3088,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 60623,
@@ -2852,7 +3099,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 60653,
@@ -2862,7 +3110,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 64,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "SHIELDSLOT"
+      "slot": "SHIELDSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 60663,
@@ -2872,7 +3121,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 65536,
-      "slot": "BACKSLOT"
+      "slot": "BACKSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 60668,
@@ -2882,7 +3132,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 60691,
@@ -2892,7 +3143,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 136546,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_2HWEAPON"
+      "slot": "ENCHSLOT_2HWEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 60692,
@@ -2902,7 +3154,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 1048608,
-      "slot": "CHESTSLOT"
+      "slot": "CHESTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 60707,
@@ -2912,7 +3165,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 60714,
@@ -2922,7 +3176,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 701939,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 60763,
@@ -2932,7 +3187,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 60767,
@@ -2942,7 +3198,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 62256,
@@ -2952,7 +3209,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 512,
-      "slot": "WRISTSLOT"
+      "slot": "WRISTSLOT",
+      "minimumVellumItemID": 43145
     },
     {
       "spellID": 62257,
@@ -2962,7 +3220,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 62948,
@@ -2972,7 +3231,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1024,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "Staff"
+      "slot": "Staff",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 62959,
@@ -2982,7 +3242,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 1024,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "Staff"
+      "slot": "Staff",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 63746,
@@ -2992,7 +3253,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 30,
       "equippedItemInventoryTypeMask": 256,
-      "slot": "FEETSLOT"
+      "slot": "FEETSLOT",
+      "minimumVellumItemID": 38682
     },
     {
       "spellID": 64441,
@@ -3002,7 +3264,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 64579,
@@ -3012,7 +3275,8 @@
       "equippedItemClass": 2,
       "equippedItemSubClassMask": 714227,
       "equippedItemInventoryTypeMask": 0,
-      "slot": "ENCHSLOT_WEAPON"
+      "slot": "ENCHSLOT_WEAPON",
+      "minimumVellumItemID": 43146
     },
     {
       "spellID": 69412,
@@ -3032,7 +3296,8 @@
       "equippedItemClass": 4,
       "equippedItemSubClassMask": 31,
       "equippedItemInventoryTypeMask": 1024,
-      "slot": "HANDSSLOT"
+      "slot": "HANDSSLOT",
+      "minimumVellumItemID": 38682
     }
   ]
 }
