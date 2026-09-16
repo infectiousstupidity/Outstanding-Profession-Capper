@@ -185,5 +185,6 @@ Implemented the recorded tier-classification finding only.
 - Removed the expansion-to-tier heuristic. The generator now converts the pinned vellum item ID to tier I/II/III.
 - Corrected seven records whose true minimum differs from the expansion proxy: 25086, 27958, 42974, 44595, 46578, 63746, and 71692.
 - Added regression coverage for a Classic enchant requiring tier II, a TBC enchant requiring tier III, a Wrath enchant requiring tier II, and Enchant Gloves - Angler requiring tier I.
+- The generator treats `minimumVellumItemID` as optional for records that are intentionally excluded from vellum eligibility; eligible records still require and validate the exact mapping.
 
 Validation pending the pushed fix commit's full `Validate addon` workflow. Task remains FIX until that workflow succeeds.

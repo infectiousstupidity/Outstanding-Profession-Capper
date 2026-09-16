@@ -114,7 +114,7 @@ def validate_source(source):
             "equippedItemClass",
             "minimumVellumItemID",
         ):
-            value = record[field]
+            value = record.get(field)
             if value is not None and (not isinstance(value, int) or value <= 0):
                 raise RuntimeError("invalid %s for spell %d" % (field, spell_id))
 
