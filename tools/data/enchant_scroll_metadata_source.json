@@ -1,0 +1,3038 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "primaryCatalog": {
+      "repository": "Hoizame/AtlasLootClassic",
+      "commit": "8e99341e4e779328460bf7684c0d5b22ce50ddf1",
+      "file": "AtlasLootClassic/Data/Profession.lua",
+      "gameVersion": "Wrath of the Lich King 3.3.5"
+    },
+    "numericTargetCrosscheck": {
+      "repository": "b-morgan/Skillet-Classic",
+      "commit": "add4400eb38d7e0839d02de0bbe10c3a162354f6",
+      "file": "EnchantData5.lua",
+      "note": "Additional pinned numeric source for equipped-item class/slot and scroll-ID cross-check; filtered to the exact WotLK catalog spell IDs."
+    },
+    "coreSemantics": {
+      "repository": "azerothcore/azerothcore-wotlk",
+      "commit": "f1bef3bc0a2f6396175e184c2cac70df77b46d11",
+      "files": [
+        "src/server/game/Spells/SpellEffects.cpp",
+        "src/server/game/Entities/Item/Item.cpp",
+        "src/server/game/Entities/Item/ItemTemplate.h"
+      ]
+    }
+  },
+  "records": [
+    {
+      "spellID": 7418,
+      "expansion": "classic",
+      "catalogOutputItemID": 38679,
+      "scrollCrosscheckItemID": 38679,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 7420,
+      "expansion": "classic",
+      "catalogOutputItemID": 38766,
+      "scrollCrosscheckItemID": 38766,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 7421,
+      "expansion": "classic",
+      "catalogOutputItemID": 6218,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 7426,
+      "expansion": "classic",
+      "catalogOutputItemID": 38767,
+      "scrollCrosscheckItemID": 38767,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 7428,
+      "expansion": "classic",
+      "catalogOutputItemID": 38768,
+      "scrollCrosscheckItemID": 38768,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 7443,
+      "expansion": "classic",
+      "catalogOutputItemID": 38769,
+      "scrollCrosscheckItemID": 38769,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 7451,
+      "expansion": "classic",
+      "catalogOutputItemID": null,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 7454,
+      "expansion": "classic",
+      "catalogOutputItemID": 38770,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 7457,
+      "expansion": "classic",
+      "catalogOutputItemID": 38771,
+      "scrollCrosscheckItemID": 38771,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 7745,
+      "expansion": "classic",
+      "catalogOutputItemID": 38772,
+      "scrollCrosscheckItemID": 38772,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1378,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 7748,
+      "expansion": "classic",
+      "catalogOutputItemID": 38773,
+      "scrollCrosscheckItemID": 38773,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 7766,
+      "expansion": "classic",
+      "catalogOutputItemID": 38774,
+      "scrollCrosscheckItemID": 38774,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 7771,
+      "expansion": "classic",
+      "catalogOutputItemID": 38775,
+      "scrollCrosscheckItemID": 38775,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 7776,
+      "expansion": "classic",
+      "catalogOutputItemID": 38776,
+      "scrollCrosscheckItemID": 38776,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 7779,
+      "expansion": "classic",
+      "catalogOutputItemID": 38777,
+      "scrollCrosscheckItemID": 38777,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 7782,
+      "expansion": "classic",
+      "catalogOutputItemID": 38778,
+      "scrollCrosscheckItemID": 38778,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 7786,
+      "expansion": "classic",
+      "catalogOutputItemID": 38779,
+      "scrollCrosscheckItemID": 38779,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 7788,
+      "expansion": "classic",
+      "catalogOutputItemID": 38780,
+      "scrollCrosscheckItemID": 38780,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 7793,
+      "expansion": "classic",
+      "catalogOutputItemID": 38781,
+      "scrollCrosscheckItemID": 38781,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1378,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 7795,
+      "expansion": "classic",
+      "catalogOutputItemID": 6339,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 7857,
+      "expansion": "classic",
+      "catalogOutputItemID": 38782,
+      "scrollCrosscheckItemID": 38782,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 7859,
+      "expansion": "classic",
+      "catalogOutputItemID": 38783,
+      "scrollCrosscheckItemID": 38783,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 7861,
+      "expansion": "classic",
+      "catalogOutputItemID": 38784,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 7863,
+      "expansion": "classic",
+      "catalogOutputItemID": 38785,
+      "scrollCrosscheckItemID": 38785,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 7867,
+      "expansion": "classic",
+      "catalogOutputItemID": 38786,
+      "scrollCrosscheckItemID": 38786,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 13378,
+      "expansion": "classic",
+      "catalogOutputItemID": 38787,
+      "scrollCrosscheckItemID": 38787,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 13380,
+      "expansion": "classic",
+      "catalogOutputItemID": 38788,
+      "scrollCrosscheckItemID": 38788,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1378,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 13419,
+      "expansion": "classic",
+      "catalogOutputItemID": 38789,
+      "scrollCrosscheckItemID": 38789,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 13421,
+      "expansion": "classic",
+      "catalogOutputItemID": 38790,
+      "scrollCrosscheckItemID": 38790,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 0,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 13464,
+      "expansion": "classic",
+      "catalogOutputItemID": 38791,
+      "scrollCrosscheckItemID": 38791,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 13485,
+      "expansion": "classic",
+      "catalogOutputItemID": 38792,
+      "scrollCrosscheckItemID": 38792,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 13501,
+      "expansion": "classic",
+      "catalogOutputItemID": 38793,
+      "scrollCrosscheckItemID": 38793,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13503,
+      "expansion": "classic",
+      "catalogOutputItemID": 38794,
+      "scrollCrosscheckItemID": 38794,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 13522,
+      "expansion": "classic",
+      "catalogOutputItemID": 38795,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 13529,
+      "expansion": "classic",
+      "catalogOutputItemID": 38796,
+      "scrollCrosscheckItemID": 38796,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1378,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 13536,
+      "expansion": "classic",
+      "catalogOutputItemID": 38797,
+      "scrollCrosscheckItemID": 38797,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13538,
+      "expansion": "classic",
+      "catalogOutputItemID": 38798,
+      "scrollCrosscheckItemID": 38798,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 13607,
+      "expansion": "classic",
+      "catalogOutputItemID": 38799,
+      "scrollCrosscheckItemID": 38799,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 13612,
+      "expansion": "classic",
+      "catalogOutputItemID": 38800,
+      "scrollCrosscheckItemID": 38800,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 13617,
+      "expansion": "classic",
+      "catalogOutputItemID": 38801,
+      "scrollCrosscheckItemID": 38801,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 13620,
+      "expansion": "classic",
+      "catalogOutputItemID": 38802,
+      "scrollCrosscheckItemID": 38802,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 13622,
+      "expansion": "classic",
+      "catalogOutputItemID": 38803,
+      "scrollCrosscheckItemID": 38803,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13626,
+      "expansion": "classic",
+      "catalogOutputItemID": 38804,
+      "scrollCrosscheckItemID": 38804,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 13628,
+      "expansion": "classic",
+      "catalogOutputItemID": 11130,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 13631,
+      "expansion": "classic",
+      "catalogOutputItemID": 38805,
+      "scrollCrosscheckItemID": 38805,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 13635,
+      "expansion": "classic",
+      "catalogOutputItemID": 38806,
+      "scrollCrosscheckItemID": 38806,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 13637,
+      "expansion": "classic",
+      "catalogOutputItemID": 38807,
+      "scrollCrosscheckItemID": 38807,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 13640,
+      "expansion": "classic",
+      "catalogOutputItemID": 38808,
+      "scrollCrosscheckItemID": 38808,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 13642,
+      "expansion": "classic",
+      "catalogOutputItemID": 38809,
+      "scrollCrosscheckItemID": 38809,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13644,
+      "expansion": "classic",
+      "catalogOutputItemID": 38810,
+      "scrollCrosscheckItemID": 38810,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 13646,
+      "expansion": "classic",
+      "catalogOutputItemID": 38811,
+      "scrollCrosscheckItemID": 38811,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13648,
+      "expansion": "classic",
+      "catalogOutputItemID": 38812,
+      "scrollCrosscheckItemID": 38812,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13653,
+      "expansion": "classic",
+      "catalogOutputItemID": 38813,
+      "scrollCrosscheckItemID": 38813,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 13655,
+      "expansion": "classic",
+      "catalogOutputItemID": 38814,
+      "scrollCrosscheckItemID": 38814,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 13657,
+      "expansion": "classic",
+      "catalogOutputItemID": 38815,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 13659,
+      "expansion": "classic",
+      "catalogOutputItemID": 38816,
+      "scrollCrosscheckItemID": 38816,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 13661,
+      "expansion": "classic",
+      "catalogOutputItemID": 38817,
+      "scrollCrosscheckItemID": 38817,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13663,
+      "expansion": "classic",
+      "catalogOutputItemID": 38818,
+      "scrollCrosscheckItemID": 38818,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 13687,
+      "expansion": "classic",
+      "catalogOutputItemID": 38819,
+      "scrollCrosscheckItemID": 38819,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 13689,
+      "expansion": "classic",
+      "catalogOutputItemID": 38820,
+      "scrollCrosscheckItemID": 38820,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 13693,
+      "expansion": "classic",
+      "catalogOutputItemID": 38821,
+      "scrollCrosscheckItemID": 38821,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 13695,
+      "expansion": "classic",
+      "catalogOutputItemID": 38822,
+      "scrollCrosscheckItemID": 38822,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1378,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 13698,
+      "expansion": "classic",
+      "catalogOutputItemID": 38823,
+      "scrollCrosscheckItemID": 38823,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 13700,
+      "expansion": "classic",
+      "catalogOutputItemID": 38824,
+      "scrollCrosscheckItemID": 38824,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 13702,
+      "expansion": "classic",
+      "catalogOutputItemID": 11145,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 13746,
+      "expansion": "classic",
+      "catalogOutputItemID": 38825,
+      "scrollCrosscheckItemID": 38825,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 13794,
+      "expansion": "classic",
+      "catalogOutputItemID": 38826,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 13815,
+      "expansion": "classic",
+      "catalogOutputItemID": 38827,
+      "scrollCrosscheckItemID": 38827,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 13817,
+      "expansion": "classic",
+      "catalogOutputItemID": 38828,
+      "scrollCrosscheckItemID": 38828,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 13822,
+      "expansion": "classic",
+      "catalogOutputItemID": 38829,
+      "scrollCrosscheckItemID": 38829,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13836,
+      "expansion": "classic",
+      "catalogOutputItemID": 38830,
+      "scrollCrosscheckItemID": 38830,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 13841,
+      "expansion": "classic",
+      "catalogOutputItemID": 38831,
+      "scrollCrosscheckItemID": 38831,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 13846,
+      "expansion": "classic",
+      "catalogOutputItemID": 38832,
+      "scrollCrosscheckItemID": 38832,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13858,
+      "expansion": "classic",
+      "catalogOutputItemID": 38833,
+      "scrollCrosscheckItemID": 38833,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 13868,
+      "expansion": "classic",
+      "catalogOutputItemID": 38834,
+      "scrollCrosscheckItemID": 38834,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 13882,
+      "expansion": "classic",
+      "catalogOutputItemID": 38835,
+      "scrollCrosscheckItemID": 38835,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 13887,
+      "expansion": "classic",
+      "catalogOutputItemID": 38836,
+      "scrollCrosscheckItemID": 38836,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 13890,
+      "expansion": "classic",
+      "catalogOutputItemID": 38837,
+      "scrollCrosscheckItemID": 38837,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 13898,
+      "expansion": "classic",
+      "catalogOutputItemID": 38838,
+      "scrollCrosscheckItemID": 38838,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 13905,
+      "expansion": "classic",
+      "catalogOutputItemID": 38839,
+      "scrollCrosscheckItemID": 38839,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 13915,
+      "expansion": "classic",
+      "catalogOutputItemID": 38840,
+      "scrollCrosscheckItemID": 38840,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 13917,
+      "expansion": "classic",
+      "catalogOutputItemID": 38841,
+      "scrollCrosscheckItemID": 38841,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 13931,
+      "expansion": "classic",
+      "catalogOutputItemID": 38842,
+      "scrollCrosscheckItemID": 38842,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13933,
+      "expansion": "classic",
+      "catalogOutputItemID": 38843,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 13935,
+      "expansion": "classic",
+      "catalogOutputItemID": 38844,
+      "scrollCrosscheckItemID": 38844,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 13937,
+      "expansion": "classic",
+      "catalogOutputItemID": 38845,
+      "scrollCrosscheckItemID": 38845,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1378,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 13939,
+      "expansion": "classic",
+      "catalogOutputItemID": 38846,
+      "scrollCrosscheckItemID": 38846,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13941,
+      "expansion": "classic",
+      "catalogOutputItemID": 38847,
+      "scrollCrosscheckItemID": 38847,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 13943,
+      "expansion": "classic",
+      "catalogOutputItemID": 38848,
+      "scrollCrosscheckItemID": 38848,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 13945,
+      "expansion": "classic",
+      "catalogOutputItemID": 38849,
+      "scrollCrosscheckItemID": 38849,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 13947,
+      "expansion": "classic",
+      "catalogOutputItemID": 38850,
+      "scrollCrosscheckItemID": 38850,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 13948,
+      "expansion": "classic",
+      "catalogOutputItemID": 38851,
+      "scrollCrosscheckItemID": 38851,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 14293,
+      "expansion": "classic",
+      "catalogOutputItemID": 11287,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 14807,
+      "expansion": "classic",
+      "catalogOutputItemID": 11288,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 14809,
+      "expansion": "classic",
+      "catalogOutputItemID": 11289,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 14810,
+      "expansion": "classic",
+      "catalogOutputItemID": 11290,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 15596,
+      "expansion": "classic",
+      "catalogOutputItemID": 11811,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 17180,
+      "expansion": "classic",
+      "catalogOutputItemID": 12655,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 17181,
+      "expansion": "classic",
+      "catalogOutputItemID": 12810,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 20008,
+      "expansion": "classic",
+      "catalogOutputItemID": 38852,
+      "scrollCrosscheckItemID": 38852,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 20009,
+      "expansion": "classic",
+      "catalogOutputItemID": 38853,
+      "scrollCrosscheckItemID": 38853,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 20010,
+      "expansion": "classic",
+      "catalogOutputItemID": 38854,
+      "scrollCrosscheckItemID": 38854,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 20011,
+      "expansion": "classic",
+      "catalogOutputItemID": 38855,
+      "scrollCrosscheckItemID": 38855,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 20012,
+      "expansion": "classic",
+      "catalogOutputItemID": 38856,
+      "scrollCrosscheckItemID": 38856,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 20013,
+      "expansion": "classic",
+      "catalogOutputItemID": 38857,
+      "scrollCrosscheckItemID": 38857,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 20014,
+      "expansion": "classic",
+      "catalogOutputItemID": 38858,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 20015,
+      "expansion": "classic",
+      "catalogOutputItemID": 38859,
+      "scrollCrosscheckItemID": 38859,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 20016,
+      "expansion": "classic",
+      "catalogOutputItemID": 38860,
+      "scrollCrosscheckItemID": 38860,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 20017,
+      "expansion": "classic",
+      "catalogOutputItemID": 38861,
+      "scrollCrosscheckItemID": 38861,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 20020,
+      "expansion": "classic",
+      "catalogOutputItemID": 38862,
+      "scrollCrosscheckItemID": 38862,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 20023,
+      "expansion": "classic",
+      "catalogOutputItemID": 38863,
+      "scrollCrosscheckItemID": 38863,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 20024,
+      "expansion": "classic",
+      "catalogOutputItemID": 38864,
+      "scrollCrosscheckItemID": 38864,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 20025,
+      "expansion": "classic",
+      "catalogOutputItemID": 38865,
+      "scrollCrosscheckItemID": 38865,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 20026,
+      "expansion": "classic",
+      "catalogOutputItemID": 38866,
+      "scrollCrosscheckItemID": 38866,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 20028,
+      "expansion": "classic",
+      "catalogOutputItemID": 38867,
+      "scrollCrosscheckItemID": 38867,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 20029,
+      "expansion": "classic",
+      "catalogOutputItemID": 38868,
+      "scrollCrosscheckItemID": 38868,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 20030,
+      "expansion": "classic",
+      "catalogOutputItemID": 38869,
+      "scrollCrosscheckItemID": 38869,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1378,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 20031,
+      "expansion": "classic",
+      "catalogOutputItemID": 38870,
+      "scrollCrosscheckItemID": 38870,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 20032,
+      "expansion": "classic",
+      "catalogOutputItemID": 38871,
+      "scrollCrosscheckItemID": 38871,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 20033,
+      "expansion": "classic",
+      "catalogOutputItemID": 38872,
+      "scrollCrosscheckItemID": 38872,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 20034,
+      "expansion": "classic",
+      "catalogOutputItemID": 38873,
+      "scrollCrosscheckItemID": 38873,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 20035,
+      "expansion": "classic",
+      "catalogOutputItemID": 38874,
+      "scrollCrosscheckItemID": 38874,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1378,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 20036,
+      "expansion": "classic",
+      "catalogOutputItemID": 38875,
+      "scrollCrosscheckItemID": 38875,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1378,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 20051,
+      "expansion": "classic",
+      "catalogOutputItemID": 16207,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 21931,
+      "expansion": "classic",
+      "catalogOutputItemID": 38876,
+      "scrollCrosscheckItemID": 38876,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 720371,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 22434,
+      "expansion": "classic",
+      "catalogOutputItemID": 17968,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 22749,
+      "expansion": "classic",
+      "catalogOutputItemID": 38877,
+      "scrollCrosscheckItemID": 38877,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 583155,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 22750,
+      "expansion": "classic",
+      "catalogOutputItemID": 38878,
+      "scrollCrosscheckItemID": 38878,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 583155,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 23799,
+      "expansion": "classic",
+      "catalogOutputItemID": 38879,
+      "scrollCrosscheckItemID": 38879,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 583155,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 23800,
+      "expansion": "classic",
+      "catalogOutputItemID": 38880,
+      "scrollCrosscheckItemID": 38880,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 583155,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 23801,
+      "expansion": "classic",
+      "catalogOutputItemID": 38881,
+      "scrollCrosscheckItemID": 38881,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 23802,
+      "expansion": "classic",
+      "catalogOutputItemID": 38882,
+      "scrollCrosscheckItemID": 38882,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 23803,
+      "expansion": "classic",
+      "catalogOutputItemID": 38883,
+      "scrollCrosscheckItemID": 38883,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 583155,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 23804,
+      "expansion": "classic",
+      "catalogOutputItemID": 38884,
+      "scrollCrosscheckItemID": 38884,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 583155,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 25072,
+      "expansion": "classic",
+      "catalogOutputItemID": 38885,
+      "scrollCrosscheckItemID": 38885,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 25073,
+      "expansion": "classic",
+      "catalogOutputItemID": 38886,
+      "scrollCrosscheckItemID": 38886,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 25074,
+      "expansion": "classic",
+      "catalogOutputItemID": 38887,
+      "scrollCrosscheckItemID": 38887,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 25078,
+      "expansion": "classic",
+      "catalogOutputItemID": 38888,
+      "scrollCrosscheckItemID": 38888,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 25079,
+      "expansion": "classic",
+      "catalogOutputItemID": 38889,
+      "scrollCrosscheckItemID": 38889,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 25080,
+      "expansion": "classic",
+      "catalogOutputItemID": 38890,
+      "scrollCrosscheckItemID": 38890,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 25081,
+      "expansion": "classic",
+      "catalogOutputItemID": 38891,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 25082,
+      "expansion": "classic",
+      "catalogOutputItemID": 38892,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 25083,
+      "expansion": "classic",
+      "catalogOutputItemID": 38893,
+      "scrollCrosscheckItemID": 38893,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 25084,
+      "expansion": "classic",
+      "catalogOutputItemID": 38894,
+      "scrollCrosscheckItemID": 38894,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 25086,
+      "expansion": "classic",
+      "catalogOutputItemID": 38895,
+      "scrollCrosscheckItemID": 38895,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 25124,
+      "expansion": "classic",
+      "catalogOutputItemID": 20744,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 25125,
+      "expansion": "classic",
+      "catalogOutputItemID": 20745,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 25126,
+      "expansion": "classic",
+      "catalogOutputItemID": 20746,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 25127,
+      "expansion": "classic",
+      "catalogOutputItemID": 20747,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 25128,
+      "expansion": "classic",
+      "catalogOutputItemID": 20750,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 25129,
+      "expansion": "classic",
+      "catalogOutputItemID": 20749,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 25130,
+      "expansion": "classic",
+      "catalogOutputItemID": 20748,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 27837,
+      "expansion": "classic",
+      "catalogOutputItemID": 38896,
+      "scrollCrosscheckItemID": 38896,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1378,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 27899,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38897,
+      "scrollCrosscheckItemID": 38897,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 27905,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38898,
+      "scrollCrosscheckItemID": 38898,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 27906,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38899,
+      "scrollCrosscheckItemID": 38899,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 27911,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38900,
+      "scrollCrosscheckItemID": 38900,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 27913,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38901,
+      "scrollCrosscheckItemID": 38901,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 27914,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38902,
+      "scrollCrosscheckItemID": 38902,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 27917,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38903,
+      "scrollCrosscheckItemID": 38903,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 27920,
+      "expansion": "bcc",
+      "catalogOutputItemID": null,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 0,
+      "equippedItemInventoryTypeMask": 2048,
+      "slot": "FINGER0SLOT"
+    },
+    {
+      "spellID": 27924,
+      "expansion": "bcc",
+      "catalogOutputItemID": null,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 0,
+      "equippedItemInventoryTypeMask": 2048,
+      "slot": "FINGER0SLOT"
+    },
+    {
+      "spellID": 27926,
+      "expansion": "bcc",
+      "catalogOutputItemID": null,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 27927,
+      "expansion": "bcc",
+      "catalogOutputItemID": null,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 0,
+      "equippedItemInventoryTypeMask": 2048,
+      "slot": "FINGER0SLOT"
+    },
+    {
+      "spellID": 27944,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38904,
+      "scrollCrosscheckItemID": 38904,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 27945,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38905,
+      "scrollCrosscheckItemID": 38905,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 27946,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38906,
+      "scrollCrosscheckItemID": 38906,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 27947,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38907,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 27948,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38908,
+      "scrollCrosscheckItemID": 38908,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 27950,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38909,
+      "scrollCrosscheckItemID": 38909,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 27951,
+      "expansion": "bcc",
+      "catalogOutputItemID": 37603,
+      "scrollCrosscheckItemID": 37603,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 27954,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38910,
+      "scrollCrosscheckItemID": 38910,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 27957,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38911,
+      "scrollCrosscheckItemID": 38911,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 27958,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38912,
+      "scrollCrosscheckItemID": 38912,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 27960,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38913,
+      "scrollCrosscheckItemID": 38913,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 27961,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38914,
+      "scrollCrosscheckItemID": 38914,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 27962,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38915,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 27967,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38917,
+      "scrollCrosscheckItemID": 38917,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 27968,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38918,
+      "scrollCrosscheckItemID": 38918,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 583155,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 27971,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38919,
+      "scrollCrosscheckItemID": 38919,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 132450,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 27972,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38920,
+      "scrollCrosscheckItemID": 38920,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 27975,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38921,
+      "scrollCrosscheckItemID": 38921,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 697843,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 27977,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38922,
+      "scrollCrosscheckItemID": 38922,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 132450,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 27981,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38923,
+      "scrollCrosscheckItemID": 38923,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 27982,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38924,
+      "scrollCrosscheckItemID": 38924,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 27984,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38925,
+      "scrollCrosscheckItemID": 38925,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 28003,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38926,
+      "scrollCrosscheckItemID": 38926,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 28004,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38927,
+      "scrollCrosscheckItemID": 38927,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 28016,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22521,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 28019,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22522,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 28021,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22445,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 28022,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22449,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 28027,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22460,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 28028,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22459,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 32664,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22461,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 32665,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22462,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 32667,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22463,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 33990,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38928,
+      "scrollCrosscheckItemID": 38928,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 33991,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38929,
+      "scrollCrosscheckItemID": 38929,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 33992,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38930,
+      "scrollCrosscheckItemID": 38930,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 33993,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38931,
+      "scrollCrosscheckItemID": 38931,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 33994,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38932,
+      "scrollCrosscheckItemID": 38932,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 33995,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38933,
+      "scrollCrosscheckItemID": 38933,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 33996,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38934,
+      "scrollCrosscheckItemID": 72070,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 33997,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38935,
+      "scrollCrosscheckItemID": 38935,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 33999,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38936,
+      "scrollCrosscheckItemID": 38936,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 34001,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38937,
+      "scrollCrosscheckItemID": 38937,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 34002,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38938,
+      "scrollCrosscheckItemID": 38938,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 34003,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38939,
+      "scrollCrosscheckItemID": 38939,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 34004,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38940,
+      "scrollCrosscheckItemID": 38940,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 34005,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38941,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 34006,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38942,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 34007,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38943,
+      "scrollCrosscheckItemID": 38943,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 34008,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38944,
+      "scrollCrosscheckItemID": 38944,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 34009,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38945,
+      "scrollCrosscheckItemID": 38945,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 34010,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38946,
+      "scrollCrosscheckItemID": 38946,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 42613,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22448,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 42615,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22448,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 42620,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38947,
+      "scrollCrosscheckItemID": 38947,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 42974,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38948,
+      "scrollCrosscheckItemID": 38948,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 44383,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38949,
+      "scrollCrosscheckItemID": 38949,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 44483,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38950,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 44484,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38951,
+      "scrollCrosscheckItemID": 38951,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 44488,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38953,
+      "scrollCrosscheckItemID": 38953,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 44489,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38954,
+      "scrollCrosscheckItemID": 38954,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 44492,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38955,
+      "scrollCrosscheckItemID": 38955,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 44494,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38956,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 44500,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38959,
+      "scrollCrosscheckItemID": 38959,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 44506,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38960,
+      "scrollCrosscheckItemID": 38960,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 44508,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38961,
+      "scrollCrosscheckItemID": 38961,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 44509,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38962,
+      "scrollCrosscheckItemID": 38962,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 44510,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38963,
+      "scrollCrosscheckItemID": 38963,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 701939,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 44513,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38964,
+      "scrollCrosscheckItemID": 38964,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 44524,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38965,
+      "scrollCrosscheckItemID": 38965,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 701939,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 44528,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38966,
+      "scrollCrosscheckItemID": 38966,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 44529,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38967,
+      "scrollCrosscheckItemID": 38967,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 44555,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38968,
+      "scrollCrosscheckItemID": 38968,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 44556,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38969,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 44575,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44815,
+      "scrollCrosscheckItemID": 44815,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 44576,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38972,
+      "scrollCrosscheckItemID": 38972,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 697843,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 44582,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38973,
+      "scrollCrosscheckItemID": 38973,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 44584,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38974,
+      "scrollCrosscheckItemID": 38974,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 44588,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38975,
+      "scrollCrosscheckItemID": 38975,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 44589,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38976,
+      "scrollCrosscheckItemID": 38976,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 44590,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38977,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 44591,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38978,
+      "scrollCrosscheckItemID": 38978,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 44592,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38979,
+      "scrollCrosscheckItemID": 38979,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 44593,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38980,
+      "scrollCrosscheckItemID": 38980,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 44595,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38981,
+      "scrollCrosscheckItemID": 38981,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 132450,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 44596,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38982,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 44598,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38984,
+      "scrollCrosscheckItemID": 38984,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 44612,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38985,
+      "scrollCrosscheckItemID": 38985,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 44616,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38987,
+      "scrollCrosscheckItemID": 38987,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 44621,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38988,
+      "scrollCrosscheckItemID": 38988,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 697843,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 44623,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38989,
+      "scrollCrosscheckItemID": 38989,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 44625,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38990,
+      "scrollCrosscheckItemID": 38990,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 44629,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38991,
+      "scrollCrosscheckItemID": 38991,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 701939,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 44630,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38992,
+      "scrollCrosscheckItemID": 38992,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 132450,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 44631,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38993,
+      "scrollCrosscheckItemID": 38993,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 44633,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38995,
+      "scrollCrosscheckItemID": 38995,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 701939,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 44635,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38997,
+      "scrollCrosscheckItemID": 38997,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 44636,
+      "expansion": "wrath",
+      "catalogOutputItemID": null,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 0,
+      "equippedItemInventoryTypeMask": 2048,
+      "slot": "FINGER0SLOT"
+    },
+    {
+      "spellID": 44645,
+      "expansion": "wrath",
+      "catalogOutputItemID": null,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 0,
+      "equippedItemInventoryTypeMask": 2048,
+      "slot": "FINGER0SLOT"
+    },
+    {
+      "spellID": 45765,
+      "expansion": "bcc",
+      "catalogOutputItemID": 22449,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 46578,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38998,
+      "scrollCrosscheckItemID": 38998,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 46594,
+      "expansion": "bcc",
+      "catalogOutputItemID": 38999,
+      "scrollCrosscheckItemID": 38999,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 47051,
+      "expansion": "bcc",
+      "catalogOutputItemID": 39000,
+      "scrollCrosscheckItemID": 39000,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 47672,
+      "expansion": "wrath",
+      "catalogOutputItemID": 39001,
+      "scrollCrosscheckItemID": 39001,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 47766,
+      "expansion": "wrath",
+      "catalogOutputItemID": 39002,
+      "scrollCrosscheckItemID": 39002,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 47898,
+      "expansion": "wrath",
+      "catalogOutputItemID": 39003,
+      "scrollCrosscheckItemID": 39003,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 47899,
+      "expansion": "wrath",
+      "catalogOutputItemID": 39004,
+      "scrollCrosscheckItemID": 39004,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 47900,
+      "expansion": "wrath",
+      "catalogOutputItemID": 39005,
+      "scrollCrosscheckItemID": 39005,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 47901,
+      "expansion": "wrath",
+      "catalogOutputItemID": 39006,
+      "scrollCrosscheckItemID": 39006,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 59619,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44497,
+      "scrollCrosscheckItemID": 44497,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 701939,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 59621,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44493,
+      "scrollCrosscheckItemID": 44493,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 697843,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 59625,
+      "expansion": "wrath",
+      "catalogOutputItemID": 43987,
+      "scrollCrosscheckItemID": 43987,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 697843,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 59636,
+      "expansion": "wrath",
+      "catalogOutputItemID": null,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 0,
+      "equippedItemInventoryTypeMask": 2048,
+      "slot": "FINGER0SLOT"
+    },
+    {
+      "spellID": 60606,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44449,
+      "scrollCrosscheckItemID": 44449,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 60609,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44456,
+      "scrollCrosscheckItemID": 44456,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 60616,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38971,
+      "scrollCrosscheckItemID": 38971,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 60619,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44452,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 60621,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44453,
+      "scrollCrosscheckItemID": 44453,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 60623,
+      "expansion": "wrath",
+      "catalogOutputItemID": 38986,
+      "scrollCrosscheckItemID": 38986,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 60653,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44455,
+      "scrollCrosscheckItemID": 44455,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 64,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "SHIELDSLOT"
+    },
+    {
+      "spellID": 60663,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44457,
+      "scrollCrosscheckItemID": 44457,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 65536,
+      "slot": "BACKSLOT"
+    },
+    {
+      "spellID": 60668,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44458,
+      "scrollCrosscheckItemID": 44458,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    },
+    {
+      "spellID": 60691,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44463,
+      "scrollCrosscheckItemID": 44463,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 136546,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_2HWEAPON"
+    },
+    {
+      "spellID": 60692,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44465,
+      "scrollCrosscheckItemID": 44465,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 1048608,
+      "slot": "CHESTSLOT"
+    },
+    {
+      "spellID": 60707,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44466,
+      "scrollCrosscheckItemID": 44466,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 60714,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44467,
+      "scrollCrosscheckItemID": 44467,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 701939,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 60763,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44469,
+      "scrollCrosscheckItemID": 44469,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 60767,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44470,
+      "scrollCrosscheckItemID": 44470,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 62256,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44947,
+      "scrollCrosscheckItemID": 44947,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 512,
+      "slot": "WRISTSLOT"
+    },
+    {
+      "spellID": 62257,
+      "expansion": "wrath",
+      "catalogOutputItemID": 44946,
+      "scrollCrosscheckItemID": 44946,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 62948,
+      "expansion": "wrath",
+      "catalogOutputItemID": 45056,
+      "scrollCrosscheckItemID": 45056,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1024,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "Staff"
+    },
+    {
+      "spellID": 62959,
+      "expansion": "wrath",
+      "catalogOutputItemID": 45060,
+      "scrollCrosscheckItemID": 45060,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 1024,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "Staff"
+    },
+    {
+      "spellID": 63746,
+      "expansion": "wrath",
+      "catalogOutputItemID": 45628,
+      "scrollCrosscheckItemID": 45628,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 30,
+      "equippedItemInventoryTypeMask": 256,
+      "slot": "FEETSLOT"
+    },
+    {
+      "spellID": 64441,
+      "expansion": "wrath",
+      "catalogOutputItemID": 46026,
+      "scrollCrosscheckItemID": 46026,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 64579,
+      "expansion": "wrath",
+      "catalogOutputItemID": 46098,
+      "scrollCrosscheckItemID": 46098,
+      "equippedItemClass": 2,
+      "equippedItemSubClassMask": 714227,
+      "equippedItemInventoryTypeMask": 0,
+      "slot": "ENCHSLOT_WEAPON"
+    },
+    {
+      "spellID": 69412,
+      "expansion": "wrath",
+      "catalogOutputItemID": 34057,
+      "scrollCrosscheckItemID": null,
+      "equippedItemClass": null,
+      "equippedItemSubClassMask": null,
+      "equippedItemInventoryTypeMask": null,
+      "slot": null
+    },
+    {
+      "spellID": 71692,
+      "expansion": "wrath",
+      "catalogOutputItemID": 50816,
+      "scrollCrosscheckItemID": 50816,
+      "equippedItemClass": 4,
+      "equippedItemSubClassMask": 31,
+      "equippedItemInventoryTypeMask": 1024,
+      "slot": "HANDSSLOT"
+    }
+  ]
+}
