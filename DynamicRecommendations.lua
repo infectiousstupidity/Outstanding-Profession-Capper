@@ -1158,7 +1158,12 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         return result
     end
 
-    if type(addonTable.getActivePriceProviderName) == "function" then
+    local providerState = type(addonTable.getActivePriceProviderState) == "function"
+        and addonTable.getActivePriceProviderState()
+        or nil
+    if providerState then
+        result.providerName = providerState.name
+    elseif type(addonTable.getActivePriceProviderName) == "function" then
         result.providerName = addonTable.getActivePriceProviderName()
     end
     if not result.providerName or result.providerName == "null" then
@@ -1170,9 +1175,14 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         addonTable.syncRuntimeSkillContext(skillContext)
     end
 
-    local providerRevision = type(addonTable.getActivePriceProviderRevision) == "function"
-        and addonTable.getActivePriceProviderRevision()
-        or nil
+    local providerRevision = providerState and providerState.revision
+        or (type(addonTable.getActivePriceProviderRevision) == "function"
+            and addonTable.getActivePriceProviderRevision()
+            or nil)
+    local providerIdentity = providerState and providerState.identity
+        or (type(addonTable.getActivePriceProviderIdentity) == "function"
+            and addonTable.getActivePriceProviderIdentity()
+            or result.providerName)
     local revisions = type(addonTable.getRuntimeRevisions) == "function"
         and addonTable.getRuntimeRevisions()
         or {}
@@ -1202,7 +1212,7 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         or "static"
 
     local cacheKey = table.concat({
-        tostring(result.providerName),
+        tostring(providerIdentity or result.providerName),
         tostring(providerRevision or "unknown"),
         tostring(skillContext.professionName or ""),
         tostring(bookRevision),
@@ -1244,16 +1254,35 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
                 end
             end
         end
-        if type(addonTable.getActivePriceProviderName) == "function"
-            and addonTable.getActivePriceProviderName() ~= result.providerName
-        then
-            return false
-        end
-        if providerRevision ~= nil
-            and type(addonTable.getActivePriceProviderRevision) == "function"
-            and addonTable.getActivePriceProviderRevision() ~= providerRevision
-        then
-            return false
+        if type(addonTable.getActivePriceProviderState) == "function" then
+            local currentProvider = addonTable.getActivePriceProviderState()
+            if currentProvider.name ~= result.providerName
+                or currentProvider.identity ~= providerIdentity
+            then
+                return false
+            end
+            if providerRevision ~= nil
+                and currentProvider.revision ~= providerRevision
+            then
+                return false
+            end
+        else
+            if type(addonTable.getActivePriceProviderName) == "function"
+                and addonTable.getActivePriceProviderName() ~= result.providerName
+            then
+                return false
+            end
+            if type(addonTable.getActivePriceProviderIdentity) == "function"
+                and addonTable.getActivePriceProviderIdentity() ~= providerIdentity
+            then
+                return false
+            end
+            if providerRevision ~= nil
+                and type(addonTable.getActivePriceProviderRevision) == "function"
+                and addonTable.getActivePriceProviderRevision() ~= providerRevision
+            then
+                return false
+            end
         end
         return true
     end
@@ -1290,7 +1319,8 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     if type(addonTable.createRevisionedPriceLookup) == "function" then
         persistentPriceLookup = addonTable.createRevisionedPriceLookup(
             result.providerName,
-            providerRevision
+            providerRevision,
+            providerIdentity
         )
     else
         persistentPriceLookup = addonTable.lookupItemPrice

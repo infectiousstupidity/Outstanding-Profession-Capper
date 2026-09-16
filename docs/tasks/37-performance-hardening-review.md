@@ -1,6 +1,6 @@
 # Task 37 — Phase 7 holistic implementation review
 
-Status: QUEUED  
+Status: IN PROGRESS — holistic code review completed; safe fixes implemented; real-client acceptance evidence still pending  
 Phase: 7 — Runtime performance hardening review  
 Depends on: Tasks 32, 33, 34, 35 and 36
 
@@ -114,3 +114,37 @@ End the task with a concise review summary containing:
 - follow-up task numbers, if any.
 
 Do not mark this task DONE until that summary exists.
+
+
+## Review implementation status
+
+The independent code review has been performed against the Phase 7 architecture under explicit continuation, even though the real-client acceptance matrix for Tasks 32–36 is still pending.
+
+Full review report: [../performance/phase7-review.md](../performance/phase7-review.md).
+
+### Defects fixed in this task
+
+1. **Provider instance identity was missing.** Raw price cache keys and recommendation dependency checks used provider name/revision only. Re-registering a provider object under the same name and revision could reuse stale raw data and an in-flight job could not detect the replacement. Each registration now receives a session instance ID; price cache keys, captured price lookups, recommendation keys, and stale-job checks include that identity.
+
+2. **Generated candidate indexes retained every modifier variant.** `RouteData.lua` cached a full 0–449 candidate index for each profession/modifier pair for the whole session. The cache is now capped at 16 entries with a bounded/compacted queue and is included in retained-cache diagnostics.
+
+### Substantial issue discovered and queued instead of hidden
+
+Task 29 intentionally changed recipe acquisition from permanent one-time route state to a segment activation to stop combinatorial state explosion. This means a route can learn an unlearned recipe, switch away, and later repay the acquisition cost when it returns. That conflicts with Task 23's intended one-time learning semantics and can change route totals/selection.
+
+Restoring the correct semantics safely requires a route-state representation that does not recreate the old exponential learned-recipe set. That is larger than a defect-only review edit, so it is queued as **Task 38 — Restore one-time recipe acquisition semantics without state explosion**.
+
+The review also confirmed that `RouteSolver.lua` still contains the older heap solver alongside the Task 35 layered job engine. Consolidating those behaviorally distinct paths is queued as **Task 39** after Task 38.
+
+### Review conclusions
+
+- No remaining known stale-publication path was found after provider instance identity was added.
+- Static remains protected from optimizer failure.
+- BAG_UPDATE, profession-book ownership, mode/skill/inventory generations, and job cancellation remain structurally guarded.
+- Canonical optimizer recipe data has no production mutation path found by the review; deep proxy-freezing remains intentionally avoided in Lua 5.1.
+- No Phase 7 cache remains identified as unbounded after bounding generated candidate indexes.
+- Cheapest and Available were not intentionally changed by the safe fixes in this task.
+- Task 29's segment-activation acquisition approximation is now explicitly documented rather than presented as exact one-time semantics.
+- No real-client latency or heap-stability claim is made because the required WoW measurements are still missing.
+
+Task 37 remains IN PROGRESS until the real-client evidence required by Tasks 32–36 exists and the final review can incorporate those measurements.

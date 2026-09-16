@@ -425,6 +425,7 @@ function addonTable.getRuntimeCacheFootprint()
     local runtime = safeStats("getRuntimeStateCacheStats")
     local price = safeStats("getPriceCacheStats")
     local dynamic = safeStats("getDynamicRuntimeCacheStats")
+    local candidate = safeStats("getGeneratedRouteCandidateCacheStats")
 
     return {
         heapKb = memoryKilobytes(),
@@ -435,6 +436,8 @@ function addonTable.getRuntimeCacheFootprint()
         maxPriceEntries = tonumber(price.maxEntries) or 0,
         recommendationEntries = tonumber(dynamic.recommendationEntries) or 0,
         maxRecommendationEntries = tonumber(dynamic.maxRecommendationEntries) or 0,
+        candidateIndexEntries = tonumber(candidate.entries) or 0,
+        maxCandidateIndexEntries = tonumber(candidate.maxEntries) or 0,
         canonicalRecipeEntries = tonumber(dynamic.canonicalRecipeEntries) or 0,
     }
 end
@@ -522,6 +525,8 @@ function addonTable.getPerformanceSummaryLines()
             .. "/" .. tostring(footprint.maxPriceEntries)
         .. " recommendations=" .. tostring(footprint.recommendationEntries)
             .. "/" .. tostring(footprint.maxRecommendationEntries)
+        .. " candidate-index=" .. tostring(footprint.candidateIndexEntries)
+            .. "/" .. tostring(footprint.maxCandidateIndexEntries)
         .. " canonical=" .. tostring(footprint.canonicalRecipeEntries))
 
     table.insert(lines, "accumulated requests=" .. tostring(totals.refreshRequests)

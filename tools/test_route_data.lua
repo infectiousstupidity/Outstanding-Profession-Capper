@@ -44,4 +44,22 @@ for spellID in pairs(relevant) do
     assert(metadata and metadata.profession == "Enchanting", "candidate set must stay profession-scoped")
 end
 
+for modifier = 0, 30 do
+    addonTable.getGeneratedRouteCandidateIndex("Enchanting", modifier)
+end
+local cacheStats = addonTable.getGeneratedRouteCandidateCacheStats()
+assert(
+    cacheStats.entries <= cacheStats.maxEntries,
+    "generated candidate-index cache must remain bounded"
+)
+assert(
+    cacheStats.queueEntries <= cacheStats.maxQueueEntries,
+    "generated candidate-index eviction queue must remain bounded"
+)
+
+addonTable.clearGeneratedRouteCandidateCache()
+local clearedStats = addonTable.getGeneratedRouteCandidateCacheStats()
+assert(clearedStats.entries == 0, "candidate-index cache clear resets entries")
+assert(clearedStats.queueEntries == 0, "candidate-index cache clear resets queue")
+
 print("Generated route topology tests passed.")

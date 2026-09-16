@@ -4,6 +4,7 @@ local NULL_PROVIDER_NAME = "null"
 local providers = {}
 local selectedProviderName = NULL_PROVIDER_NAME
 local preferredProviderName
+local providerInstanceCounter = 0
 
 local PRICE_CACHE_MAX_ENTRIES = 512
 local PRICE_CACHE_UNKNOWN_REVISION_TTL = 15
@@ -339,6 +340,7 @@ providers[NULL_PROVIDER_NAME] = {
     name = NULL_PROVIDER_NAME,
     provider = nullProvider,
     priority = -1000000,
+    instanceID = 0,
 }
 
 local function providerIsAvailable(entry)
@@ -395,10 +397,12 @@ function addonTable.registerPriceProvider(name, provider, priority)
         return false, "provider_requires_getItemPrice"
     end
 
+    providerInstanceCounter = providerInstanceCounter + 1
     providers[name] = {
         name = name,
         provider = provider,
         priority = tonumber(priority) or 0,
+        instanceID = providerInstanceCounter,
     }
 
     refreshSelection()
@@ -438,9 +442,22 @@ function addonTable.selectPriceProvider(name)
     return true, selected.name
 end
 
+local function providerIdentity(entry)
+    if not entry then
+        return NULL_PROVIDER_NAME .. "#0"
+    end
+    return tostring(entry.name or NULL_PROVIDER_NAME)
+        .. "#"
+        .. tostring(tonumber(entry.instanceID) or 0)
+end
+
 function addonTable.getActivePriceProviderName()
     refreshSelection()
     return selectedProviderName
+end
+
+function addonTable.getActivePriceProviderIdentity()
+    return providerIdentity(refreshSelection())
 end
 
 local function providerRevision(entry)
@@ -459,6 +476,15 @@ function addonTable.getActivePriceProviderRevision()
     return providerRevision(refreshSelection())
 end
 
+function addonTable.getActivePriceProviderState()
+    local entry = refreshSelection()
+    return {
+        name = entry.name,
+        identity = providerIdentity(entry),
+        revision = providerRevision(entry),
+    }
+end
+
 function addonTable.getRegisteredPriceProviders()
     local names = {}
     for name in pairs(providers) do
@@ -468,7 +494,14 @@ function addonTable.getRegisteredPriceProviders()
     return names
 end
 
-local function lookupItemPriceCached(item, nowOverride, expectedProviderName, expectedRevision, revisionCaptured)
+local function lookupItemPriceCached(
+    item,
+    nowOverride,
+    expectedProviderName,
+    expectedProviderIdentity,
+    expectedRevision,
+    revisionCaptured
+)
     local entry = refreshSelection()
     if expectedProviderName and entry.name ~= expectedProviderName then
         return unavailableResult(
@@ -476,6 +509,16 @@ local function lookupItemPriceCached(item, nowOverride, expectedProviderName, ex
             entry.name,
             "provider_changed",
             "active provider changed during recommendation"
+        )
+    end
+    if expectedProviderIdentity
+        and providerIdentity(entry) ~= expectedProviderIdentity
+    then
+        return unavailableResult(
+            item,
+            entry.name,
+            "provider_changed",
+            "active provider instance changed during recommendation"
         )
     end
 
@@ -489,7 +532,7 @@ local function lookupItemPriceCached(item, nowOverride, expectedProviderName, ex
     local now = runtimeNow()
     local revisionKey = revision ~= nil and tostring(revision) or "ttl"
     local key = table.concat({
-        entry.name,
+        providerIdentity(entry),
         revisionKey,
         cacheItemKey(item),
     }, "|")
@@ -523,16 +566,29 @@ local function lookupItemPriceCached(item, nowOverride, expectedProviderName, ex
 end
 
 function addonTable.lookupItemPrice(item, nowOverride)
-    return lookupItemPriceCached(item, nowOverride, nil, nil, false)
+    return lookupItemPriceCached(item, nowOverride, nil, nil, nil, false)
 end
 
-function addonTable.createRevisionedPriceLookup(providerName, providerRevisionValue)
+function addonTable.createRevisionedPriceLookup(
+    providerName,
+    providerRevisionValue,
+    providerIdentityValue
+)
     providerName = tostring(providerName or "")
+    local capturedIdentity = providerIdentityValue
+    if capturedIdentity == nil then
+        local entry = refreshSelection()
+        capturedIdentity = entry.name == providerName
+            and providerIdentity(entry)
+            or nil
+    end
+
     return function(item, nowOverride)
         return lookupItemPriceCached(
             item,
             nowOverride,
             providerName,
+            capturedIdentity,
             providerRevisionValue ~= nil and tostring(providerRevisionValue) or nil,
             true
         )

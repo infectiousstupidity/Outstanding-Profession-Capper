@@ -14,8 +14,22 @@ addonTable.getActivePriceProviderName = function()
     return "fixture"
 end
 
+local providerIdentity = "fixture#1"
+
 addonTable.getActivePriceProviderRevision = function()
     return "1"
+end
+
+addonTable.getActivePriceProviderIdentity = function()
+    return providerIdentity
+end
+
+addonTable.getActivePriceProviderState = function()
+    return {
+        name = "fixture",
+        revision = "1",
+        identity = providerIdentity,
+    }
 end
 
 addonTable.lookupItemPrice = function(item)
@@ -210,6 +224,25 @@ local staleStatus, staleResult = addonTable.stepDynamicProfessionRecommendation(
 assertEqual(staleStatus, "cancelled", "inventory generation cancels old recommendation")
 assertEqual(staleResult.reason, "runtime_inputs_changed", "stale job cannot publish")
 assert(stalePending._incremental == nil, "cancelled recommendation drops job closure")
+
+addonTable.noteRuntimeInventoryChanged()
+local providerPending = addonTable.computeDynamicProfessionRecommendation(
+    cache,
+    context,
+    {
+        targetSkill = 1,
+        incrementalRoute = true,
+    }
+)
+providerIdentity = "fixture#2"
+local providerStatus, providerResult = addonTable.stepDynamicProfessionRecommendation(
+    providerPending,
+    1,
+    function() return 1 end
+)
+assertEqual(providerStatus, "cancelled", "provider instance change cancels old recommendation")
+assertEqual(providerResult.reason, "runtime_inputs_changed", "provider replacement cannot publish stale work")
+providerIdentity = "fixture#1"
 
 addonTable.noteRuntimeInventoryChanged()
 local explicitPending = addonTable.computeDynamicProfessionRecommendation(

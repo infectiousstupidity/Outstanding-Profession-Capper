@@ -14,7 +14,7 @@ Task 34 makes runtime reuse dependency-aware instead of clearing all dynamic sta
 
 The Task 33 profession-book snapshot also exposes its own per-snapshot generation. Recommendation keys use that profession-specific generation when available.
 
-Target skill, optimization objective, provider identity/revision, availability mode, and bundled acquisition revision are direct key fields rather than large serialized tables.
+Target skill, optimization objective, provider instance identity/revision, availability mode, and bundled acquisition revision are direct key fields rather than large serialized tables.
 
 ## Cache layers and bounds
 
@@ -28,9 +28,15 @@ Key cardinality is item IDs within the current inventory generation. The cache i
 
 Owner: `PriceProvider.lua`.
 
-The cache stores raw provider results, including negative/missing results. Keys are provider identity + provider revision + normalized item identity. Normalization and price age are recalculated on read, so a cached raw scan can become stale naturally as time passes.
+The cache stores raw provider results, including negative/missing results. Keys are provider instance identity + provider revision + normalized item identity. Every provider registration receives a new session instance ID, so replacing a provider object under the same name/revision cannot reuse the previous object's raw prices. Normalization and price age are recalculated on read, so a cached raw scan can become stale naturally as time passes.
 
 Providers with a revision retain values until that revision changes or the entry is evicted. Providers without a revision use a conservative 15-second TTL. The cache retains at most 512 entries. Inventory, skill, profession-book, and recommendation-mode changes do not clear it.
+
+### Generated route candidate indexes
+
+Owner: `RouteData.lua`.
+
+Each cached index maps trained skill 0–449 to candidate spell IDs for one profession/modifier pair. These tables are relatively large, so the session cache is capped at 16 entries and its queue is compacted/bounded. Modifier churn can rebuild an evicted index, but cannot retain every modifier variant indefinitely.
 
 ### Canonical optimizer recipes
 
@@ -59,3 +65,13 @@ Before a freshly computed result is stored or returned, the captured runtime/pro
 Equipment/aura refreshes rely on the skill-context comparison. They advance the skill generation only when the effective profession context actually changes.
 
 `PLAYER_LEVEL_UP` and `UPDATE_FACTION` advance eligibility and schedule a normal recommendation refresh.
+
+
+## Known route-state approximation
+
+Task 29 intentionally stopped carrying every learned recipe acquisition in the route-state set because the full learned-recipe set caused combinatorial state growth. As a result, recipe acquisition is currently modeled as a segment activation:
+
+- continuing the same unlearned recipe does not repay acquisition;
+- switching away and later returning can conservatively pay acquisition again.
+
+This is a semantic approximation, not a cache-invalidation rule. Task 38 is queued to restore true one-time recipe acquisition semantics without reintroducing the state explosion.

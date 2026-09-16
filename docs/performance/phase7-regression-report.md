@@ -15,8 +15,10 @@ This report is the final Task 36 acceptance record. Automated regression gates a
 | Warm exact recommendation does not rerun solver | `tools/test_runtime_caches.lua` |
 | Inventory change invalidates current Cheapest result | `tools/test_runtime_caches.lua` |
 | Provider revision invalidates price result | `tools/test_runtime_caches.lua` |
+| Same-name/same-revision provider replacement cannot reuse stale data | `tools/test_price_provider.lua` |
+| Provider instance replacement cancels pending route publication | `tools/test_incremental_recommendations.lua` |
 | Same item/provider/revision is queried once | `tools/test_runtime_caches.lua` |
-| Runtime caches and eviction queues stay bounded | `tools/test_runtime_caches.lua` |
+| Runtime caches and eviction queues stay bounded | `tools/test_runtime_caches.lua`, `tools/test_route_data.lua` |
 | Incremental route equals synchronous exact route | `tools/test_incremental_route.lua` |
 | Stale incremental job cannot publish | `tools/test_incremental_route.lua`, `tools/test_incremental_recommendations.lua` |
 | Cheapest and Available semantics survive slicing | `tools/test_incremental_recommendations.lua` |
@@ -37,7 +39,9 @@ These are deterministic and do not depend on a particular PC:
 - Inventory entries must remain at or below 2,048.
 - Provider-price entries must remain at or below 512 and its eviction queue at or below its documented bound.
 - Recommendation entries must remain at or below 8 and its eviction queue at or below its documented bound.
-- A stale route job must publish zero recommendation results after its dependency generation changes.
+- Generated candidate-index entries must remain at or below 16 and its queue must remain bounded.
+- Re-registering a provider under the same name/revision must create a new cache namespace.
+- A stale route job must publish zero recommendation results after its dependency generation or provider instance changes.
 
 No absolute millisecond threshold is invented here. The real-client performance thresholds must be derived from the measured before/after runs below.
 
@@ -148,3 +152,17 @@ After filling the tables, record:
 - any measured bottleneck that still dominates.
 
 If a remaining bottleneck is material, queue a separate evidence-based follow-up task rather than expanding Task 36 silently.
+
+
+## Task 37 review findings
+
+The Phase 7 holistic review is recorded in [phase7-review.md](phase7-review.md).
+
+The review fixed two concrete Phase 7 defects:
+
+- provider objects re-registered under the same name/revision could share stale raw-price cache identity and evade pending-job invalidation;
+- generated profession/modifier candidate indexes could accumulate large 450-skill tables for the whole session.
+
+The review also found a larger semantic issue introduced deliberately by Task 29: recipe learning is modeled as a segment activation instead of permanent one-time route state. That avoids state explosion, but a route that learns recipe B, switches to A, and later returns to B can conservatively pay the acquisition cost again. Task 38 is queued to restore true one-time acquisition semantics without returning to the old combinatorial state model.
+
+A separate maintainability follow-up, Task 39, is queued for the duplicated legacy heap solver versus the layered job engine.
