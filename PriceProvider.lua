@@ -762,44 +762,48 @@ function addonTable.evaluateResaleValue(result)
     if marketValue and minBuyout then
         resale.estimatedResaleValue = math.min(marketValue, minBuyout)
         resale.sourcePriceType = "market_capped_by_min_buyout"
-        resale.confidence = "two_current_sources"
     elseif marketValue then
         resale.estimatedResaleValue = marketValue
         resale.sourcePriceType = "market"
-        resale.confidence = "single_current_source"
     elseif minBuyout then
         resale.estimatedResaleValue = minBuyout
         resale.sourcePriceType = "min_buyout"
-        resale.confidence = "single_current_source"
     elseif recentValue then
         resale.estimatedResaleValue = recentValue
         resale.sourcePriceType = "recent"
-        resale.confidence = "context_only"
     elseif historicalValue then
         resale.estimatedResaleValue = historicalValue
         resale.sourcePriceType = "historical"
-        resale.confidence = "context_only"
     else
         resale.reason = "no_resale_price_evidence"
         return resale
     end
 
     if resale.isSuspicious then
+        resale.confidence = "rejected_suspicious"
         resale.reason = "suspicious_price"
         return resale
     end
 
     if resale.isTooOld then
+        resale.confidence = "rejected_too_old"
         resale.reason = "price_too_old"
         return resale
     end
 
     if not resale.isFresh then
-        resale.reason = resale.isStale and "stale_price" or "freshness_unknown"
+        if resale.isStale then
+            resale.confidence = "rejected_stale"
+            resale.reason = "stale_price"
+        else
+            resale.confidence = "rejected_freshness_unknown"
+            resale.reason = "freshness_unknown"
+        end
         return resale
     end
 
     if not hasCurrentEvidence then
+        resale.confidence = "context_only"
         resale.reason = recentValue
             and "recent_only_context"
             or "historical_only_context"
@@ -810,10 +814,13 @@ function addonTable.evaluateResaleValue(result)
     resale.creditGranted = resale.optimizationCredit > 0
 
     if marketValue and minBuyout then
+        resale.confidence = "two_current_sources"
         resale.reason = "fresh_market_capped_by_min_buyout"
     elseif marketValue then
+        resale.confidence = "single_current_source"
         resale.reason = "fresh_market_value"
     else
+        resale.confidence = "single_current_source"
         resale.reason = "fresh_min_buyout"
     end
 

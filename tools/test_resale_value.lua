@@ -87,6 +87,7 @@ assertEqual(stale.isStale, true, "stale evidence state")
 assertEqual(stale.isTooOld, false, "stale evidence is not too old")
 assertEqual(stale.estimatedResaleValue, 80, "stale estimate remains context")
 assertEqual(stale.optimizationCredit, 0, "stale evidence grants no credit")
+assertEqual(stale.confidence, "rejected_stale", "stale confidence reflects rejection")
 assertEqual(stale.reason, "stale_price", "stale reason")
 
 local tooOld = resale({
@@ -96,6 +97,7 @@ local tooOld = resale({
 }, 400000)
 assertEqual(tooOld.isTooOld, true, "too-old evidence state")
 assertEqual(tooOld.optimizationCredit, 0, "too-old evidence grants no credit")
+assertEqual(tooOld.confidence, "rejected_too_old", "too-old confidence reflects rejection")
 assertEqual(tooOld.reason, "price_too_old", "too-old reason")
 
 local suspiciousLow = resale({
@@ -107,6 +109,7 @@ local suspiciousLow = resale({
     marketRatio = 0.1,
 }, 100000)
 assertEqual(suspiciousLow.optimizationCredit, 0, "suspicious low ratio grants no credit")
+assertEqual(suspiciousLow.confidence, "rejected_suspicious", "suspicious low confidence reflects rejection")
 assertEqual(suspiciousLow.reason, "suspicious_price", "suspicious low reason")
 assertEqual(suspiciousLow.suspiciousReason, "min_buyout_far_below_market", "suspicious low detail")
 assertNear(suspiciousLow.marketRatio, 0.1, 0.0001, "suspicious low ratio retained")
@@ -120,6 +123,7 @@ local suspiciousHigh = resale({
     marketRatio = 10,
 }, 100000)
 assertEqual(suspiciousHigh.optimizationCredit, 0, "suspicious high ratio grants no credit")
+assertEqual(suspiciousHigh.confidence, "rejected_suspicious", "suspicious high confidence reflects rejection")
 assertEqual(suspiciousHigh.reason, "suspicious_price", "suspicious high reason")
 
 local historicalOnly = resale({
@@ -153,6 +157,7 @@ local unknownFreshness = resale({
     marketValue = 100,
 }, 100000)
 assertEqual(unknownFreshness.optimizationCredit, 0, "unknown freshness grants no credit")
+assertEqual(unknownFreshness.confidence, "rejected_freshness_unknown", "unknown freshness confidence reflects rejection")
 assertEqual(unknownFreshness.reason, "freshness_unknown", "unknown freshness reason")
 
 local nan = 0 / 0

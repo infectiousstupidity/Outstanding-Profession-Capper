@@ -183,4 +183,13 @@ Review outcome: **FIX**. Task 42 remains blocked until Agent 3 resolves the find
 
 ### Agent 3 fixes
 
-Pending.
+Implemented only the two findings recorded by Agent 2.
+
+- Resale confidence is now assigned after the suspicion/freshness eligibility gates. Fresh usable current evidence keeps `single_current_source` / `two_current_sources`; rejected evidence now reports `rejected_suspicious`, `rejected_stale`, `rejected_too_old`, or `rejected_freshness_unknown` so UI-facing confidence no longer contradicts the reason for zero credit.
+- Added regression assertions for suspicious, stale, too-old, and unknown-freshness confidence metadata.
+- Updated the TSM integration fixture to match the pinned AuctionDB v4 schema: scan time remains per-item as `record.ts`; no fabricated realm-level `lastScan` field is present.
+- The TSM provider therefore exposes no revision for this schema and intentionally uses the existing bounded 15-second unknown-revision price-cache TTL.
+- Added a deterministic TTL regression proving the cached item price is reused inside 15 seconds and refreshed after expiry.
+- No O(all-auctions) scan or second resale cache was added.
+
+Validation: GitHub Actions `Validate addon` is pending for the Agent 3 fix commit. Task 42 remains blocked until it passes.
