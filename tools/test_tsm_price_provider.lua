@@ -22,6 +22,7 @@ local function clearTSM()
     GetRealmName = nil
     UnitFactionGroup = nil
     GetAddOnMetadata = nil
+    GetTime = nil
 end
 
 clearTSM()
@@ -33,22 +34,27 @@ GetAddOnMetadata = function(addon, key)
     end
 end
 
+local realmData = {
+    ["i:34054"] = {
+        mb = 100,
+        mv = 110,
+        na = 7,
+        ts = 99000,
+        mkt = 125,
+        hist = 140,
+    },
+}
 TSM_AuctionDB_GetRealmData = function()
-    return {
-        lastScan = 99000,
-        ["i:34054"] = {
-            mb = 100,
-            mv = 110,
-            na = 7,
-            ts = 99000,
-            mkt = 125,
-            hist = 140,
-        },
-    }
+    return realmData
+end
+
+local monotonicNow = 1000
+GetTime = function()
+    return monotonicNow
 end
 
 assertEqual(addonTable.getActivePriceProviderName(), "tsm-auctiondb", "raw AuctionDB provider selected")
-assertEqual(addonTable.getActivePriceProviderRevision(), "99000", "realm scan revision exposed")
+assertEqual(addonTable.getActivePriceProviderRevision(), nil, "AuctionDB v4 has no realm-wide revision")
 local raw = addonTable.lookupItemPrice(34054, 100000)
 assertEqual(raw.available, true, "raw price available")
 assertEqual(raw.minBuyout, 100, "raw min buyout")
@@ -61,6 +67,17 @@ assertEqual(raw.ageSeconds, 1000, "raw scan age")
 assertEqual(raw.freshness, "fresh", "raw freshness")
 assertEqual(raw.providerVersion, "v4.14.66-wrath", "raw provider version")
 assertEqual(raw.providerBackend, "AuctionDB API", "raw backend")
+
+local cacheStats = addonTable.getPriceCacheStats()
+assertEqual(cacheStats.unknownRevisionTTL, 15, "unknown-revision cache TTL")
+realmData["i:34054"].mb = 95
+monotonicNow = 1010
+local withinTTL = addonTable.lookupItemPrice(34054, 100000)
+assertEqual(withinTTL.minBuyout, 100, "unknown-revision cache reused within TTL")
+monotonicNow = 1016
+local afterTTL = addonTable.lookupItemPrice(34054, 100000)
+assertEqual(afterTTL.minBuyout, 95, "unknown-revision cache refreshes after TTL")
+realmData["i:34054"].mb = 100
 
 addonTable.resetPriceCache()
 TSM_API = {
