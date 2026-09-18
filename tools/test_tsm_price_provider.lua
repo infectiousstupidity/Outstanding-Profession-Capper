@@ -168,6 +168,7 @@ TSM_AuctionDB = {
         },
     },
 }
+addonTable.resetPriceCache()
 
 local saved = addonTable.lookupItemPrice("34054", 100000)
 assertEqual(saved.minBuyout, 90, "SavedVariables fallback buyout")

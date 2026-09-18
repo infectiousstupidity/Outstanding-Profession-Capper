@@ -192,4 +192,8 @@ Implemented only the two findings recorded by Agent 2.
 - Added a deterministic TTL regression proving the cached item price is reused inside 15 seconds and refreshed after expiry.
 - No O(all-auctions) scan or second resale cache was added.
 
-Validation: GitHub Actions `Validate addon` is pending for the Agent 3 fix commit. Task 42 remains blocked until it passes.
+Validation:
+- Agent 3 fix commit `e45d865a388b07215fcd3402ce047655241a03bd` passed Lua syntax, the resale suite, and all tests through the TSM step, but workflow run 111 exposed a fixture-isolation bug in `tools/test_tsm_price_provider.lua`: the test switched from its mocked AuctionDB API backend to mocked SavedVariables without clearing the same provider cache, so the SavedVariables assertion reused the preceding cached raw price.
+- The follow-up test-only fix resets the price cache at that synthetic backend boundary. Production cache behavior and the Task 41 resale logic are unchanged.
+
+Full validation is pending for the follow-up commit. Task 42 remains blocked until it passes.
