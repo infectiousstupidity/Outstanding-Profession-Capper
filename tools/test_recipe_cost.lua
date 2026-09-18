@@ -51,6 +51,63 @@ addonTable.chooseUsableUnitPrice = function(result, purpose)
     return nil, "unknown"
 end
 
+addonTable.evaluateResaleValue = function(result)
+    if type(result) ~= "table" or not result.available then
+        return {
+            estimatedResaleValue = nil,
+            optimizationCredit = 0,
+            confidence = "none",
+            reason = result and result.unavailableReason or "price_unavailable",
+        }
+    end
+
+    local market = tonumber(result.marketValue)
+    local minBuyout = tonumber(result.minBuyout)
+    local estimate
+    if market and minBuyout then
+        estimate = math.min(market, minBuyout)
+    else
+        estimate = market or minBuyout
+    end
+
+    if not estimate or estimate <= 0 then
+        return {
+            estimatedResaleValue = nil,
+            optimizationCredit = 0,
+            confidence = "none",
+            reason = "no_resale_price_evidence",
+        }
+    end
+
+    if result.isSuspicious then
+        return {
+            estimatedResaleValue = estimate,
+            optimizationCredit = 0,
+            confidence = "rejected_suspicious",
+            reason = "suspicious_price",
+        }
+    end
+
+    if result.freshness == "stale" then
+        return {
+            estimatedResaleValue = estimate,
+            optimizationCredit = 0,
+            confidence = "rejected_stale",
+            reason = "stale_price",
+        }
+    end
+
+    return {
+        estimatedResaleValue = estimate,
+        optimizationCredit = estimate,
+        confidence = market and minBuyout and "two_current_sources" or "single_current_source",
+        reason = market and minBuyout
+            and "fresh_market_capped_by_min_buyout"
+            or "fresh_current_price",
+    }
+end
+
+assert(loadfile("EnchantScrollData.lua"))("Profession_Capper", addonTable)
 assert(loadfile("RecipeCost.lua"))("Profession_Capper", addonTable)
 
 local function assertEqual(actual, expected, label)
@@ -306,5 +363,188 @@ assertEqual(purchasePlan.producedQuantity, 3, "purchase plan exposes converted y
 assertEqual(purchasePlan.directTotalCost, 1200, "purchase plan exposes direct comparison")
 assertEqual(purchasePlan.totalCost, 900, "purchase plan exposes recommended total")
 assertEqual(purchasePlan.savings, 300, "purchase plan exposes savings")
+
+-- Task 42: resale-aware Enchanting execution economics.
+prices[43145] = {
+    available = true,
+    marketValue = 30,
+    minBuyout = 30,
+    freshness = "fresh",
+}
+prices[38960] = {
+    available = true,
+    marketValue = 20,
+    minBuyout = 20,
+    freshness = "fresh",
+}
+
+local gathererRecipe = {
+    spellID = 44506,
+    acquisition = { status = "learned" },
+    difficulty = { yellow = 100, green = 110, gray = 120 },
+    reagents = {
+        { itemID = 1001, quantity = 1 },
+    },
+}
+
+local gathererDirect = addonTable.calculateRecipeCost(gathererRecipe, 90, nil, {}, {})
+assertEqual(gathererDirect.selectedExecutionMethod, "direct", "low-value Gatherer scroll keeps direct execution")
+assertEqual(gathererDirect.directGrossCost, 100, "Gatherer direct gross cost")
+assertEqual(gathererDirect.scrollGrossCost, 130, "Gatherer scroll gross includes vellum")
+assertEqual(gathererDirect.vellumItemID, 43145, "Gatherer uses compatible armor vellum III")
+assertEqual(gathererDirect.scrollOutputItemID, 38960, "Gatherer scroll output")
+assertEqual(gathererDirect.resaleCredit, 20, "Gatherer resale credit uses conservative current evidence")
+assertEqual(gathererDirect.scrollEffectiveCostPerCraft, 110, "Gatherer scroll effective cost")
+assertEqual(gathererDirect.effectiveCostPerCraft, 100, "direct path remains cheaper")
+assertEqual(gathererDirect.expectedMarketCostPerSkillUp, 100, "Cheapest market field unchanged")
+
+prices[38960].marketValue = 80
+prices[38960].minBuyout = 80
+local gathererYellow = addonTable.calculateRecipeCost(gathererRecipe, 105, nil, {}, {})
+assertEqual(gathererYellow.selectedExecutionMethod, "scroll", "resale can make Gatherer scroll path cheaper")
+assertEqual(gathererYellow.scrollEffectiveCostPerCraft, 50, "Gatherer resale-adjusted scroll cost")
+assertNear(gathererYellow.skillUpChance, 0.75, 0.0001, "Task 42 preserves exact skill-up chance")
+assertNear(gathererYellow.expectedEffectiveCostPerSkillUp, 50 * 4 / 3, 0.0001, "effective cost scales by exact chance")
+assertNear(gathererYellow.expectedMarketCostPerSkillUp, 100 * 4 / 3, 0.0001, "Cheapest expected market cost remains unchanged")
+
+prices[38979] = {
+    available = true,
+    marketValue = 250,
+    minBuyout = 250,
+    freshness = "fresh",
+}
+local exceptionalRecipe = {
+    spellID = 44592,
+    acquisition = { status = "learned" },
+    difficulty = { yellow = 100, green = 110, gray = 120 },
+    reagents = {
+        { itemID = 1001, quantity = 1 },
+    },
+}
+local exceptional = addonTable.calculateRecipeCost(exceptionalRecipe, 90, nil, {}, {})
+assertEqual(exceptional.selectedExecutionMethod, "scroll", "Exceptional Spellpower uses profitable scroll path")
+assertEqual(exceptional.scrollGrossCost, 130, "Exceptional Spellpower scroll gross")
+assertEqual(exceptional.resaleCredit, 130, "resale credit capped at gross scroll cost")
+assertEqual(exceptional.scrollEffectiveCostPerCraft, 0, "effective route cost floors at zero")
+assertEqual(exceptional.effectiveCostPerCraft, 0, "selected effective cost never negative")
+assertEqual(exceptional.estimatedSurplus, 120, "surplus remains separate from route credit")
+assertEqual(exceptional.expectedEstimatedSurplusPerSkillUp, 120, "expected surplus exposed separately")
+
+prices[38682] = {
+    available = true,
+    marketValue = 50,
+    minBuyout = 50,
+    freshness = "fresh",
+}
+prices[37602] = {
+    available = true,
+    marketValue = 20,
+    minBuyout = 20,
+    freshness = "fresh",
+}
+prices[43145].marketValue = 30
+prices[43145].minBuyout = 30
+prices[38768] = {
+    available = true,
+    marketValue = 200,
+    minBuyout = 200,
+    freshness = "fresh",
+}
+local classicVellumRecipe = {
+    spellID = 7428,
+    acquisition = { status = "learned" },
+    difficulty = { yellow = 100, green = 110, gray = 120 },
+    reagents = {
+        { itemID = 1001, quantity = 1 },
+    },
+}
+local higherRankCheaper = addonTable.calculateRecipeCost(classicVellumRecipe, 90, nil, {}, {})
+assertEqual(higherRankCheaper.vellumItemID, 37602, "higher-rank compatible vellum can win on price")
+assertEqual(higherRankCheaper.vellumTier, 2, "chosen vellum tier is explicit")
+assertEqual(higherRankCheaper.vellumCost, 20, "chosen vellum cost is explicit")
+
+prices[38960].marketValue = 500
+prices[38960].minBuyout = 500
+prices[38960].freshness = "stale"
+local staleScroll = addonTable.calculateRecipeCost(gathererRecipe, 90, nil, {}, {})
+assertEqual(staleScroll.resaleCredit, 0, "stale scroll evidence grants no route credit")
+assertEqual(staleScroll.selectedExecutionMethod, "direct", "stale scroll evidence cannot make scroll path win")
+assertEqual(staleScroll.resaleConfidence, "rejected_stale", "stale resale reason retained")
+prices[38960].freshness = "fresh"
+prices[38960].isSuspicious = true
+local suspiciousScroll = addonTable.calculateRecipeCost(gathererRecipe, 90, nil, {}, {})
+assertEqual(suspiciousScroll.resaleCredit, 0, "suspicious scroll evidence grants no route credit")
+assertEqual(suspiciousScroll.selectedExecutionMethod, "direct", "suspicious scroll evidence cannot make scroll path win")
+prices[38960].isSuspicious = nil
+
+local savedVellum = prices[43145]
+prices[43145] = nil
+local noVellum = addonTable.calculateRecipeCost(gathererRecipe, 90, nil, {}, {})
+assertEqual(noVellum.selectedExecutionMethod, "direct", "missing compatible vellum falls back to direct")
+assertEqual(noVellum.scrollPathAvailable, false, "missing vellum marks scroll path unavailable")
+prices[43145] = savedVellum
+
+local personalRecipe = {
+    spellID = 27920,
+    acquisition = { status = "learned" },
+    difficulty = { yellow = 100, green = 110, gray = 120 },
+    reagents = {
+        { itemID = 1001, quantity = 1 },
+    },
+}
+local personal = addonTable.calculateRecipeCost(personalRecipe, 90, nil, {}, {})
+assertEqual(personal.selectedExecutionMethod, "direct", "personal ring enchant cannot enter scroll economics")
+assertEqual(personal.scrollPathAvailable, false, "personal ring enchant has no scroll path")
+
+local rodRecipe = {
+    spellID = 32664,
+    acquisition = { status = "learned" },
+    difficulty = { yellow = 100, green = 110, gray = 120 },
+    reagents = {
+        { itemID = 1001, quantity = 1 },
+    },
+}
+local rodEconomics = addonTable.calculateRecipeCost(rodRecipe, 90, nil, {}, {})
+assertEqual(rodEconomics.selectedExecutionMethod, "direct", "non-vellum craft stays direct")
+assertEqual(rodEconomics.scrollPathAvailable, false, "non-vellum craft cannot receive resale credit")
+
+prices[38960].marketValue = 500
+prices[38960].minBuyout = 500
+local toolRecipe = {
+    spellID = 44506,
+    acquisition = { status = "trainable", goldCost = 250 },
+    difficulty = { yellow = 100, green = 110, gray = 120 },
+    reagents = {
+        { itemID = 1001, quantity = 1 },
+        { itemID = 1002, quantity = 1, reusable = true, reusableKey = "task42-tool" },
+    },
+}
+local protectedOneTime = addonTable.calculateRecipeCost(toolRecipe, 90, nil, {}, {})
+assertEqual(protectedOneTime.selectedExecutionMethod, "scroll", "profitable scroll selected with one-time costs present")
+assertEqual(protectedOneTime.effectiveCostPerCraft, 0, "variable craft economics may floor at zero")
+assertEqual(protectedOneTime.fixedOneTimeMaterialCost, 50, "reusable tool excluded from resale offset")
+assertEqual(protectedOneTime.expectedEffectiveCostPerSkillUp, 50, "reusable tool remains in expected effective cost")
+assertEqual(protectedOneTime.acquisitionCost, 250, "recipe acquisition cost remains separate")
+assertEqual(protectedOneTime.oneTimeCosts[1].kind, "recipe_acquisition", "recipe acquisition remains a one-time route cost")
+assertEqual(protectedOneTime.oneTimeCosts[2].kind, "reusable_reagent", "tool remains a one-time route cost")
+
+local task42Cache = {}
+priceLookupCalls = 0
+local cachedTask42Orange = addonTable.calculateRecipeCost(gathererRecipe, 90, nil, {}, {
+    materialCostCache = task42Cache,
+})
+local task42CallsAfterFirst = priceLookupCalls
+local cachedTask42Yellow = addonTable.calculateRecipeCost(gathererRecipe, 105, nil, {}, {
+    materialCostCache = task42Cache,
+})
+assertEqual(cachedTask42Orange.vellumItemID, cachedTask42Yellow.vellumItemID, "cached execution economics preserve vellum choice")
+assertEqual(priceLookupCalls, task42CallsAfterFirst, "material cache reuses scroll and vellum price work across skill points")
+assertNear(
+    cachedTask42Yellow.expectedEffectiveCostPerSkillUp,
+    cachedTask42Yellow.effectiveCostPerCraft * 4 / 3
+        + cachedTask42Yellow.fixedOneTimeMaterialCost,
+    0.0001,
+    "cached economics rescale only by exact skill-up chance"
+)
 
 print("Recipe cost engine tests passed.")

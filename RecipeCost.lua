@@ -730,6 +730,198 @@ local function materialCostCacheKey(recipe, state, options)
     }, "|")
 end
 
+local function buildDirectExecutionEconomics(variableMarket, fixedMarket)
+    local directGrossCost = nonNegativeNumber(variableMarket) or 0
+    return {
+        selectedExecutionMethod = "direct",
+        directGrossCost = directGrossCost,
+        scrollPathAvailable = false,
+        scrollGrossCost = nil,
+        scrollEffectiveCostPerCraft = nil,
+        vellumItemID = nil,
+        vellumTier = nil,
+        vellumCost = nil,
+        vellumPriceType = nil,
+        vellumSource = nil,
+        scrollOutputItemID = nil,
+        resaleEstimate = nil,
+        resaleOptimizationValue = 0,
+        resaleCredit = 0,
+        estimatedSurplus = 0,
+        effectiveCostPerCraft = directGrossCost,
+        fixedOneTimeMaterialCost = nonNegativeNumber(fixedMarket) or 0,
+        resaleConfidence = "none",
+        resaleReason = "not_vellum_eligible",
+        scrollUnavailableReason = "not_vellum_eligible",
+    }
+end
+
+local function chooseCheapestCompatibleVellum(spellID, priceLookup, priceChooser, now)
+    if type(addonTable.getCompatibleEnchantVellums) ~= "function" then
+        return nil, "vellum_metadata_unavailable"
+    end
+
+    local vellums, minimumTier = addonTable.getCompatibleEnchantVellums(spellID)
+    if type(vellums) ~= "table" or not tonumber(minimumTier) then
+        return nil, "no_compatible_vellum"
+    end
+
+    local best
+    local firstReason
+    for index = 1, table.getn(vellums) do
+        local vellum = vellums[index]
+        local tier = tonumber(vellum and vellum.tier)
+        local itemID = vellum and tonumber(vellum.itemID)
+        if tier and itemID and tier >= tonumber(minimumTier) then
+            local choice, reason = chooseItemPrice(
+                itemID,
+                "market",
+                priceLookup,
+                priceChooser,
+                now
+            )
+            local cost = choice and nonNegativeNumber(choice.unitPrice) or nil
+            if cost ~= nil then
+                if not best
+                    or cost < best.cost
+                    or (cost == best.cost and tier < best.tier)
+                then
+                    best = {
+                        itemID = itemID,
+                        tier = tier,
+                        cost = cost,
+                        choice = choice,
+                    }
+                end
+            elseif not firstReason then
+                firstReason = reason
+            end
+        end
+    end
+
+    return best, firstReason or "compatible_vellum_price_unavailable"
+end
+
+local function buildExecutionEconomics(
+    recipe,
+    variableMarket,
+    fixedMarket,
+    priceLookup,
+    priceChooser,
+    options
+)
+    local economics = buildDirectExecutionEconomics(variableMarket, fixedMarket)
+    local spellID = recipe and (recipe.spellID or recipe.recipeID)
+    if type(addonTable.getEnchantScrollMetadata) ~= "function" then
+        economics.scrollUnavailableReason = "enchant_metadata_unavailable"
+        economics.resaleReason = "enchant_metadata_unavailable"
+        return economics
+    end
+
+    local metadata = addonTable.getEnchantScrollMetadata(spellID)
+    if not metadata or not metadata.vellumEligible or not tonumber(metadata.scrollItemID) then
+        economics.scrollUnavailableReason = metadata and metadata.classification
+            or "not_vellum_eligible"
+        economics.resaleReason = economics.scrollUnavailableReason
+        return economics
+    end
+
+    economics.scrollOutputItemID = tonumber(metadata.scrollItemID)
+
+    local vellum, vellumReason = chooseCheapestCompatibleVellum(
+        spellID,
+        priceLookup,
+        priceChooser,
+        options and options.now
+    )
+    if not vellum then
+        economics.scrollUnavailableReason = vellumReason or "compatible_vellum_price_unavailable"
+        economics.resaleReason = economics.scrollUnavailableReason
+        return economics
+    end
+
+    economics.scrollPathAvailable = true
+    economics.scrollUnavailableReason = nil
+    economics.vellumItemID = vellum.itemID
+    economics.vellumTier = vellum.tier
+    economics.vellumCost = vellum.cost
+    economics.vellumPriceType = vellum.choice and vellum.choice.priceType or nil
+    economics.vellumSource = vellum.choice and vellum.choice.source or nil
+    economics.scrollGrossCost = economics.directGrossCost + vellum.cost
+
+    local resale
+    if type(addonTable.evaluateResaleValue) == "function" then
+        local rawResale = priceLookup(economics.scrollOutputItemID, options and options.now)
+        resale = addonTable.evaluateResaleValue(rawResale)
+    end
+
+    local resaleEstimate = resale and nonNegativeNumber(resale.estimatedResaleValue) or nil
+    local optimizationValue = resale and nonNegativeNumber(resale.optimizationCredit) or 0
+    optimizationValue = optimizationValue or 0
+
+    economics.resaleEstimate = resaleEstimate
+    economics.resaleOptimizationValue = optimizationValue
+    economics.resaleConfidence = resale and resale.confidence or "none"
+    economics.resaleReason = resale and resale.reason or "resale_evaluator_unavailable"
+    economics.resaleCredit = math.min(economics.scrollGrossCost, optimizationValue)
+    economics.scrollEffectiveCostPerCraft = math.max(
+        0,
+        economics.scrollGrossCost - economics.resaleCredit
+    )
+    economics.estimatedSurplus = math.max(
+        0,
+        optimizationValue - economics.scrollGrossCost
+    )
+
+    if economics.scrollEffectiveCostPerCraft < economics.directGrossCost then
+        economics.selectedExecutionMethod = "scroll"
+        economics.effectiveCostPerCraft = economics.scrollEffectiveCostPerCraft
+    end
+
+    return economics
+end
+
+local function applyExecutionEconomics(result, economics, expectedCrafts)
+    if type(result) ~= "table" or type(economics) ~= "table" then
+        return
+    end
+
+    result.selectedExecutionMethod = economics.selectedExecutionMethod
+    result.directGrossCost = economics.directGrossCost
+    result.scrollPathAvailable = economics.scrollPathAvailable
+    result.scrollGrossCost = economics.scrollGrossCost
+    result.scrollEffectiveCostPerCraft = economics.scrollEffectiveCostPerCraft
+    result.vellumItemID = economics.vellumItemID
+    result.vellumTier = economics.vellumTier
+    result.vellumCost = economics.vellumCost
+    result.vellumPriceType = economics.vellumPriceType
+    result.vellumSource = economics.vellumSource
+    result.scrollOutputItemID = economics.scrollOutputItemID
+    result.resaleEstimate = economics.resaleEstimate
+    result.resaleOptimizationValue = economics.resaleOptimizationValue
+    result.resaleCredit = economics.resaleCredit
+    result.estimatedSurplus = economics.estimatedSurplus
+    result.effectiveCostPerCraft = economics.effectiveCostPerCraft
+    result.effectiveLevelingCost = economics.effectiveCostPerCraft
+    result.fixedOneTimeMaterialCost = economics.fixedOneTimeMaterialCost
+    result.resaleConfidence = economics.resaleConfidence
+    result.resaleReason = economics.resaleReason
+    result.scrollUnavailableReason = economics.scrollUnavailableReason
+
+    local crafts = positiveNumber(expectedCrafts) or 1
+    result.expectedEffectiveCostPerSkillUp =
+        (nonNegativeNumber(economics.effectiveCostPerCraft) or 0) * crafts
+        + (nonNegativeNumber(economics.fixedOneTimeMaterialCost) or 0)
+    result.expectedEstimatedSurplusPerSkillUp =
+        (nonNegativeNumber(economics.estimatedSurplus) or 0) * crafts
+
+    result.executionEconomics = copyMap(economics)
+    result.executionEconomics.expectedEffectiveCostPerSkillUp =
+        result.expectedEffectiveCostPerSkillUp
+    result.executionEconomics.expectedEstimatedSurplusPerSkillUp =
+        result.expectedEstimatedSurplusPerSkillUp
+end
+
 function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, options)
     if type(addonTable.performanceIncrement) == "function" then
         addonTable.performanceIncrement("recipe_cost_evaluations", 1)
@@ -772,6 +964,28 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
         incomplete = false,
         quality = "unavailable",
         unavailableReason = nil,
+        selectedExecutionMethod = nil,
+        directGrossCost = nil,
+        scrollPathAvailable = false,
+        scrollGrossCost = nil,
+        scrollEffectiveCostPerCraft = nil,
+        vellumItemID = nil,
+        vellumTier = nil,
+        vellumCost = nil,
+        scrollOutputItemID = nil,
+        resaleEstimate = nil,
+        resaleOptimizationValue = 0,
+        resaleCredit = 0,
+        estimatedSurplus = 0,
+        effectiveCostPerCraft = nil,
+        effectiveLevelingCost = nil,
+        fixedOneTimeMaterialCost = nil,
+        expectedEffectiveCostPerSkillUp = nil,
+        expectedEstimatedSurplusPerSkillUp = nil,
+        resaleConfidence = "none",
+        resaleReason = nil,
+        scrollUnavailableReason = nil,
+        executionEconomics = nil,
     }
 
     if not recipe or type(recipe) ~= "table" then
@@ -856,6 +1070,11 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
             cachedMaterial.variableGold * expectedCrafts + cachedMaterial.fixedGold
         result.expectedCurrentPurchaseCostPerSkillUp =
             cachedMaterial.variableCurrent * expectedCrafts + cachedMaterial.fixedCurrent
+        applyExecutionEconomics(
+            result,
+            cachedMaterial.executionEconomics,
+            expectedCrafts
+        )
         result.availableNow = cachedMaterial.allPurchasesAvailableNow
         result.availabilityConfidence = result.availableNow and "confirmed" or "unavailable"
         result.available = true
@@ -1064,6 +1283,18 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
         end
     end
 
+    local executionEconomics
+    if not result.incomplete then
+        executionEconomics = buildExecutionEconomics(
+            recipe,
+            variableMarket,
+            fixedMarket,
+            priceLookup,
+            priceChooser,
+            options
+        )
+    end
+
     if materialCache and materialKey then
         materialCache[materialKey] = {
             incomplete = result.incomplete,
@@ -1084,6 +1315,7 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
             fixedCurrent = fixedCurrent,
             hasStale = hasStale,
             allPurchasesAvailableNow = allPurchasesAvailableNow,
+            executionEconomics = executionEconomics,
         }
     end
 
@@ -1100,6 +1332,7 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
     result.expectedMarketCostPerSkillUp = expectedMarket
     result.expectedGoldNeededNowPerSkillUp = expectedGold
     result.expectedCurrentPurchaseCostPerSkillUp = expectedCurrentPurchase
+    applyExecutionEconomics(result, executionEconomics, expectedCrafts)
     result.availableNow = allPurchasesAvailableNow
     result.availabilityConfidence = allPurchasesAvailableNow and "confirmed" or "unavailable"
     result.available = true
