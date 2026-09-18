@@ -1,6 +1,6 @@
 # Task 41 — Conservative resale valuation
 
-Status: FIX  
+Status: DONE  
 Phase: 9 — Resale-aware Smartest optimization  
 Depends on: Task 40
 
@@ -196,4 +196,7 @@ Validation:
 - Agent 3 fix commit `e45d865a388b07215fcd3402ce047655241a03bd` passed Lua syntax, the resale suite, and all tests through the TSM step, but workflow run 111 exposed a fixture-isolation bug in `tools/test_tsm_price_provider.lua`: the test switched from its mocked AuctionDB API backend to mocked SavedVariables without clearing the same provider cache, so the SavedVariables assertion reused the preceding cached raw price.
 - The follow-up test-only fix resets the price cache at that synthetic backend boundary. Production cache behavior and the Task 41 resale logic are unchanged.
 
-Full validation is pending for the follow-up commit. Task 42 remains blocked until it passes.
+- Follow-up commit `83d1bd96146fbda8aa56fef54b636e454da6a230` resets the cache at that synthetic backend boundary.
+- GitHub Actions `Validate addon` run 112 completed successfully for the follow-up commit, including Lua 5.1 syntax, conservative resale valuation, TSM AuctionDB provider coverage, route/cost/shopping/recommendation suites, performance guards, addon structure, and profession-guide validation.
+
+Task 41 is DONE. The Agent 2 findings are resolved and Task 42 may begin in a separate task/commit.
