@@ -174,7 +174,13 @@ Coverage:
 - Recipe acquisition and reusable-tool costs surviving resale credit.
 - Material-cache reuse across skill points without repeated scroll/vellum lookups.
 
-Validation: pending the implementation commit's full GitHub Actions `Validate addon` run. Task remains REVIEW for the required independent Agent 2 pass; Task 43 is not started.
+Validation:
+- Implementation commit: `ba908da717d46a26eae03ff61ccff386bad9213d` (`feat: add resale-aware enchant economics`).
+- GitHub Actions `Validate addon` run 114 completed successfully.
+- The new Task 42 recipe-cost coverage passed, including Gatherer/Exceptional Spellpower economics, higher-rank vellum selection, floor-at-zero/surplus separation, stale/suspicious resale rejection, one-time-cost protection, and material-cache reuse.
+- Existing enchant metadata, price provider, TSM provider, Cheapest route solver, incremental route execution, shopping-plan, dynamic recommendation, full-catalog route, performance-guard, structure, and guide validation all remained green.
+
+Task 42 remains REVIEW for the required independent Agent 2 pass. Task 43 has not been started.
 
 ### Agent 2 review
 
