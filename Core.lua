@@ -1787,6 +1787,135 @@ local function dynamicPriceLine()
     )
 end
 
+local function economicItemName(itemID)
+    itemID = tonumber(itemID)
+    if itemID and type(GetItemInfo) == "function" then
+        local name = GetItemInfo(itemID)
+        if name and name ~= "" then
+            return name
+        end
+    end
+    return itemID and ("Item " .. tostring(itemID)) or addonTable.L["metric_unknown"]
+end
+
+local function formatEconomicCopper(value)
+    if value == nil then
+        return addonTable.L["metric_unknown"]
+    end
+    return addonTable.formatCopperShort(value)
+end
+
+local function formatSkillUpChance(chance)
+    chance = tonumber(chance)
+    if not chance then
+        return addonTable.L["metric_unknown"]
+    end
+
+    local percent = math.max(0, math.min(100, chance * 100))
+    local rounded = math.floor(percent + 0.5)
+    if math.abs(percent - rounded) < 0.05 then
+        return tostring(rounded) .. "%"
+    end
+    return string.format("%.1f%%", percent)
+end
+
+local function formatExpectedCrafts(crafts)
+    crafts = tonumber(crafts)
+    if not crafts then
+        return addonTable.L["metric_unknown"]
+    end
+
+    crafts = math.max(0, crafts)
+    local rounded = math.floor(crafts + 0.5)
+    if math.abs(crafts - rounded) < 0.05 then
+        return tostring(rounded)
+    end
+    return string.format("%.1f", crafts)
+end
+
+local function smartestEconomics(cost)
+    if type(addonTable.getSmartestEconomicsPresentation) ~= "function" then
+        return nil
+    end
+    return addonTable.getSmartestEconomicsPresentation(cost)
+end
+
+local function smartestResaleWarning(economics)
+    if not economics or economics.method ~= "scroll" then
+        return ""
+    end
+
+    local warning
+    if economics.resaleEvidenceState == "unavailable" then
+        warning = addonTable.L["smartest_resale_unavailable"]
+    elseif economics.resaleEvidenceState == "rejected" then
+        warning = addonTable.L["smartest_resale_rejected"]
+    elseif economics.resaleEvidenceState == "weak" then
+        warning = addonTable.L["smartest_resale_weak"]
+    end
+
+    if warning then
+        return warning .. " · " .. addonTable.L["smartest_market_disclaimer"]
+    end
+    return addonTable.L["smartest_market_disclaimer"]
+end
+
+local function addSmartestEconomicsToTooltip(cost)
+    local economics = smartestEconomics(cost)
+    if not economics then
+        return
+    end
+
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine(addonTable.L["smartest_tooltip_title"], 1, 0.82, 0.12, true)
+    GameTooltip:AddLine(string.format(
+        addonTable.L["smartest_tooltip_skill"],
+        formatSkillUpChance(economics.skillUpChance),
+        formatExpectedCrafts(economics.expectedCrafts)
+    ), 0.82, 0.82, 0.82, true)
+    GameTooltip:AddLine(string.format(
+        addonTable.L["smartest_tooltip_materials"],
+        formatEconomicCopper(economics.materialCostPerCraft)
+    ), 0.82, 0.82, 0.82, true)
+
+    if economics.method == "scroll" then
+        GameTooltip:AddLine(string.format(
+            addonTable.L["smartest_tooltip_vellum"],
+            economicItemName(economics.vellumItemID),
+            formatEconomicCopper(economics.vellumCost)
+        ), 0.82, 0.82, 0.82, true)
+    end
+
+    GameTooltip:AddLine(string.format(
+        addonTable.L["smartest_tooltip_gross"],
+        formatEconomicCopper(economics.grossCostPerCraft)
+    ), 0.82, 0.82, 0.82, true)
+
+    if economics.method == "scroll" then
+        GameTooltip:AddLine(string.format(
+            addonTable.L["smartest_tooltip_resale"],
+            formatEconomicCopper(economics.estimatedResalePerCraft)
+        ), 0.82, 0.82, 0.82, true)
+    end
+
+    GameTooltip:AddLine(string.format(
+        addonTable.L["smartest_tooltip_effective"],
+        formatEconomicCopper(economics.effectiveCostPerSkillUp)
+    ), 0.55, 1, 0.45, true)
+
+    if economics.hasPositiveSurplus then
+        GameTooltip:AddLine(string.format(
+            addonTable.L["smartest_tooltip_surplus"],
+            formatEconomicCopper(economics.estimatedSurplusPerCraft)
+        ), 0.72, 0.82, 1, true)
+    end
+
+    local warning = smartestResaleWarning(economics)
+    if warning ~= "" then
+        GameTooltip:AddLine(warning, 1, 0.72, 0.22, true)
+    end
+end
+
 local function updateDetailModeControl()
     if not MainFrameCoreDetailsToggle then
         return
