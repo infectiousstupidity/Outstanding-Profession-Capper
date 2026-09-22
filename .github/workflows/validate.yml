@@ -20,6 +20,8 @@ jobs:
         run: lua5.1 tools/test_character_skill.lua
       - name: Test recommendation settings migration
         run: lua5.1 tools/test_settings.lua
+      - name: Test recommendation presentation model
+        run: lua5.1 tools/test_recommendation_presentation.lua
       - name: Test performance instrumentation
         run: lua5.1 tools/test_performance.lua
       - name: Test profession book lifecycle
