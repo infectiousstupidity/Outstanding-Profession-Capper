@@ -153,9 +153,11 @@ Implemented on current `master` as Task 43 only.
 - Added regressions for Smartest vs Cheapest, efficiency-before-surplus, surplus tie-breaks, deterministic final ties, negative-edge rejection, vellum availability, saved-setting migration, synchronous/incremental equivalence, objective-driven stale cancellation, and cache separation.
 
 Validation:
-- Full repository validation is pending the Agent 1 implementation commit.
+- Agent 1 implementation commit: `3e0adcebd14f4e45827b4757b8f47df1a9eb0047` (`feat: add Smartest route objective`).
+- GitHub Actions `Validate addon` run 119 completed successfully on that commit.
+- Validation passed Lua 5.1 syntax; recommendation-setting migration; recipe cost and conservative resale; Cheapest and Smartest route tests; synchronous/incremental route equivalence; dynamic/incremental recommendations; full-catalog routes; shopping plan; cache/performance guards; addon structure; and profession guides.
 
-Task 43 is REVIEW after the implementation commit passes validation. Task 44 remains blocked pending independent Agent 2 review.
+Task 43 remains REVIEW for the required independent Agent 2 pass. Task 44 remains blocked.
 
 ### Agent 2 review
 
