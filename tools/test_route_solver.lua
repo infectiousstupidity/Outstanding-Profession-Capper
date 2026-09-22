@@ -528,6 +528,10 @@ local function smartestFixture(recipe)
         expectedEffectiveCostPerSkillUp = row.effective,
         expectedEstimatedSurplusPerSkillUp = row.surplus,
         selectedExecutionMethod = row.method,
+        directGrossCost = row.gross,
+        scrollGrossCost = row.method == "scroll" and row.gross or nil,
+        resaleCredit = row.method == "scroll" and (row.gross - row.effective) or 0,
+        effectiveCostPerCraft = row.effective,
         oneTimeCosts = {},
         quality = "complete",
         skillUpChance = 1 / row.crafts,
@@ -561,6 +565,8 @@ local smartest = addonTable.solveCheapestProfessionRoute(
 )
 assertEqual(smartest.actions[1].recipeID, 10, "Smartest can choose higher gross cost after resale credit")
 assertEqual(smartest.totalEffectiveLevelingCost, 20, "Smartest exposes effective route cost")
+assertEqual(smartest.totalGrossLevelingCost, 100, "Smartest exposes gross route cost")
+assertEqual(smartest.totalResaleCredit, 80, "Smartest exposes credited resale")
 assertEqual(smartest.totalExpectedCrafts, 1, "Smartest exposes expected crafts")
 assertEqual(smartest.totalEstimatedResaleSurplus, 15, "Smartest exposes selected scroll surplus")
 
