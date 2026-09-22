@@ -106,6 +106,31 @@ function addonTable.getSmartestEconomicsPresentation(cost)
     }
 end
 
+function addonTable.getSmartestComparisonPresentation(candidate)
+    if type(candidate) ~= "table" then
+        return nil
+    end
+
+    local cost = type(candidate.cost) == "table" and candidate.cost or {}
+    local economics = addonTable.getSmartestEconomicsPresentation(cost)
+    if not economics then
+        return nil
+    end
+
+    return {
+        skillUpChance = nonNegativeNumber(candidate.skillUpChance)
+            or economics.skillUpChance,
+        expectedCrafts = nonNegativeNumber(candidate.expectedCraftsPerSkillUp)
+            or economics.expectedCrafts,
+        effectiveCostPerCraft = nonNegativeNumber(candidate.costPerCraft)
+            or economics.effectiveCostPerCraft,
+        effectiveCostPerSkillUp = nonNegativeNumber(candidate.expectedCostPerSkillUp)
+            or economics.effectiveCostPerSkillUp,
+        estimatedSurplusPerSkillUp =
+            nonNegativeNumber(candidate.estimatedSurplusPerSkillUp) or 0,
+    }
+end
+
 function addonTable.getSmartestRoutePresentation(plan)
     if type(plan) ~= "table" or plan.complete ~= true then
         return nil
