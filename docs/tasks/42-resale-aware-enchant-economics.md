@@ -1,6 +1,6 @@
 # Task 42 — Resale-aware Enchanting craft economics
 
-Status: REVIEW  
+Status: FIX  
 Phase: 9 — Resale-aware Smartest optimization  
 Depends on: Tasks 40 and 41
 
@@ -184,7 +184,38 @@ Task 42 remains REVIEW for the required independent Agent 2 pass. Task 43 has no
 
 ### Agent 2 review
 
-Pending.
+Reviewed independently against the actual current `master` at `44e2277466a1a5aa460c54e1dcf21962efc6d173`, implementation commit `ba908da717d46a26eae03ff61ccff386bad9213d`, the Task 40/41 production paths, the live recommendation path, and the current tests. The only commit after the Task 42 implementation changed `TASKS.md` and this task document; no Task 42 implementation code changed after `ba908da717d46a26eae03ff61ccff386bad9213d`.
+
+Review outcome: **FIX**.
+
+Findings:
+
+1. **HIGH — Task 42 expected economics can become stale after the live skill-up chance is reconciled.**
+   - **Affected behavior:** `DynamicRecommendations.applyLiveSkillType()` can change `cost.skillUpChance` and then recompute `expectedCraftsPerSkillUp` plus the existing Cheapest cost fields, but it does not recompute Task 42's `expectedEffectiveCostPerSkillUp`, `expectedEstimatedSurplusPerSkillUp`, or the mirrored values inside `executionEconomics`. A live recipe can therefore expose one final skill-up chance while its resale-aware expected economics still use the earlier chance.
+   - **Evidence:** live profession records are built with `liveSkillType`; both current-recipe ranking and `adaptiveRouteCost()` call `applyLiveSkillType()` after `calculateRecipeCost()`. Task 42 derives its expected fields inside `RecipeCost.applyExecutionEconomics()` before that post-processing occurs. The Task 42 recipe-cost coverage tests direct `calculateRecipeCost()` chance scaling, while the dynamic/incremental recommendation coverage does not assert Task 42 fields through a `liveSkillType` adjustment.
+   - **Impact:** current Cheapest ordering is not changed because `RouteSolver.lua` still consumes only the legacy Cheapest fields, but the Task 42 result contract is internally inconsistent and Task 43 could consume a wrong expected effective cost.
+   - **Smallest correct fix direction:** make the final skill-up probability authoritative in one place. Do not derive Task 42 economics from a guessed recipe-color probability. If live reconciliation legitimately changes the final numeric chance, recompute all Task 42 chance-derived fields from `effectiveCostPerCraft`, `fixedOneTimeMaterialCost`, and `estimatedSurplus`, including the mirrored `executionEconomics` values. Add a production-path regression where `liveSkillType` changes/reconciles the chance and assert all legacy and Task 42 expected fields use the same final probability.
+
+2. **MEDIUM — informational surplus is calculated from optimization-eligible credit instead of the retained resale estimate.**
+   - **Affected behavior:** `RecipeCost.buildExecutionEconomics()` sets `estimatedSurplus = max(0, optimizationValue - scrollGrossCost)`. Task 41 deliberately retains `estimatedResaleValue` as context even when stale, suspicious, too old, unknown-freshness, or context-only evidence is rejected for optimization. Task 42's specified result model is `estimatedSurplus = max(0, resaleEstimate - scrollGrossCost)`; only `resaleCredit` is supposed to depend on optimization eligibility.
+   - **Evidence:** rejected Task 41 evidence returns a non-nil contextual `estimatedResaleValue` with `optimizationCredit = 0`. Task 42 then reports zero surplus because it subtracts from `optimizationValue`, not `resaleEstimate`. The stale/suspicious recipe-cost tests assert zero credit and direct fallback but never assert the informational surplus; the fresh profitable case cannot distinguish the two operands because estimate and optimization credit are equal.
+   - **Impact:** untrusted data still cannot reduce optimization cost, so route safety is preserved, but the informational surplus field loses the exact evidence/context separation required by Task 42 and can under-report the retained market estimate.
+   - **Smallest correct fix direction:** keep `resaleCredit` based only on Task 41's optimization-eligible value, but compute `estimatedSurplus` from the safe retained `resaleEstimate`. Add stale/suspicious (and ideally unknown/context-only) high-estimate regressions proving zero credit while informational surplus and confidence/reason remain available.
+
+What passed:
+- Direct versus scroll gross/effective arithmetic is correct for optimization-eligible resale evidence; resale credit is capped at scroll gross cost and effective cost floors at zero.
+- Recipe acquisition remains a separate solver one-time cost, profession training remains a separate route action, and reusable rods/tools remain fixed one-time material cost outside resale credit.
+- Task 40 metadata gates scroll economics to explicitly vellum-eligible enchants. Compatible vellum enumeration respects the pinned minimum tier, is deterministic on equal prices, and allows a cheaper higher-rank vellum to win.
+- Missing vellum/resale paths fall back safely; stale, suspicious, too-old, unknown-freshness, missing, and context-only Task 41 evidence cannot reduce optimization cost.
+- Existing Cheapest route metrics/order are unchanged: `RouteSolver.lua` still resolves edges from the legacy expected market/gold/current fields and does not consume Task 42 resale-aware fields.
+- Existing material/recommendation price caching is reused. Task 42 adds no persistent craft-economics cache; the provider price cache remains bounded and the recommendation-local material cache prevents repeated vellum/scroll work across simulated skill points.
+
+Validation:
+- Re-ran GitHub Actions `Validate addon` run 115, attempt 2, against current `master` `44e2277466a1a5aa460c54e1dcf21962efc6d173`.
+- The rerun passed Lua 5.1 syntax; runtime-cache/performance tests; generated enchant metadata verification/tests; price provider, conservative resale, and TSM provider tests; recipe-cost tests; cheapest and incremental route tests; shopping/recommendation/full-catalog/static route tests; Enchanting rod coverage; Phase 7 performance guards; addon structure; and guide validation.
+- The green suite does not falsify either finding because the missing assertions described above are not present.
+
+Task 42 moves to **FIX** for Agent 3. Task 43 remains blocked and was not started.
 
 ### Agent 3 fixes
 
