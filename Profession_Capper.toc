@@ -31,6 +31,7 @@ RecipeCost.lua
 RouteSolver.lua
 ShoppingPlan.lua
 DynamicRecommendations.lua
+RecommendationPresentation.lua
 Settings.lua
 EnchantConfirmation.lua
 Session.lua

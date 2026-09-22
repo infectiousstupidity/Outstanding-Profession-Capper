@@ -44,7 +44,7 @@ local COMPARE_CONTENT_TOP = 132
 local COMPARE_FOOTER_SPACE = 58
 local COMPARE_MIN_HEIGHT = 356
 
-local DETAILS_PANEL_HEIGHT = 96
+local DETAILS_PANEL_HEIGHT = 114
 local DETAILS_PANEL_GAP = 10
 
 local tradeSkillStateMutation = false
@@ -1566,18 +1566,37 @@ local function updateProfessionHeader()
     end
 end
 
-local function getRecommendationMode()
+local function getRecommendationState()
     local db = addonTable.getSettings()
-    if db.recommendationMode == "static" then
-        return "static"
-    elseif db.recommendationAvailableOnly == true then
-        return "available"
+    if type(addonTable.getRecommendationPresentationState) == "function" then
+        return addonTable.getRecommendationPresentationState(db)
     end
-    return "dynamic"
+
+    local objective = db.recommendationObjective == "smartest"
+        and "smartest"
+        or "cheapest"
+    local static = db.recommendationMode == "static"
+    return {
+        mode = static and "static" or objective,
+        objective = objective,
+        static = static,
+        cheapest = not static and objective == "cheapest",
+        smartest = not static and objective == "smartest",
+        availableOnly = db.recommendationAvailableOnly == true,
+        availableEnabled = not static,
+    }
+end
+
+local function getRecommendationMode()
+    return getRecommendationState().mode
 end
 
 local function isOptimizedMode(mode)
-    return mode == "dynamic" or mode == "available"
+    return mode == "cheapest" or mode == "smartest"
+end
+
+local function isAvailableOnly()
+    return getRecommendationState().availableOnly == true
 end
 
 local function getDetailMode()
@@ -1673,11 +1692,29 @@ local function setModeButtonState(button, selected)
 end
 
 local function updateModeControls()
-    local mode = getRecommendationMode()
+    local state = getRecommendationState()
+    local mode = state.mode
 
-    setModeButtonState(MainFrameCoreCheapestMode, mode == "dynamic")
-    setModeButtonState(MainFrameCoreAvailableMode, mode == "available")
+    setModeButtonState(MainFrameCoreCheapestMode, mode == "cheapest")
+    setModeButtonState(MainFrameCoreSmartestMode, mode == "smartest")
     setModeButtonState(MainFrameCoreStaticMode, mode == "static")
+
+    if MainFrameCoreAvailableOnly then
+        MainFrameCoreAvailableOnly:SetChecked(state.availableOnly)
+        if state.availableEnabled then
+            MainFrameCoreAvailableOnly:Enable()
+            MainFrameCoreAvailableOnly:SetAlpha(1)
+            if txtAvailableOnlyLabel then
+                txtAvailableOnlyLabel:SetTextColor(0.78, 0.78, 0.78)
+            end
+        else
+            MainFrameCoreAvailableOnly:Disable()
+            MainFrameCoreAvailableOnly:SetAlpha(0.45)
+            if txtAvailableOnlyLabel then
+                txtAvailableOnlyLabel:SetTextColor(0.45, 0.45, 0.45)
+            end
+        end
+    end
 
     if MainFrameCoreRoute then
         local staticRouteAvailable = mode == "static"
@@ -1750,6 +1787,158 @@ local function dynamicPriceLine()
     )
 end
 
+local function economicItemName(itemID)
+    itemID = tonumber(itemID)
+    if itemID and type(GetItemInfo) == "function" then
+        local name = GetItemInfo(itemID)
+        if name and name ~= "" then
+            return name
+        end
+    end
+    return itemID and ("Item " .. tostring(itemID)) or addonTable.L["metric_unknown"]
+end
+
+local function formatEconomicCopper(value)
+    if value == nil then
+        return addonTable.L["metric_unknown"]
+    end
+    return addonTable.formatCopperShort(value)
+end
+
+local function formatSkillUpChance(chance)
+    chance = tonumber(chance)
+    if not chance then
+        return addonTable.L["metric_unknown"]
+    end
+
+    local percent = math.max(0, math.min(100, chance * 100))
+    local rounded = math.floor(percent + 0.5)
+    if math.abs(percent - rounded) < 0.05 then
+        return tostring(rounded) .. "%"
+    end
+    return string.format("%.1f%%", percent)
+end
+
+local function formatExpectedCrafts(crafts)
+    crafts = tonumber(crafts)
+    if not crafts then
+        return addonTable.L["metric_unknown"]
+    end
+
+    crafts = math.max(0, crafts)
+    local rounded = math.floor(crafts + 0.5)
+    if math.abs(crafts - rounded) < 0.05 then
+        return tostring(rounded)
+    end
+    return string.format("%.1f", crafts)
+end
+
+local function smartestEconomics(cost)
+    if type(addonTable.getSmartestEconomicsPresentation) ~= "function" then
+        return nil
+    end
+    return addonTable.getSmartestEconomicsPresentation(cost)
+end
+
+local function currentSmartestEconomics()
+    local economics = smartestEconomics(
+        dynamicRecommendation and dynamicRecommendation.currentCost
+    )
+    local segment = dynamicRecommendation and dynamicRecommendation.currentSegment
+    if economics
+        and segment
+        and tonumber(segment.effectiveLevelingCost)
+    then
+        local skillUps = math.max(
+            1,
+            (tonumber(segment.skillEnd) or 0) - (tonumber(segment.skillStart) or 0)
+        )
+        economics.effectiveCostPerSkillUp =
+            math.max(0, tonumber(segment.effectiveLevelingCost) or 0) / skillUps
+    end
+    return economics
+end
+
+local function smartestResaleWarning(economics)
+    if not economics or economics.method ~= "scroll" then
+        return ""
+    end
+
+    local warning
+    if economics.resaleEvidenceState == "unavailable" then
+        warning = addonTable.L["smartest_resale_unavailable"]
+    elseif economics.resaleEvidenceState == "rejected" then
+        warning = addonTable.L["smartest_resale_rejected"]
+    elseif economics.resaleEvidenceState == "weak" then
+        warning = addonTable.L["smartest_resale_weak"]
+    end
+
+    if warning then
+        return warning .. " · " .. addonTable.L["smartest_market_disclaimer"]
+    end
+    return addonTable.L["smartest_market_disclaimer"]
+end
+
+local function addSmartestEconomicsToTooltip(cost, effectiveCostPerSkillUp)
+    local economics = smartestEconomics(cost)
+    if not economics then
+        return
+    end
+
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine(addonTable.L["smartest_tooltip_title"], 1, 0.82, 0.12, true)
+    GameTooltip:AddLine(string.format(
+        addonTable.L["smartest_tooltip_skill"],
+        formatSkillUpChance(economics.skillUpChance),
+        formatExpectedCrafts(economics.expectedCrafts)
+    ), 0.82, 0.82, 0.82, true)
+    GameTooltip:AddLine(string.format(
+        addonTable.L["smartest_tooltip_materials"],
+        formatEconomicCopper(economics.materialCostPerCraft)
+    ), 0.82, 0.82, 0.82, true)
+
+    if economics.method == "scroll" then
+        GameTooltip:AddLine(string.format(
+            addonTable.L["smartest_tooltip_vellum"],
+            economicItemName(economics.vellumItemID),
+            formatEconomicCopper(economics.vellumCost)
+        ), 0.82, 0.82, 0.82, true)
+    end
+
+    GameTooltip:AddLine(string.format(
+        addonTable.L["smartest_tooltip_gross"],
+        formatEconomicCopper(economics.grossCostPerCraft)
+    ), 0.82, 0.82, 0.82, true)
+
+    if economics.method == "scroll" then
+        GameTooltip:AddLine(string.format(
+            addonTable.L["smartest_tooltip_resale"],
+            formatEconomicCopper(economics.estimatedResalePerCraft)
+        ), 0.82, 0.82, 0.82, true)
+    end
+
+    GameTooltip:AddLine(string.format(
+        addonTable.L["smartest_tooltip_effective"],
+        formatEconomicCopper(
+            effectiveCostPerSkillUp ~= nil
+                and math.max(0, tonumber(effectiveCostPerSkillUp) or 0)
+                or economics.effectiveCostPerSkillUp
+        )
+    ), 0.55, 1, 0.45, true)
+
+    if economics.hasPositiveSurplus then
+        GameTooltip:AddLine(string.format(
+            addonTable.L["smartest_tooltip_surplus"],
+            formatEconomicCopper(economics.estimatedSurplusPerCraft)
+        ), 0.72, 0.82, 1, true)
+    end
+
+    local warning = smartestResaleWarning(economics)
+    if warning ~= "" then
+        GameTooltip:AddLine(warning, 1, 0.72, 0.22, true)
+    end
+end
+
 local function updateDetailModeControl()
     if not MainFrameCoreDetailsToggle then
         return
@@ -1797,7 +1986,8 @@ local function updateDetailPanel()
         return false
     end
 
-    if not isOptimizedMode(getRecommendationMode()) then
+    local mode = getRecommendationMode()
+    if not isOptimizedMode(mode) then
         MainFrameCoreDetails:Hide()
         return false
     end
@@ -1808,7 +1998,11 @@ local function updateDetailPanel()
     end
 
     MainFrameCoreDetails:Show()
-    txtDetailsLabel:SetText(addonTable.L["details_label"])
+    txtDetailsLabel:SetText(
+        mode == "smartest"
+            and addonTable.L["details_smartest_label"]
+            or addonTable.L["details_label"]
+    )
 
     if not dynamicRecommendation or not dynamicRecommendation.available then
         local reason = dynamicRecommendation and dynamicRecommendation.reason or "unknown"
@@ -1820,6 +2014,80 @@ local function updateDetailPanel()
         txtDetailsSource:SetText("")
         txtDetailsCoverage:SetText("")
         txtDetailsCandidates:SetText("")
+        txtDetailsWarning:SetText("")
+        return true
+    end
+
+    if dynamicRecommendation.requiresAcquisition
+        and type(addonTable.updateAcquisitionLocationControls) == "function"
+    then
+        addonTable.updateAcquisitionLocationControls(dynamicRecommendation.acquisition)
+    end
+
+    if mode == "smartest" then
+        local economics = currentSmartestEconomics()
+        if not economics then
+            txtDetailsSource:SetText("")
+            txtDetailsRoute:SetText(addonTable.L["details_route_incomplete"])
+            txtDetailsRoute:SetTextColor(1, 0.72, 0.22)
+            txtDetailsCoverage:SetText("")
+            txtDetailsCandidates:SetText("")
+            txtDetailsWarning:SetText("")
+            return true
+        end
+
+        local vellumContext = ""
+        if economics.method == "scroll" then
+            local vellumName = economicItemName(economics.vellumItemID)
+            local scrollName = economicItemName(economics.scrollOutputItemID)
+            txtDetailsSource:SetText(string.format(
+                addonTable.L["smartest_execution_scroll"],
+                vellumName,
+                scrollName
+            ))
+            vellumContext = string.format(
+                addonTable.L["smartest_vellum_context"],
+                vellumName,
+                formatEconomicCopper(economics.vellumCost)
+            )
+        else
+            txtDetailsSource:SetText(addonTable.L["smartest_execution_direct"])
+        end
+
+        txtDetailsRoute:SetText(string.format(
+            addonTable.L["smartest_skill_context"],
+            formatSkillUpChance(economics.skillUpChance),
+            formatExpectedCrafts(economics.expectedCrafts),
+            formatEconomicCopper(economics.materialCostPerCraft),
+            vellumContext
+        ))
+        txtDetailsRoute:SetTextColor(0.92, 0.92, 0.92)
+
+        txtDetailsCoverage:SetText(string.format(
+            addonTable.L["smartest_economics_line"],
+            formatEconomicCopper(economics.grossCostPerCraft),
+            formatEconomicCopper(economics.estimatedResalePerCraft),
+            formatEconomicCopper(economics.effectiveCostPerSkillUp)
+        ))
+
+        if economics.hasPositiveSurplus then
+            txtDetailsCandidates:SetText(string.format(
+                addonTable.L["smartest_surplus_line"],
+                formatEconomicCopper(economics.estimatedSurplusPerCraft)
+            ))
+        else
+            txtDetailsCandidates:SetText(addonTable.L["smartest_no_surplus_line"])
+        end
+
+        txtDetailsWarning:SetText(smartestResaleWarning(economics))
+        if economics.resaleEvidenceState == "unavailable"
+            or economics.resaleEvidenceState == "rejected"
+            or economics.resaleEvidenceState == "weak"
+        then
+            txtDetailsWarning:SetTextColor(1, 0.72, 0.22)
+        else
+            txtDetailsWarning:SetTextColor(0.62, 0.62, 0.62)
+        end
         return true
     end
 
@@ -1831,11 +2099,6 @@ local function updateDetailPanel()
             and string.format(addonTable.L["details_source"], sourceSummary)
             or ""
     )
-    if dynamicRecommendation.requiresAcquisition
-        and type(addonTable.updateAcquisitionLocationControls) == "function"
-    then
-        addonTable.updateAcquisitionLocationControls(dynamicRecommendation.acquisition)
-    end
 
     local plan = dynamicRecommendation.plan
     local target = tonumber(dynamicRecommendation.targetSkill)
@@ -1872,6 +2135,7 @@ local function updateDetailPanel()
         addonTable.L["details_candidates"],
         comparableCandidateCount()
     ))
+    txtDetailsWarning:SetText("")
 
     return true
 end
@@ -1905,8 +2169,38 @@ local function updateRecommendationSummary()
     resetRecommendationMetrics()
 
     local mode = getRecommendationMode()
+    if mode == "smartest" then
+        txtMetricApplicationLabel:SetText(addonTable.L["metric_gross_craft"])
+        txtMetricSkillLabel:SetText(addonTable.L["metric_effective_skill"])
+    else
+        txtMetricApplicationLabel:SetText(addonTable.L["metric_application"])
+        txtMetricSkillLabel:SetText(addonTable.L["metric_skill_up"])
+    end
+
     if isOptimizedMode(mode) and dynamicRecommendation and dynamicRecommendation.available then
         local cost = dynamicRecommendation.currentCost or {}
+        if mode == "smartest" then
+            local economics = currentSmartestEconomics()
+            if economics then
+                txtMetricApplicationValue:SetText("~" .. formatEconomicCopper(
+                    economics.grossCostPerCraft
+                ))
+                txtMetricSkillValue:SetText("~" .. formatEconomicCopper(
+                    economics.effectiveCostPerSkillUp
+                ))
+                if economics.method == "scroll" then
+                    txtPriceMeta:SetText(string.format(
+                        addonTable.L["smartest_execution_scroll"],
+                        economicItemName(economics.vellumItemID),
+                        economicItemName(economics.scrollOutputItemID)
+                    ))
+                else
+                    txtPriceMeta:SetText(addonTable.L["smartest_execution_direct"])
+                end
+                return
+            end
+        end
+
         local perCraft = addonTable.formatCopperShort(
             cost.currentPurchaseCostPerCraft or cost.materialMarketValuePerCraft
         )
@@ -1927,7 +2221,14 @@ local function updateRecommendationSummary()
         end
 
         local reason = dynamicRecommendation and dynamicRecommendation.reason or "unknown"
-        local fallbackKey = mode == "available" and "available_fallback" or "dynamic_fallback"
+        local fallbackKey
+        if isAvailableOnly() then
+            fallbackKey = "available_filter_fallback"
+        elseif mode == "smartest" then
+            fallbackKey = "smartest_fallback"
+        else
+            fallbackKey = "dynamic_fallback"
+        end
         txtPriceMeta:SetText(string.format(
             addonTable.L[fallbackKey],
             humanizeDynamicReason(reason)
@@ -2177,11 +2478,7 @@ local function getAcquisitionGuidance(spellID, acquisition, compact)
     return formatAcquisitionGuidanceInfo(info)
 end
 
-function setRecommendationMode(mode)
-    if not addonTable.setRecommendationMode(mode) then
-        return
-    end
-
+local function refreshAfterRecommendationSettingChange()
     if professionContext then
         resetValues()
         if type(addonTable.performanceRecordRefreshRequest) == "function" then
@@ -2191,6 +2488,32 @@ function setRecommendationMode(mode)
     else
         updateModeControls()
     end
+end
+
+function setRecommendationMode(mode)
+    if mode == "cheapest" or mode == "smartest" then
+        if not addonTable.setRecommendationMode("optimized") then
+            return
+        end
+        if not addonTable.setRecommendationObjective(mode) then
+            return
+        end
+    elseif not addonTable.setRecommendationMode(mode) then
+        return
+    end
+
+    refreshAfterRecommendationSettingChange()
+end
+
+function setRecommendationAvailableOnly(availableOnly)
+    if getRecommendationMode() == "static" then
+        updateModeControls()
+        return
+    end
+    if not addonTable.setRecommendationAvailableOnly(availableOnly) then
+        return
+    end
+    refreshAfterRecommendationSettingChange()
 end
 
 local COMPARE_DIFFICULTY_COLORS = {
@@ -2293,12 +2616,20 @@ local function compareRowOnEnter(self)
             1, 0.82, 0.12, true
         )
     end
-    GameTooltip:AddLine(string.format(
-        addonTable.L["compare_material_costs"],
-        difficulty,
-        addonTable.formatCopperShort(candidate.costPerCraft),
-        addonTable.formatCopperShort(candidate.expectedCostPerSkillUp)
-    ), 0.82, 0.82, 0.82, true)
+    if getRecommendationMode() == "smartest" then
+        GameTooltip:AddLine(difficulty, 0.82, 0.82, 0.82, true)
+        addSmartestEconomicsToTooltip(
+            candidate.cost,
+            candidate.expectedCostPerSkillUp
+        )
+    else
+        GameTooltip:AddLine(string.format(
+            addonTable.L["compare_material_costs"],
+            difficulty,
+            addonTable.formatCopperShort(candidate.costPerCraft),
+            addonTable.formatCopperShort(candidate.expectedCostPerSkillUp)
+        ), 0.82, 0.82, 0.82, true)
+    end
 
     if candidate.cost and candidate.cost.quality == "stale" then
         GameTooltip:AddLine(addonTable.L["compare_stale"], 1, 0.72, 0.22, true)
@@ -2463,6 +2794,22 @@ local function routeRowOnEnter(self)
             tonumber(segment.skillEnd) or 0
         ), 0.82, 0.82, 0.82, true)
 
+        if getRecommendationMode() == "smartest"
+            and self.rowType == "craft"
+            and segment.firstCost
+        then
+            local skillUps = math.max(
+                1,
+                (tonumber(segment.skillEnd) or 0) - (tonumber(segment.skillStart) or 0)
+            )
+            addSmartestEconomicsToTooltip(
+                segment.firstCost,
+                tonumber(segment.effectiveLevelingCost)
+                    and (tonumber(segment.effectiveLevelingCost) / skillUps)
+                    or nil
+            )
+        end
+
         if self.rowType == "static"
             and type(segment.recipeNames) == "table"
             and table.getn(segment.recipeNames) > 1
@@ -2550,7 +2897,7 @@ end
 local function filteredComparisonCandidates()
     local result = {}
     local candidates = dynamicRecommendation and dynamicRecommendation.candidates or {}
-    local requireAvailable = getRecommendationMode() == "available"
+    local requireAvailable = isAvailableOnly()
     for i = 1, table.getn(candidates) do
         local candidate = candidates[i]
         local difficulty = candidate and candidate.difficulty
@@ -2638,9 +2985,24 @@ local function renderComparisonView()
     setRouteHeadersVisible(false)
     setComparisonHeadersVisible(true)
 
-    local subtitleKey = getRecommendationMode() == "available"
-        and "compare_available_subtitle"
-        or "compare_subtitle"
+    local mode = getRecommendationMode()
+    local availableOnly = isAvailableOnly()
+    local subtitleKey
+    if mode == "smartest" then
+        subtitleKey = availableOnly
+            and "compare_smartest_available_subtitle"
+            or "compare_smartest_subtitle"
+        txtCompareAppHeader:SetText(addonTable.L["compare_effective_per_app"])
+        txtCompareSkillHeader:SetText(addonTable.L["compare_effective_per_skill"])
+        txtCompareDeltaHeader:SetText(addonTable.L["compare_vs_chosen"])
+    else
+        subtitleKey = availableOnly
+            and "compare_available_subtitle"
+            or "compare_subtitle"
+        txtCompareAppHeader:SetText(addonTable.L["compare_per_app"])
+        txtCompareSkillHeader:SetText(addonTable.L["compare_per_skill"])
+        txtCompareDeltaHeader:SetText(addonTable.L["compare_vs_best"])
+    end
     txtCompareSubtitle:SetText(string.format(
         addonTable.L[subtitleKey],
         professionContext and professionContext.effectiveSkill or 0
@@ -2668,40 +3030,76 @@ local function renderComparisonView()
         row.name:SetText(name)
         row.difficulty:SetText(compareDifficultyLabel(candidate.difficulty))
         row.difficulty:SetTextColor(color[1], color[2], color[3])
-        row.perApp:SetText("~" .. addonTable.formatCopperShort(candidate.costPerCraft))
-        row.perSkill:SetText("~" .. addonTable.formatCopperShort(candidate.expectedCostPerSkillUp))
+
+        local comparisonPresentation
+        if mode == "smartest"
+            and type(addonTable.getSmartestComparisonPresentation) == "function"
+        then
+            comparisonPresentation = addonTable.getSmartestComparisonPresentation(candidate)
+        end
+        local perCraft = comparisonPresentation
+            and comparisonPresentation.effectiveCostPerCraft
+            or candidate.costPerCraft
+        local perSkill = comparisonPresentation
+            and comparisonPresentation.effectiveCostPerSkillUp
+            or candidate.expectedCostPerSkillUp
+        row.perApp:SetText("~" .. addonTable.formatCopperShort(perCraft))
+        row.perSkill:SetText("~" .. addonTable.formatCopperShort(perSkill))
+
+        local metaParts = {}
+        if mode == "smartest" then
+            local smartMeta = string.format(
+                addonTable.L["compare_smartest_meta"],
+                formatSkillUpChance(
+                    comparisonPresentation and comparisonPresentation.skillUpChance
+                        or candidate.skillUpChance
+                ),
+                formatExpectedCrafts(
+                    comparisonPresentation and comparisonPresentation.expectedCrafts
+                        or candidate.expectedCraftsPerSkillUp
+                )
+            )
+            local surplus = comparisonPresentation
+                and comparisonPresentation.estimatedSurplusPerSkillUp
+                or (tonumber(candidate.estimatedSurplusPerSkillUp) or 0)
+            if surplus > 0 then
+                smartMeta = smartMeta .. string.format(
+                    addonTable.L["compare_smartest_surplus"],
+                    addonTable.formatCopperShort(surplus)
+                )
+            end
+            table.insert(metaParts, smartMeta)
+        end
 
         local acquisitionInfo = candidate.cost
             and acquisitionDisplayInfo(candidate.cost.acquisition)
             or nil
-        local acquisitionMeta
         if acquisitionInfo and not acquisitionInfo.alreadyAcquired then
-            acquisitionMeta = shortAcquisitionLabel(candidate.cost.acquisition)
+            local acquisitionMeta = shortAcquisitionLabel(candidate.cost.acquisition)
+            if acquisitionMeta then
+                table.insert(metaParts, acquisitionMeta)
+            end
         end
 
         if stale then
-            row.meta:SetText(
-                acquisitionMeta
-                    and (acquisitionMeta .. " · " .. addonTable.L["compare_stale"])
-                    or addonTable.L["compare_stale"]
-            )
+            table.insert(metaParts, addonTable.L["compare_stale"])
+        elseif not candidate.availableNow then
+            table.insert(metaParts, addonTable.L["compare_not_available_now"])
+        end
+        row.meta:SetText(table.concat(metaParts, " · "))
+
+        if stale or not candidate.availableNow then
             row.meta:SetTextColor(1, 0.72, 0.22)
+        elseif acquisitionInfo and not acquisitionInfo.alreadyAcquired then
+            row.meta:SetTextColor(0.95, 0.82, 0.42)
+        else
+            row.meta:SetTextColor(0.65, 0.65, 0.65)
+        end
+
+        if stale then
             row.perApp:SetTextColor(1, 0.72, 0.22)
             row.perSkill:SetTextColor(1, 0.72, 0.22)
-        elseif not candidate.availableNow then
-            row.meta:SetText(
-                acquisitionMeta
-                    and (acquisitionMeta .. " · " .. addonTable.L["compare_not_available_now"])
-                    or addonTable.L["compare_not_available_now"]
-            )
-            row.meta:SetTextColor(1, 0.72, 0.22)
-            row.perApp:SetTextColor(0.92, 0.92, 0.92)
-            row.perSkill:SetTextColor(0.92, 0.92, 0.92)
         else
-            row.meta:SetText(acquisitionMeta or "")
-            if acquisitionMeta then
-                row.meta:SetTextColor(0.95, 0.82, 0.42)
-            end
             row.perApp:SetTextColor(0.92, 0.92, 0.92)
             row.perSkill:SetTextColor(0.92, 0.92, 0.92)
         end
@@ -2747,18 +3145,24 @@ local function renderComparisonView()
         MainFrameCoreCompareShowMore:Hide()
     end
 
-    if total > visible and visible >= COMPARE_MAX_VISIBLE then
-        txtCompareFooter:SetText(string.format(
-            addonTable.L["compare_top_only"],
-            visible,
-            total
-        ))
+    local rankingNote
+    if mode == "smartest" then
+        rankingNote = availableOnly
+            and addonTable.L["compare_smartest_available_note"]
+            or addonTable.L["compare_smartest_ranking_note"]
     else
+        rankingNote = availableOnly
+            and addonTable.L["compare_available_note"]
+            or addonTable.L["compare_ranking_note"]
+    end
+
+    if total > visible and visible >= COMPARE_MAX_VISIBLE then
         txtCompareFooter:SetText(
-            getRecommendationMode() == "available"
-                and addonTable.L["compare_available_note"]
-                or addonTable.L["compare_ranking_note"]
+            string.format(addonTable.L["compare_top_only"], visible, total)
+                .. "\n" .. rankingNote
         )
+    else
+        txtCompareFooter:SetText(rankingNote)
     end
 
     updateComparePanelHeight(math.max(visible, 1), COMPARE_ROW_HEIGHT)
@@ -2771,7 +3175,14 @@ local function renderRouteView()
     setRouteHeadersVisible(true)
     MainFrameCoreCompareShowMore:Hide()
 
-    txtCompareSubtitle:SetText(addonTable.L["compare_route_subtitle"])
+    local mode = getRecommendationMode()
+    local smartest = mode == "smartest"
+    txtCompareSubtitle:SetText(
+        addonTable.L[smartest and "compare_route_smartest_subtitle" or "compare_route_subtitle"]
+    )
+    txtCompareRouteCostHeader:SetText(
+        addonTable.L[smartest and "compare_route_effective_header" or "compare_route_cost_header"]
+    )
 
     local plan = dynamicRecommendation and dynamicRecommendation.plan
     if not plan or not plan.complete then
@@ -2824,8 +3235,11 @@ local function renderRouteView()
             ))
             row.step:SetTextColor(0.95, 0.82, 0.42)
             row.crafts:SetText(addonTable.L["metric_unknown"])
-            if segment.acquisitionCost ~= nil then
-                row.cost:SetText("~" .. addonTable.formatCopperShort(segment.acquisitionCost))
+            local acquisitionDisplayCost = smartest
+                and (segment.acquisitionMarketCost or segment.acquisitionCost)
+                or segment.acquisitionCost
+            if acquisitionDisplayCost ~= nil then
+                row.cost:SetText("~" .. addonTable.formatCopperShort(acquisitionDisplayCost))
             else
                 row.cost:SetText(addonTable.L["metric_unknown"])
             end
@@ -2838,7 +3252,11 @@ local function renderRouteView()
             ))
             row.step:SetTextColor(0.9, 0.82, 0.45)
             row.crafts:SetText(addonTable.L["metric_unknown"])
-            row.cost:SetText("~" .. addonTable.formatCopperShort(segment.marketCost))
+            row.cost:SetText("~" .. addonTable.formatCopperShort(
+                smartest
+                    and (segment.effectiveLevelingCost or segment.marketCost)
+                    or segment.marketCost
+            ))
         else
             row.range:SetText(string.format(
                 addonTable.L["compare_route_range"],
@@ -2849,25 +3267,50 @@ local function renderRouteView()
             row.step:SetText(name)
             row.step:SetTextColor(0.92, 0.92, 0.92)
             row.crafts:SetText("~" .. tostring(math.max(0, math.ceil(tonumber(segment.expectedCrafts) or 0))))
-            local craftCost = math.max(
-                0,
-                (tonumber(segment.marketCost) or 0) - (tonumber(segment.acquisitionCost) or 0)
-            )
+            local craftCost
+            if smartest then
+                craftCost = math.max(
+                    0,
+                    (tonumber(segment.effectiveLevelingCost) or 0)
+                        - (tonumber(segment.acquisitionMarketCost) or 0)
+                )
+            else
+                craftCost = math.max(
+                    0,
+                    (tonumber(segment.marketCost) or 0) - (tonumber(segment.acquisitionCost) or 0)
+                )
+            end
             row.cost:SetText("~" .. addonTable.formatCopperShort(craftCost))
         end
 
         row:Show()
     end
 
-    local totalCost = plan.estimatedCurrentPurchaseCost or plan.estimatedMarketValueCost
     local pageText = string.format(addonTable.L["compare_route_page"], pageStart, pageEnd, count)
-    if totalCost then
-        txtCompareFooter:SetText(
-            string.format(addonTable.L["compare_route_total"], addonTable.formatCopperShort(totalCost))
-                .. " · " .. pageText
-        )
+    if smartest and type(addonTable.getSmartestRoutePresentation) == "function" then
+        local economics = addonTable.getSmartestRoutePresentation(plan)
+        if economics then
+            txtCompareFooter:SetText(string.format(
+                addonTable.L["compare_route_smartest_total"],
+                formatEconomicCopper(economics.grossLevelingCost),
+                formatEconomicCopper(economics.estimatedResaleCredit),
+                formatEconomicCopper(economics.effectiveLevelingCost),
+                formatEconomicCopper(economics.estimatedSurplus),
+                pageText
+            ))
+        else
+            txtCompareFooter:SetText(pageText)
+        end
     else
-        txtCompareFooter:SetText(pageText)
+        local totalCost = plan.estimatedCurrentPurchaseCost or plan.estimatedMarketValueCost
+        if totalCost then
+            txtCompareFooter:SetText(
+                string.format(addonTable.L["compare_route_total"], addonTable.formatCopperShort(totalCost))
+                    .. " · " .. pageText
+            )
+        else
+            txtCompareFooter:SetText(pageText)
+        end
     end
 
     updateComparePanelHeight(math.max(visibleIndex, 1), ROUTE_ROW_HEIGHT)
@@ -2880,6 +3323,7 @@ local function renderStaticRouteView()
     setRouteHeadersVisible(true)
     MainFrameCoreCompareShowMore:Hide()
     txtCompareSubtitle:SetText(addonTable.L["static_route_subtitle"])
+    txtCompareRouteCostHeader:SetText(addonTable.L["compare_route_cost_header"])
 
     local playerLevel
     if type(UnitLevel) == "function" then
@@ -3789,6 +4233,12 @@ function fnOnLoad()
     if MainFrameCoreCheapestMode then
         MainFrameCoreCheapestMode:SetText(L["mode_cheapest"])
     end
+    if MainFrameCoreSmartestMode then
+        MainFrameCoreSmartestMode:SetText(L["mode_smartest"])
+    end
+    if txtAvailableOnlyLabel then
+        txtAvailableOnlyLabel:SetText(L["mode_available_only"])
+    end
     if MainFrameCoreStaticMode then
         MainFrameCoreStaticMode:SetText(L["mode_static"])
     end
@@ -4002,22 +4452,24 @@ local function displayRecipeInternal()
         local requestedDynamic = isOptimizedMode(recommendationMode)
         if usingDynamic then
             txtCraftStats:SetText("")
-            txtRecipeStatus:SetText(
-                recommendationMode == "available"
-                    and L["available_preferred"]
-                    or L["dynamic_preferred"]
-            )
+            local status = recommendationMode == "smartest"
+                and L["smartest_preferred"]
+                or L["cheapest_preferred"]
+            if isAvailableOnly() then
+                status = status .. L["available_filter_suffix"]
+            end
+            txtRecipeStatus:SetText(status)
             txtRecipeStatus:SetTextColor(0.45, 1, 0.35)
         elseif requestedDynamic then
             txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))
             if dynamicRecommendation and dynamicRecommendation.calculating then
                 txtRecipeStatus:SetText(L["dynamic_calculating_short"])
+            elseif isAvailableOnly() then
+                txtRecipeStatus:SetText(L["available_filter_fallback_short"])
+            elseif recommendationMode == "smartest" then
+                txtRecipeStatus:SetText(L["smartest_fallback_short"])
             else
-                txtRecipeStatus:SetText(
-                    recommendationMode == "available"
-                        and L["available_fallback_short"]
-                        or L["dynamic_fallback_short"]
-                )
+                txtRecipeStatus:SetText(L["dynamic_fallback_short"])
             end
             txtRecipeStatus:SetTextColor(1, 0.72, 0.22)
         else

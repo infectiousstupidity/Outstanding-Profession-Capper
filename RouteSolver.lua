@@ -549,6 +549,19 @@ local function reconstruct(finalNode)
     return actions
 end
 
+local function actionResaleCredit(action)
+    if type(action) ~= "table"
+        or action.type ~= "craft"
+        or type(action.cost) ~= "table"
+        or action.cost.selectedExecutionMethod ~= "scroll"
+    then
+        return 0
+    end
+
+    return math.max(0, numberOrZero(action.cost.resaleCredit))
+        * math.max(0, numberOrZero(action.expectedCrafts))
+end
+
 local function buildSegments(actions)
     local segments = {}
     local cumulativeMarket = 0
@@ -567,6 +580,14 @@ local function buildSegments(actions)
                 last.expectedMaterialCost = last.expectedMaterialCost + numberOrZero(action.marketCost)
                 last.expectedGoldNeededNow = last.expectedGoldNeededNow + numberOrZero(action.goldCost)
                 last.acquisitionCost = last.acquisitionCost + numberOrZero(action.acquisitionGoldCost)
+                last.acquisitionMarketCost = last.acquisitionMarketCost
+                    + numberOrZero(action.acquisitionMarketCost)
+                last.effectiveLevelingCost = last.effectiveLevelingCost
+                    + numberOrZero(action.effectiveLevelingCost)
+                last.estimatedResaleCredit = last.estimatedResaleCredit
+                    + actionResaleCredit(action)
+                last.estimatedResaleSurplus = last.estimatedResaleSurplus
+                    + numberOrZero(action.estimatedResaleSurplus)
                 last.cumulativeMarketCost = cumulativeMarket
                 last.cumulativeGoldCost = cumulativeGold
                 if action.quality == "stale" then
@@ -582,6 +603,10 @@ local function buildSegments(actions)
                     expectedMaterialCost = numberOrZero(action.marketCost),
                     expectedGoldNeededNow = numberOrZero(action.goldCost),
                     acquisitionCost = numberOrZero(action.acquisitionGoldCost),
+                    acquisitionMarketCost = numberOrZero(action.acquisitionMarketCost),
+                    effectiveLevelingCost = numberOrZero(action.effectiveLevelingCost),
+                    estimatedResaleCredit = actionResaleCredit(action),
+                    estimatedResaleSurplus = numberOrZero(action.estimatedResaleSurplus),
                     cumulativeMarketCost = cumulativeMarket,
                     cumulativeGoldCost = cumulativeGold,
                     quality = action.quality,
@@ -673,6 +698,8 @@ local function newRouteResult(startSkill, targetSkill, metric, objective, availa
         totalMarketCost = nil,
         totalGoldCost = nil,
         totalCurrentPurchaseCost = nil,
+        totalGrossLevelingCost = nil,
+        totalResaleCredit = 0,
         totalEffectiveLevelingCost = nil,
         totalExpectedCrafts = 0,
         totalEstimatedResaleSurplus = 0,
@@ -943,10 +970,13 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
     nextRecipeMask = normalizeRecipeMask(job.recipeCodec, nextRecipeMask, nextSkill)
 
     local acquisitionGoldCost = 0
+    local acquisitionMarketCost = 0
     for acquiredIndex = 1, table.getn(acquiredNow) do
         if acquiredNow[acquiredIndex].kind == "recipe_acquisition" then
             acquisitionGoldCost = acquisitionGoldCost
                 + numberOrZero(acquiredNow[acquiredIndex].goldCost)
+            acquisitionMarketCost = acquisitionMarketCost
+                + numberOrZero(acquiredNow[acquiredIndex].marketCost)
         end
     end
 
@@ -995,6 +1025,7 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
             effectiveLevelingCost = edgeEffective,
             estimatedResaleSurplus = edgeSurplus,
             acquisitionGoldCost = acquisitionGoldCost,
+            acquisitionMarketCost = acquisitionMarketCost,
             quality = cost.quality,
             cost = cost,
         },
@@ -1035,10 +1066,16 @@ local function finalizeLayeredRouteJob(job)
     else
         result.actions = reconstruct(finalNode)
         result.segments = buildSegments(result.actions)
+        local totalResaleCredit = 0
+        for actionIndex = 1, table.getn(result.actions) do
+            totalResaleCredit = totalResaleCredit + actionResaleCredit(result.actions[actionIndex])
+        end
         result.totalMarketCost = finalNode.totalMarketCost
         result.totalGoldCost = finalNode.totalGoldCost
         result.totalCurrentPurchaseCost = finalNode.totalCurrentPurchaseCost
+        result.totalResaleCredit = totalResaleCredit
         result.totalEffectiveLevelingCost = finalNode.totalEffectiveLevelingCost
+        result.totalGrossLevelingCost = finalNode.totalEffectiveLevelingCost + totalResaleCredit
         result.totalExpectedCrafts = finalNode.totalExpectedCrafts
         result.totalEstimatedResaleSurplus = finalNode.totalEstimatedSurplus
         result.quality = finalNode.quality
@@ -1286,6 +1323,8 @@ local function createLayeredRouteJob(
         result.totalMarketCost = 0
         result.totalGoldCost = 0
         result.totalCurrentPurchaseCost = 0
+        result.totalGrossLevelingCost = 0
+        result.totalResaleCredit = 0
         result.totalEffectiveLevelingCost = 0
         result.totalEstimatedResaleSurplus = 0
         result.quality = "complete"
