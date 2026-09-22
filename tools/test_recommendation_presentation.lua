@@ -154,6 +154,33 @@ assertEqual(suspicious.resaleEvidenceState, "rejected", "suspicious resale warni
 assertEqual(suspicious.resaleCreditPerCraft, 0, "suspicious resale cannot reduce cost")
 assertEqual(suspicious.estimatedSurplusPerCraft, 250, "informational surplus remains visible")
 
+local comparison = addonTable.getSmartestComparisonPresentation({
+    skillUpChance = 0.8,
+    expectedCraftsPerSkillUp = 1.25,
+    costPerCraft = 0,
+    expectedCostPerSkillUp = 35,
+    estimatedSurplusPerSkillUp = 312.5,
+    cost = {
+        selectedExecutionMethod = "scroll",
+        skillUpChance = 0.8,
+        expectedCraftsPerSkillUp = 1.25,
+        directGrossCost = 400,
+        scrollGrossCost = 450,
+        resaleEstimate = 700,
+        resaleCredit = 450,
+        effectiveCostPerCraft = 0,
+        expectedEffectiveCostPerSkillUp = 0,
+        estimatedSurplus = 250,
+        expectedEstimatedSurplusPerSkillUp = 312.5,
+        resaleConfidence = "two_current_sources",
+    },
+})
+assertNear(comparison.skillUpChance, 0.8, 0.0001, "Compare shows exact skill-up chance")
+assertNear(comparison.expectedCrafts, 1.25, 0.0001, "Compare shows expected crafts")
+assertEqual(comparison.effectiveCostPerCraft, 0, "Compare shows effective craft cost")
+assertEqual(comparison.effectiveCostPerSkillUp, 35, "Compare includes candidate one-time cost in effective skill-up cost")
+assertNear(comparison.estimatedSurplusPerSkillUp, 312.5, 0.0001, "Compare exposes estimated surplus tie-break context")
+
 local route = addonTable.getSmartestRoutePresentation({
     complete = true,
     totalGrossLevelingCost = 5000,
