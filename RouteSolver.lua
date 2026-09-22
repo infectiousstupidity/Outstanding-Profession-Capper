@@ -249,6 +249,63 @@ local function numberOrZero(value)
     return tonumber(value) or 0
 end
 
+local function finiteNumber(value)
+    local numeric = tonumber(value)
+    if numeric == nil
+        or numeric ~= numeric
+        or numeric == math.huge
+        or numeric == -math.huge
+    then
+        return nil
+    end
+    return numeric
+end
+
+local function validateSmartestCraftMetrics(cost)
+    local effectiveCost = finiteNumber(cost and cost.expectedEffectiveCostPerSkillUp)
+    if effectiveCost == nil then
+        return nil, "malformed_smartest_edge"
+    end
+    if effectiveCost < 0 then
+        return nil, "negative_smartest_edge"
+    end
+
+    local expectedCrafts = finiteNumber(cost.expectedCraftsPerSkillUp)
+    if expectedCrafts == nil or expectedCrafts <= 0 then
+        return nil, "malformed_smartest_edge"
+    end
+
+    local surplus = 0
+    if cost.selectedExecutionMethod == "scroll" then
+        surplus = finiteNumber(cost.expectedEstimatedSurplusPerSkillUp)
+        if surplus == nil or surplus < 0 then
+            return nil, "malformed_smartest_edge"
+        end
+    end
+
+    for index = 1, table.getn(cost.oneTimeCosts or {}) do
+        local oneTime = cost.oneTimeCosts[index]
+        if oneTime.kind == "recipe_acquisition" then
+            local rawCost = oneTime.marketCost ~= nil
+                and oneTime.marketCost
+                or oneTime.goldCost
+            local acquisitionCost = finiteNumber(rawCost)
+            if acquisitionCost == nil then
+                return nil, "malformed_smartest_edge"
+            end
+            if acquisitionCost < 0 then
+                return nil, "negative_smartest_edge"
+            end
+        end
+    end
+
+    return {
+        effectiveCost = effectiveCost,
+        expectedCrafts = expectedCrafts,
+        estimatedSurplus = surplus,
+    }
+end
+
 local function stableIDToken(value)
     local numeric = tonumber(value)
     if numeric then
@@ -436,7 +493,17 @@ local function trainingAvailable(action, skill, trainedCap)
 end
 
 local function getTrainingCost(action, metric, objective)
-    local goldCost = tonumber(action.goldCost or action.purchasePrice)
+    local rawGoldCost = action.goldCost
+    if rawGoldCost == nil then
+        rawGoldCost = action.purchasePrice
+    end
+    local goldCost = tonumber(rawGoldCost)
+    if objective == "smartest"
+        and rawGoldCost ~= nil
+        and finiteNumber(rawGoldCost) == nil
+    then
+        return nil, nil, nil, "malformed_smartest_edge"
+    end
     if goldCost == nil then
         if action.status == "learned" or action.alreadyLearned then
             goldCost = 0
@@ -445,7 +512,14 @@ local function getTrainingCost(action, metric, objective)
         end
     end
 
-    local marketCost = tonumber(action.marketCost)
+    local rawMarketCost = action.marketCost
+    local marketCost = tonumber(rawMarketCost)
+    if objective == "smartest"
+        and rawMarketCost ~= nil
+        and finiteNumber(rawMarketCost) == nil
+    then
+        return nil, nil, nil, "malformed_smartest_edge"
+    end
     if marketCost == nil then
         marketCost = goldCost
     end
@@ -698,18 +772,26 @@ local function jobAdvanceTraining(job, node)
                 )
                 if not cursor.acquired[keyName] then
                     local newCap = tonumber(action.newCap or action.targetCap)
-                    local trainingMetric, trainingMarket, trainingGold = getTrainingCost(
+                    local trainingMetric, trainingMarket, trainingGold, trainingReason = getTrainingCost(
                         action,
                         job.metric,
                         job.objective
                     )
                     local trainingCostValid = trainingMetric ~= nil
-                    if trainingCostValid
-                        and job.objective == "smartest"
-                        and (trainingMetric < 0 or trainingMarket < 0 or trainingGold < 0)
-                    then
-                        trainingCostValid = false
-                        addMissingReason(job.missing, "negative_smartest_edge")
+                    if trainingReason then
+                        addMissingReason(job.missing, trainingReason)
+                    end
+                    if trainingCostValid and job.objective == "smartest" then
+                        if finiteNumber(trainingMetric) == nil
+                            or finiteNumber(trainingMarket) == nil
+                            or finiteNumber(trainingGold) == nil
+                        then
+                            trainingCostValid = false
+                            addMissingReason(job.missing, "malformed_smartest_edge")
+                        elseif trainingMetric < 0 or trainingMarket < 0 or trainingGold < 0 then
+                            trainingCostValid = false
+                            addMissingReason(job.missing, "negative_smartest_edge")
+                        end
                     end
                     if newCap and trainingCostValid
                         and (not chosenCap
@@ -798,13 +880,22 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
         return
     end
 
+    local smartestMetrics
+    if job.objective == "smartest" then
+        local invalidReason
+        smartestMetrics, invalidReason = validateSmartestCraftMetrics(cost)
+        if not smartestMetrics then
+            addMissingReason(job.missing, invalidReason)
+            return
+        end
+    end
+
     local metricCost = resolveMetricCost(cost, job.metric, job.objective)
     if metricCost == nil then
         return
     end
-    if job.objective == "smartest" and numberOrZero(metricCost) < 0 then
-        addMissingReason(job.missing, "negative_smartest_edge")
-        return
+    if smartestMetrics then
+        metricCost = smartestMetrics.effectiveCost
     end
 
     local nextAcquired, nextRecipeMask, extraMetric, extraMarket, extraGold, acquiredNow = applyCostOneTime(
@@ -825,13 +916,29 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
     ) + extraGold
     local edgeMetric = numberOrZero(metricCost) + extraMetric
     local edgeEffective = numberOrZero(cost.expectedEffectiveCostPerSkillUp) + extraMarket
-    local edgeSurplus = selectedEstimatedSurplus(cost)
-    if job.objective == "smartest"
-        and (extraMetric < 0 or edgeMetric < 0 or edgeEffective < 0)
-    then
-        addMissingReason(job.missing, "negative_smartest_edge")
-        return
+    local edgeSurplus = smartestMetrics
+        and smartestMetrics.estimatedSurplus
+        or selectedEstimatedSurplus(cost)
+    local edgeExpectedCrafts = smartestMetrics
+        and smartestMetrics.expectedCrafts
+        or numberOrZero(cost.expectedCraftsPerSkillUp)
+
+    if job.objective == "smartest" then
+        if finiteNumber(extraMetric) == nil
+            or finiteNumber(edgeMetric) == nil
+            or finiteNumber(edgeEffective) == nil
+            or finiteNumber(edgeExpectedCrafts) == nil
+            or finiteNumber(edgeSurplus) == nil
+        then
+            addMissingReason(job.missing, "malformed_smartest_edge")
+            return
+        end
+        if extraMetric < 0 or edgeMetric < 0 or edgeEffective < 0 then
+            addMissingReason(job.missing, "negative_smartest_edge")
+            return
+        end
     end
+
     local nextSkill = math.min(job.targetSkill, node.skill + 1)
     nextRecipeMask = normalizeRecipeMask(job.recipeCodec, nextRecipeMask, nextSkill)
 
@@ -843,20 +950,32 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
         end
     end
 
+    local nextTotalCost = node.totalCost + edgeMetric
+    local nextEffectiveCost = node.totalEffectiveLevelingCost + edgeEffective
+    local nextExpectedCrafts = node.totalExpectedCrafts + edgeExpectedCrafts
+    local nextEstimatedSurplus = node.totalEstimatedSurplus + edgeSurplus
+    if job.objective == "smartest"
+        and (finiteNumber(nextTotalCost) == nil
+            or finiteNumber(nextEffectiveCost) == nil
+            or finiteNumber(nextExpectedCrafts) == nil
+            or finiteNumber(nextEstimatedSurplus) == nil)
+    then
+        addMissingReason(job.missing, "malformed_smartest_edge")
+        return
+    end
+
     jobRelax(job, job.nextStates, {
         skill = nextSkill,
         trainedCap = node.trainedCap,
         acquired = nextAcquired,
         recipeMask = nextRecipeMask,
-        totalCost = node.totalCost + edgeMetric,
+        totalCost = nextTotalCost,
         totalMarketCost = node.totalMarketCost + edgeMarket,
         totalGoldCost = node.totalGoldCost + edgeGold,
         totalCurrentPurchaseCost = node.totalCurrentPurchaseCost + edgeCurrent,
-        totalEffectiveLevelingCost =
-            node.totalEffectiveLevelingCost + edgeEffective,
-        totalExpectedCrafts =
-            node.totalExpectedCrafts + numberOrZero(cost.expectedCraftsPerSkillUp),
-        totalEstimatedSurplus = node.totalEstimatedSurplus + edgeSurplus,
+        totalEffectiveLevelingCost = nextEffectiveCost,
+        totalExpectedCrafts = nextExpectedCrafts,
+        totalEstimatedSurplus = nextEstimatedSurplus,
         previous = node,
         quality = (node.quality == "stale" or cost.quality == "stale")
             and "stale"

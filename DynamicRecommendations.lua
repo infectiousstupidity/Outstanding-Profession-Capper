@@ -977,11 +977,56 @@ local function stableRecipeIDLess(left, right)
     return tostring(left or "") < tostring(right or "")
 end
 
+local function finiteNumber(value)
+    local numeric = tonumber(value)
+    if numeric == nil
+        or numeric ~= numeric
+        or numeric == math.huge
+        or numeric == -math.huge
+    then
+        return nil
+    end
+    return numeric
+end
+
 local function candidateEstimatedSurplus(cost)
     if not cost or cost.selectedExecutionMethod ~= "scroll" then
         return 0
     end
-    return math.max(0, tonumber(cost.expectedEstimatedSurplusPerSkillUp) or 0)
+
+    local surplus = finiteNumber(cost.expectedEstimatedSurplusPerSkillUp)
+    if surplus == nil or surplus < 0 then
+        return nil
+    end
+    return surplus
+end
+
+local function currentRecipeAcquisitionCost(cost, state)
+    local total = 0
+    local acquired = state and (state.acquiredOneTime or state.acquiredReusable) or {}
+
+    for index = 1, table.getn(cost and cost.oneTimeCosts or {}) do
+        local oneTime = cost.oneTimeCosts[index]
+        if oneTime.kind == "recipe_acquisition" then
+            local key = oneTime.key and tostring(oneTime.key) or nil
+            local alreadyAcquired = key and acquired[key] == true
+            if not alreadyAcquired then
+                local rawCost = oneTime.marketCost ~= nil
+                    and oneTime.marketCost
+                    or oneTime.goldCost
+                local value = finiteNumber(rawCost)
+                if value == nil or value < 0 then
+                    return nil
+                end
+                total = total + value
+                if finiteNumber(total) == nil then
+                    return nil
+                end
+            end
+        end
+    end
+
+    return total
 end
 
 local function rankCurrentRecipesInternal(recipes, skillContext, state, skill, options)
@@ -1023,23 +1068,36 @@ local function rankCurrentRecipesInternal(recipes, skillContext, state, skill, o
             local expectedCrafts = tonumber(cost.expectedCraftsPerSkillUp) or math.huge
             local estimatedSurplus = candidateEstimatedSurplus(cost)
             if objective == "smartest" then
-                expectedCost = cost.expectedEffectiveCostPerSkillUp
-                perCraft = cost.effectiveCostPerCraft
-            elseif options and (options.availableOnly or options.requireAvailableNow) then
-                expectedCost = cost.expectedGoldNeededNowPerSkillUp
-                    or cost.expectedCurrentPurchaseCostPerSkillUp
-                    or cost.expectedMarketCostPerSkillUp
-                perCraft = cost.goldNeededNowPerCraft
-                    or cost.currentPurchaseCostPerCraft
-                    or cost.materialMarketValuePerCraft
+                local effectiveCost = finiteNumber(cost.expectedEffectiveCostPerSkillUp)
+                local crafts = finiteNumber(cost.expectedCraftsPerSkillUp)
+                local acquisitionCost = currentRecipeAcquisitionCost(cost, state)
+                if effectiveCost ~= nil
+                    and effectiveCost >= 0
+                    and crafts ~= nil
+                    and crafts > 0
+                    and estimatedSurplus ~= nil
+                    and acquisitionCost ~= nil
+                then
+                    expectedCost = effectiveCost + acquisitionCost
+                    if finiteNumber(expectedCost) == nil then
+                        expectedCost = nil
+                    end
+                    expectedCrafts = crafts
+                end
+                perCraft = finiteNumber(cost.effectiveCostPerCraft)
             else
+                -- Availability is a feasibility filter, not a different
+                -- Cheapest objective. Keep the historical Cheapest score
+                -- regardless of whether availableOnly is enabled.
                 expectedCost = cost.expectedCurrentPurchaseCostPerSkillUp
                     or cost.expectedMarketCostPerSkillUp
                 perCraft = cost.currentPurchaseCostPerCraft
                     or cost.materialMarketValuePerCraft
             end
 
-            if expectedCost ~= nil and perCraft ~= nil then
+            local rankingCostAvailable = expectedCost ~= nil
+                and (objective == "smartest" or perCraft ~= nil)
+            if rankingCostAvailable then
                 table.insert(ranked, {
                     recipe = recipe,
                     recipeID = getRecipeID(recipe),
