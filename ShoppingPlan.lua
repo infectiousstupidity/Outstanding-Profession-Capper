@@ -227,6 +227,19 @@ local function sortedMaterialList(materials)
     return result
 end
 
+local function actionResaleCredit(action)
+    if type(action) ~= "table"
+        or action.type ~= "craft"
+        or type(action.cost) ~= "table"
+        or action.cost.selectedExecutionMethod ~= "scroll"
+    then
+        return 0
+    end
+
+    return math.max(0, numberOrZero(action.cost.resaleCredit))
+        * math.max(0, numberOrZero(action.expectedCrafts))
+end
+
 local function buildCostSegments(actions)
     local segments = {}
 
@@ -241,6 +254,12 @@ local function buildCostSegments(actions)
                 last.marketCost = last.marketCost + numberOrZero(action.marketCost)
                 last.routeGoldEstimate = last.routeGoldEstimate + numberOrZero(action.goldCost)
                 last.acquisitionCost = last.acquisitionCost + numberOrZero(action.acquisitionGoldCost)
+                last.effectiveLevelingCost = last.effectiveLevelingCost
+                    + numberOrZero(action.effectiveLevelingCost)
+                last.estimatedResaleCredit = last.estimatedResaleCredit
+                    + actionResaleCredit(action)
+                last.estimatedResaleSurplus = last.estimatedResaleSurplus
+                    + numberOrZero(action.estimatedResaleSurplus)
                 if not last.acquisition and action.cost and action.cost.acquisition then
                     last.acquisition = action.cost.acquisition
                 end
@@ -261,6 +280,10 @@ local function buildCostSegments(actions)
                     marketCost = numberOrZero(action.marketCost),
                     routeGoldEstimate = numberOrZero(action.goldCost),
                     acquisitionCost = numberOrZero(action.acquisitionGoldCost),
+                    effectiveLevelingCost = numberOrZero(action.effectiveLevelingCost),
+                    estimatedResaleCredit = actionResaleCredit(action),
+                    estimatedResaleSurplus = numberOrZero(action.estimatedResaleSurplus),
+                    firstCost = action.cost,
                     acquisition = action.cost and action.cost.acquisition or nil,
                     requiresAcquisition = action.cost
                         and action.cost.acquisition
@@ -280,6 +303,9 @@ local function buildCostSegments(actions)
                 marketCost = numberOrZero(action.marketCost),
                 routeGoldEstimate = numberOrZero(action.goldCost),
                 acquisitionCost = numberOrZero(action.goldCost),
+                effectiveLevelingCost = numberOrZero(action.effectiveLevelingCost),
+                estimatedResaleCredit = 0,
+                estimatedResaleSurplus = 0,
             })
         end
     end
@@ -314,6 +340,10 @@ function addonTable.buildProfessionShoppingPlan(route, state, options)
         estimatedMarketValueCost = nil,
         estimatedCurrentPurchaseCost = nil,
         estimatedGoldNeededNow = nil,
+        totalGrossLevelingCost = route and route.totalGrossLevelingCost or nil,
+        totalResaleCredit = route and route.totalResaleCredit or 0,
+        totalEffectiveLevelingCost = route and route.totalEffectiveLevelingCost or nil,
+        totalEstimatedResaleSurplus = route and route.totalEstimatedResaleSurplus or 0,
         acquisitionCost = 0,
         acquisitionMarketCost = 0,
         totalExpectedCrafts = 0,
