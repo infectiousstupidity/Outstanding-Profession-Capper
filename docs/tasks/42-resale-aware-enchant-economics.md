@@ -228,6 +228,8 @@ Resolved only the two findings recorded by Agent 2.
 - No Cheapest objective/order, vellum compatibility, price-provider/cache ownership, one-time cost treatment, or Task 43 implementation was changed.
 
 Validation:
-- Full repository validation must pass on the Agent 3 fix commit before this task is considered closed.
+- Agent 3 fix commit: `67abf1afce12898497243b85a72d9a68501011a0` (`fix: resolve task 42 review findings`).
+- GitHub Actions `Validate addon` run 117 completed successfully on that commit.
+- The run passed Lua 5.1 syntax; recipe-cost and dynamic-recommendation regressions for both Agent 2 findings; price/resale/TSM providers; enchant metadata; cheapest/incremental/full-catalog/static route suites; shopping-plan integration; caching/performance guards; addon structure; and profession-guide validation.
 
-Task 42 is DONE after the Agent 3 fix commit passes full validation. Task 43 becomes the next available task but was not started.
+Task 42 is DONE. Task 43 is the next available task but was not started.
