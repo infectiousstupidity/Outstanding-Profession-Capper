@@ -48,6 +48,10 @@
           <Size><AbsDimension x="170" y="18"/></Size>
           <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="70" y="-49"/></Offset></Anchor></Anchors>
         </FontString>
+        <FontString name="txtAvailableOnlyLabel" inherits="GameFontDisableSmall" justifyH="LEFT">
+          <Size><AbsDimension x="132" y="18"/></Size>
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="268" y="-80"/></Offset></Anchor></Anchors>
+        </FontString>
         <Texture name="texHeaderSeparator" file="Interface\ChatFrame\ChatFrameBackground">
           <Size><AbsDimension x="524" y="1"/></Size>
           <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="18" y="-101"/></Offset></Anchor></Anchors>
@@ -225,16 +229,21 @@
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="244" y="-52"/></Offset></Anchor></Anchors>
         <Scripts><OnClick>setRecommendationMode("dynamic");</OnClick></Scripts>
       </Button>
-      <Button name="$parentAvailableMode" text="Available" inherits="UIPanelButtonTemplate">
+      <Button name="$parentSmartestMode" text="Smartest" inherits="UIPanelButtonTemplate">
         <Size><AbsDimension x="76" y="25"/></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="318" y="-52"/></Offset></Anchor></Anchors>
-        <Scripts><OnClick>setRecommendationMode("available");</OnClick></Scripts>
+        <Scripts><OnClick>setRecommendationMode("smartest");</OnClick></Scripts>
       </Button>
       <Button name="$parentStaticMode" text="Static" inherits="UIPanelButtonTemplate">
         <Size><AbsDimension x="64" y="25"/></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="398" y="-52"/></Offset></Anchor></Anchors>
         <Scripts><OnClick>setRecommendationMode("static");</OnClick></Scripts>
       </Button>
+      <CheckButton name="$parentAvailableOnly" inherits="UICheckButtonTemplate">
+        <Size><AbsDimension x="20" y="20"/></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="244" y="-78"/></Offset></Anchor></Anchors>
+        <Scripts><OnClick>setRecommendationAvailableOnly(self:GetChecked());</OnClick></Scripts>
+      </CheckButton>
       <Button name="$parentRoute" text="Compare" inherits="UIPanelButtonTemplate" hidden="true">
         <Size><AbsDimension x="72" y="25"/></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="466" y="-52"/></Offset></Anchor></Anchors>
@@ -249,7 +258,7 @@
       </Frame>
 
       <Frame name="$parentDetails" hidden="true">
-        <Size><AbsDimension x="524" y="96"/></Size>
+        <Size><AbsDimension x="524" y="114"/></Size>
         <Anchors>
           <Anchor point="BOTTOMLEFT" relativeTo="MainFrameCore" relativePoint="BOTTOMLEFT">
             <Offset><AbsDimension x="18" y="72"/></Offset>
@@ -281,6 +290,10 @@
             <FontString name="txtDetailsCandidates" inherits="GameFontDisableSmall" justifyH="LEFT">
               <Size><AbsDimension x="500" y="15"/></Size>
               <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="0" y="-79"/></Offset></Anchor></Anchors>
+            </FontString>
+            <FontString name="txtDetailsWarning" inherits="GameFontDisableSmall" justifyH="LEFT">
+              <Size><AbsDimension x="500" y="15"/></Size>
+              <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="0" y="-97"/></Offset></Anchor></Anchors>
             </FontString>
           </Layer>
         </Layers>
@@ -407,8 +420,8 @@
           <Anchors><Anchor point="TOP"><Offset><AbsDimension x="0" y="-168"/></Offset></Anchor></Anchors>
         </FontString>
         <FontString name="txtCompareFooter" inherits="GameFontDisableSmall" justifyH="RIGHT">
-          <Size><AbsDimension x="360" y="18"/></Size>
-          <Anchors><Anchor point="BOTTOMRIGHT"><Offset><AbsDimension x="-16" y="18"/></Offset></Anchor></Anchors>
+          <Size><AbsDimension x="608" y="34"/></Size>
+          <Anchors><Anchor point="BOTTOMRIGHT"><Offset><AbsDimension x="-16" y="14"/></Offset></Anchor></Anchors>
         </FontString>
       </Layer>
     </Layers>
