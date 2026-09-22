@@ -169,6 +169,7 @@ Baseline validation:
 - Independently verified GitHub Actions `Validate addon` run 119 on the implementation commit and run 120 on the bookkeeping commit. Both completed successfully.
 - Those runs execute Lua 5.1 syntax validation, settings migration, recipe-cost and conservative-resale tests, route and incremental-route tests, shopping-plan tests, dynamic and incremental recommendation tests, full-catalog route tests, runtime/cache/performance guards, addon structure validation, and profession-guide validation.
 - The review adds `tools/test_task43_review.lua` as a final CI step after the complete baseline suite so adversarial failures do not hide baseline regressions.
+- Agent 2 review evidence commit `0748c39bd6dbefaadd0b99faca90e4b83871985f` produced `Validate addon` run 121: Lua syntax and every normal repository test/validator passed; only the final adversarial review step failed, after reporting `10 checks passed, 3 defects confirmed`. The three failures exactly match Findings 1–3 below.
 
 #### Finding 1 — HIGH — Available-only changes Cheapest fallback economics instead of only filtering feasibility
 
