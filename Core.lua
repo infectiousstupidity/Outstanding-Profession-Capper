@@ -3030,17 +3030,38 @@ local function renderComparisonView()
         row.name:SetText(name)
         row.difficulty:SetText(compareDifficultyLabel(candidate.difficulty))
         row.difficulty:SetTextColor(color[1], color[2], color[3])
-        row.perApp:SetText("~" .. addonTable.formatCopperShort(candidate.costPerCraft))
-        row.perSkill:SetText("~" .. addonTable.formatCopperShort(candidate.expectedCostPerSkillUp))
+
+        local comparisonPresentation
+        if mode == "smartest"
+            and type(addonTable.getSmartestComparisonPresentation) == "function"
+        then
+            comparisonPresentation = addonTable.getSmartestComparisonPresentation(candidate)
+        end
+        local perCraft = comparisonPresentation
+            and comparisonPresentation.effectiveCostPerCraft
+            or candidate.costPerCraft
+        local perSkill = comparisonPresentation
+            and comparisonPresentation.effectiveCostPerSkillUp
+            or candidate.expectedCostPerSkillUp
+        row.perApp:SetText("~" .. addonTable.formatCopperShort(perCraft))
+        row.perSkill:SetText("~" .. addonTable.formatCopperShort(perSkill))
 
         local metaParts = {}
         if mode == "smartest" then
             local smartMeta = string.format(
                 addonTable.L["compare_smartest_meta"],
-                formatSkillUpChance(candidate.skillUpChance),
-                formatExpectedCrafts(candidate.expectedCraftsPerSkillUp)
+                formatSkillUpChance(
+                    comparisonPresentation and comparisonPresentation.skillUpChance
+                        or candidate.skillUpChance
+                ),
+                formatExpectedCrafts(
+                    comparisonPresentation and comparisonPresentation.expectedCrafts
+                        or candidate.expectedCraftsPerSkillUp
+                )
             )
-            local surplus = tonumber(candidate.estimatedSurplusPerSkillUp) or 0
+            local surplus = comparisonPresentation
+                and comparisonPresentation.estimatedSurplusPerSkillUp
+                or (tonumber(candidate.estimatedSurplusPerSkillUp) or 0)
             if surplus > 0 then
                 smartMeta = smartMeta .. string.format(
                     addonTable.L["compare_smartest_surplus"],
