@@ -470,11 +470,16 @@ local staleScroll = addonTable.calculateRecipeCost(gathererRecipe, 90, nil, {}, 
 assertEqual(staleScroll.resaleCredit, 0, "stale scroll evidence grants no route credit")
 assertEqual(staleScroll.selectedExecutionMethod, "direct", "stale scroll evidence cannot make scroll path win")
 assertEqual(staleScroll.resaleConfidence, "rejected_stale", "stale resale reason retained")
+assertEqual(staleScroll.resaleEstimate, 500, "stale resale estimate remains informational context")
+assertEqual(staleScroll.estimatedSurplus, 370, "stale high estimate retains informational surplus")
+assertEqual(staleScroll.expectedEstimatedSurplusPerSkillUp, 370, "stale surplus remains separate from route cost")
 prices[38960].freshness = "fresh"
 prices[38960].isSuspicious = true
 local suspiciousScroll = addonTable.calculateRecipeCost(gathererRecipe, 90, nil, {}, {})
 assertEqual(suspiciousScroll.resaleCredit, 0, "suspicious scroll evidence grants no route credit")
 assertEqual(suspiciousScroll.selectedExecutionMethod, "direct", "suspicious scroll evidence cannot make scroll path win")
+assertEqual(suspiciousScroll.resaleEstimate, 500, "suspicious resale estimate remains informational context")
+assertEqual(suspiciousScroll.estimatedSurplus, 370, "suspicious high estimate retains informational surplus")
 prices[38960].isSuspicious = nil
 
 local savedVellum = prices[43145]

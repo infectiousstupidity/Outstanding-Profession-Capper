@@ -870,7 +870,7 @@ local function buildExecutionEconomics(
     )
     economics.estimatedSurplus = math.max(
         0,
-        optimizationValue - economics.scrollGrossCost
+        (resaleEstimate or 0) - economics.scrollGrossCost
     )
 
     if economics.scrollEffectiveCostPerCraft < economics.directGrossCost then
