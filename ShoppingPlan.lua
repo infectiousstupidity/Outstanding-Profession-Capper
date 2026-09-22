@@ -254,6 +254,8 @@ local function buildCostSegments(actions)
                 last.marketCost = last.marketCost + numberOrZero(action.marketCost)
                 last.routeGoldEstimate = last.routeGoldEstimate + numberOrZero(action.goldCost)
                 last.acquisitionCost = last.acquisitionCost + numberOrZero(action.acquisitionGoldCost)
+                last.acquisitionMarketCost = last.acquisitionMarketCost
+                    + numberOrZero(action.acquisitionMarketCost)
                 last.effectiveLevelingCost = last.effectiveLevelingCost
                     + numberOrZero(action.effectiveLevelingCost)
                 last.estimatedResaleCredit = last.estimatedResaleCredit
@@ -280,6 +282,7 @@ local function buildCostSegments(actions)
                     marketCost = numberOrZero(action.marketCost),
                     routeGoldEstimate = numberOrZero(action.goldCost),
                     acquisitionCost = numberOrZero(action.acquisitionGoldCost),
+                    acquisitionMarketCost = numberOrZero(action.acquisitionMarketCost),
                     effectiveLevelingCost = numberOrZero(action.effectiveLevelingCost),
                     estimatedResaleCredit = actionResaleCredit(action),
                     estimatedResaleSurplus = numberOrZero(action.estimatedResaleSurplus),
@@ -303,6 +306,7 @@ local function buildCostSegments(actions)
                 marketCost = numberOrZero(action.marketCost),
                 routeGoldEstimate = numberOrZero(action.goldCost),
                 acquisitionCost = numberOrZero(action.goldCost),
+                acquisitionMarketCost = numberOrZero(action.marketCost),
                 effectiveLevelingCost = numberOrZero(action.effectiveLevelingCost),
                 estimatedResaleCredit = 0,
                 estimatedResaleSurplus = 0,
