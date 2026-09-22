@@ -487,4 +487,174 @@ assert(stressMetrics.peakLayerStates <= 64, "live layered state count never exce
 assertEqual(stressMetrics.recipeAcquisitionBits, 12, "stress route tracks only candidate recipe bits")
 assertEqual(stressMetrics.recipeAcquisitionBytes, 2, "candidate acquisition history uses compact fixed-width bitset")
 
-print("Cheapest route solver tests passed.")
+local smartestRecipes = {
+    { id = 20 },
+    { id = 10 },
+    { id = 30 },
+}
+
+local function smartestFixture(recipe)
+    local byID = {
+        [20] = {
+            gross = 50,
+            effective = 50,
+            crafts = 1,
+            surplus = 0,
+            method = "direct",
+        },
+        [10] = {
+            gross = 100,
+            effective = 20,
+            crafts = 1,
+            surplus = 15,
+            method = "scroll",
+        },
+        [30] = {
+            gross = 80,
+            effective = 30,
+            crafts = 1,
+            surplus = 0,
+            method = "direct",
+        },
+    }
+    local row = byID[recipe.id]
+    return {
+        available = true,
+        useful = true,
+        expectedCraftsPerSkillUp = row.crafts,
+        expectedMarketCostPerSkillUp = row.gross,
+        expectedGoldNeededNowPerSkillUp = row.gross,
+        expectedCurrentPurchaseCostPerSkillUp = row.gross,
+        expectedEffectiveCostPerSkillUp = row.effective,
+        expectedEstimatedSurplusPerSkillUp = row.surplus,
+        selectedExecutionMethod = row.method,
+        oneTimeCosts = {},
+        quality = "complete",
+        skillUpChance = 1 / row.crafts,
+    }
+end
+
+local cheapestBaseline = addonTable.solveCheapestProfessionRoute(
+    smartestRecipes,
+    nil,
+    { currentCap = 1 },
+    {
+        startSkill = 0,
+        targetSkill = 1,
+        optimizeFor = "current",
+        objective = "cheapest",
+        costRecipe = smartestFixture,
+    }
+)
+assertEqual(cheapestBaseline.actions[1].recipeID, 20, "Cheapest still uses gross/current purchase cost")
+
+local smartest = addonTable.solveCheapestProfessionRoute(
+    smartestRecipes,
+    nil,
+    { currentCap = 1 },
+    {
+        startSkill = 0,
+        targetSkill = 1,
+        objective = "smartest",
+        costRecipe = smartestFixture,
+    }
+)
+assertEqual(smartest.actions[1].recipeID, 10, "Smartest can choose higher gross cost after resale credit")
+assertEqual(smartest.totalEffectiveLevelingCost, 20, "Smartest exposes effective route cost")
+assertEqual(smartest.totalExpectedCrafts, 1, "Smartest exposes expected crafts")
+assertEqual(smartest.totalEstimatedResaleSurplus, 15, "Smartest exposes selected scroll surplus")
+
+local tieRecipes = {
+    { id = 3, crafts = 2, surplus = 1000 },
+    { id = 2, crafts = 1, surplus = 5 },
+    { id = 1, crafts = 1, surplus = 20 },
+}
+local function tieFixture(recipe)
+    return {
+        available = true,
+        useful = true,
+        expectedCraftsPerSkillUp = recipe.crafts,
+        expectedMarketCostPerSkillUp = 100,
+        expectedGoldNeededNowPerSkillUp = 100,
+        expectedCurrentPurchaseCostPerSkillUp = 100,
+        expectedEffectiveCostPerSkillUp = 0,
+        expectedEstimatedSurplusPerSkillUp = recipe.surplus,
+        selectedExecutionMethod = "scroll",
+        oneTimeCosts = {},
+        quality = "complete",
+        skillUpChance = 1 / recipe.crafts,
+    }
+end
+
+local efficiencyTie = addonTable.solveCheapestProfessionRoute(
+    { tieRecipes[1], tieRecipes[3] },
+    nil,
+    { currentCap = 1 },
+    {
+        startSkill = 0,
+        targetSkill = 1,
+        objective = "smartest",
+        costRecipe = tieFixture,
+    }
+)
+assertEqual(efficiencyTie.actions[1].recipeID, 1, "zero-cost tie prefers fewer expected crafts before surplus")
+
+local surplusTie = addonTable.solveCheapestProfessionRoute(
+    { tieRecipes[2], tieRecipes[3] },
+    nil,
+    { currentCap = 1 },
+    {
+        startSkill = 0,
+        targetSkill = 1,
+        objective = "smartest",
+        costRecipe = tieFixture,
+    }
+)
+assertEqual(surplusTie.actions[1].recipeID, 1, "surplus breaks tie only after cost and crafts")
+
+local deterministicTie = addonTable.solveCheapestProfessionRoute(
+    {
+        { id = 20, crafts = 1, surplus = 0 },
+        { id = 10, crafts = 1, surplus = 0 },
+    },
+    nil,
+    { currentCap = 1 },
+    {
+        startSkill = 0,
+        targetSkill = 1,
+        objective = "smartest",
+        costRecipe = tieFixture,
+    }
+)
+assertEqual(deterministicTie.actions[1].recipeID, 10, "Smartest final tie uses stable recipe ID order")
+
+local negativeSmartest = addonTable.solveCheapestProfessionRoute(
+    {{ id = "negative" }},
+    nil,
+    { currentCap = 1 },
+    {
+        startSkill = 0,
+        targetSkill = 1,
+        objective = "smartest",
+        costRecipe = function()
+            return {
+                available = true,
+                useful = true,
+                expectedCraftsPerSkillUp = 1,
+                expectedMarketCostPerSkillUp = 10,
+                expectedGoldNeededNowPerSkillUp = 10,
+                expectedCurrentPurchaseCostPerSkillUp = 10,
+                expectedEffectiveCostPerSkillUp = -1,
+                expectedEstimatedSurplusPerSkillUp = 0,
+                selectedExecutionMethod = "direct",
+                oneTimeCosts = {},
+                quality = "complete",
+                skillUpChance = 1,
+            }
+        end,
+    }
+)
+assertEqual(negativeSmartest.complete, false, "negative Smartest edge is rejected")
+assertEqual(negativeSmartest.missingData[1], "negative_smartest_edge", "negative edge guard reason")
+
+print("Cheapest and Smartest route solver tests passed.")

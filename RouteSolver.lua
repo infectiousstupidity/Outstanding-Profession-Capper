@@ -249,7 +249,85 @@ local function numberOrZero(value)
     return tonumber(value) or 0
 end
 
-local function resolveMetricCost(cost, metric)
+local function stableIDToken(value)
+    local numeric = tonumber(value)
+    if numeric then
+        return "0:" .. string.format("%020.0f", numeric)
+    end
+    return "1:" .. tostring(value or "")
+end
+
+local function transitionOrderToken(transition)
+    if type(transition) ~= "table" then
+        return ""
+    end
+    if transition.type == "craft" then
+        return "C:" .. stableIDToken(transition.recipeID)
+    end
+    local training = transition.training or {}
+    return "T:" .. stableIDToken(
+        training.key or transition.newCap or transition.oldCap or ""
+    )
+end
+
+local function routeOrderLess(left, right)
+    local leftTokens = {}
+    local rightTokens = {}
+    local cursor = left
+    while cursor and cursor.transition do
+        table.insert(leftTokens, transitionOrderToken(cursor.transition))
+        cursor = cursor.previous
+    end
+    cursor = right
+    while cursor and cursor.transition do
+        table.insert(rightTokens, transitionOrderToken(cursor.transition))
+        cursor = cursor.previous
+    end
+
+    local leftIndex = table.getn(leftTokens)
+    local rightIndex = table.getn(rightTokens)
+    while leftIndex > 0 and rightIndex > 0 do
+        local leftToken = leftTokens[leftIndex]
+        local rightToken = rightTokens[rightIndex]
+        if leftToken ~= rightToken then
+            return leftToken < rightToken
+        end
+        leftIndex = leftIndex - 1
+        rightIndex = rightIndex - 1
+    end
+    return leftIndex < rightIndex
+end
+
+local function nodeBetter(job, left, right)
+    if not right then
+        return true
+    end
+    if job.objective ~= "smartest" then
+        return left.totalCost < right.totalCost
+    end
+    if left.totalCost ~= right.totalCost then
+        return left.totalCost < right.totalCost
+    end
+    if left.totalExpectedCrafts ~= right.totalExpectedCrafts then
+        return left.totalExpectedCrafts < right.totalExpectedCrafts
+    end
+    if left.totalEstimatedSurplus ~= right.totalEstimatedSurplus then
+        return left.totalEstimatedSurplus > right.totalEstimatedSurplus
+    end
+    return routeOrderLess(left, right)
+end
+
+local function selectedEstimatedSurplus(cost)
+    if not cost or cost.selectedExecutionMethod ~= "scroll" then
+        return 0
+    end
+    return math.max(0, numberOrZero(cost.expectedEstimatedSurplusPerSkillUp))
+end
+
+local function resolveMetricCost(cost, metric, objective)
+    if objective == "smartest" then
+        return cost.expectedEffectiveCostPerSkillUp
+    end
     if metric == "gold" then
         return cost.expectedGoldNeededNowPerSkillUp
     elseif metric == "current" then
@@ -259,14 +337,19 @@ local function resolveMetricCost(cost, metric)
     return cost.expectedMarketCostPerSkillUp
 end
 
-local function oneTimeMetricCost(oneTime, metric)
+local function oneTimeMetricCost(oneTime, metric, objective)
+    if objective == "smartest" then
+        return numberOrZero(
+            oneTime.marketCost ~= nil and oneTime.marketCost or oneTime.goldCost
+        )
+    end
     if metric == "gold" or metric == "current" then
         return numberOrZero(oneTime.goldCost)
     end
     return numberOrZero(oneTime.marketCost ~= nil and oneTime.marketCost or oneTime.goldCost)
 end
 
-local function applyCostOneTime(acquired, recipeMask, codec, cost, metric)
+local function applyCostOneTime(acquired, recipeMask, codec, cost, metric, objective)
     local nextAcquired = copyMap(acquired)
     local nextRecipeMask = recipeMask
     local extraCost = 0
@@ -290,7 +373,7 @@ local function applyCostOneTime(acquired, recipeMask, codec, cost, metric)
             table.insert(acquiredNow, oneTime)
 
             if oneTime.kind == "recipe_acquisition" then
-                extraCost = extraCost + oneTimeMetricCost(oneTime, metric)
+                extraCost = extraCost + oneTimeMetricCost(oneTime, metric, objective)
                 extraMarketCost = extraMarketCost + numberOrZero(
                     oneTime.marketCost ~= nil and oneTime.marketCost or oneTime.goldCost
                 )
@@ -352,7 +435,7 @@ local function trainingAvailable(action, skill, trainedCap)
     return true
 end
 
-local function getTrainingCost(action, metric)
+local function getTrainingCost(action, metric, objective)
     local goldCost = tonumber(action.goldCost or action.purchasePrice)
     if goldCost == nil then
         if action.status == "learned" or action.alreadyLearned then
@@ -367,6 +450,9 @@ local function getTrainingCost(action, metric)
         marketCost = goldCost
     end
 
+    if objective == "smartest" then
+        return marketCost, marketCost, goldCost
+    end
     if metric == "gold" then
         return goldCost, marketCost, goldCost
     end
@@ -499,19 +585,23 @@ local function mapValues(map)
     return values
 end
 
-local function newRouteResult(startSkill, targetSkill, metric)
+local function newRouteResult(startSkill, targetSkill, metric, objective, availableOnly)
     return {
         complete = false,
         fallbackToStaticGuide = true,
         startSkill = startSkill,
         targetSkill = targetSkill,
-        optimizationMetric = metric,
+        objective = objective,
+        availableOnly = availableOnly and true or false,
+        optimizationMetric = objective == "smartest" and "effective" or metric,
         actions = {},
         segments = {},
         totalMarketCost = nil,
         totalGoldCost = nil,
         totalCurrentPurchaseCost = nil,
+        totalEffectiveLevelingCost = nil,
         totalExpectedCrafts = 0,
+        totalEstimatedResaleSurplus = 0,
         quality = "incomplete",
         missingData = {},
         exploredStates = 0,
@@ -567,7 +657,7 @@ local function jobRelax(job, target, node, countField)
         node.lastRecipeID
     )
     local existing = target[key]
-    if existing and existing.totalCost <= node.totalCost then
+    if existing and not nodeBetter(job, node, existing) then
         return true
     end
 
@@ -610,12 +700,25 @@ local function jobAdvanceTraining(job, node)
                     local newCap = tonumber(action.newCap or action.targetCap)
                     local trainingMetric, trainingMarket, trainingGold = getTrainingCost(
                         action,
-                        job.metric
+                        job.metric,
+                        job.objective
                     )
-                    if newCap and trainingMetric ~= nil
+                    local trainingCostValid = trainingMetric ~= nil
+                    if trainingCostValid
+                        and job.objective == "smartest"
+                        and (trainingMetric < 0 or trainingMarket < 0 or trainingGold < 0)
+                    then
+                        trainingCostValid = false
+                        addMissingReason(job.missing, "negative_smartest_edge")
+                    end
+                    if newCap and trainingCostValid
                         and (not chosenCap
                             or newCap < chosenCap
-                            or (newCap == chosenCap and trainingMetric < chosenMetric))
+                            or (newCap == chosenCap and trainingMetric < chosenMetric)
+                            or (newCap == chosenCap
+                                and trainingMetric == chosenMetric
+                                and job.objective == "smartest"
+                                and stableIDToken(keyName) < stableIDToken(chosenKey)))
                     then
                         chosen = action
                         chosenMetric = trainingMetric
@@ -644,6 +747,10 @@ local function jobAdvanceTraining(job, node)
             totalMarketCost = cursor.totalMarketCost + chosenMarket,
             totalGoldCost = cursor.totalGoldCost + chosenGold,
             totalCurrentPurchaseCost = cursor.totalCurrentPurchaseCost + chosenGold,
+            totalEffectiveLevelingCost =
+                cursor.totalEffectiveLevelingCost + chosenMarket,
+            totalExpectedCrafts = cursor.totalExpectedCrafts,
+            totalEstimatedSurplus = cursor.totalEstimatedSurplus,
             previous = cursor,
             quality = cursor.quality,
             lastRecipeID = cursor.lastRecipeID,
@@ -657,6 +764,8 @@ local function jobAdvanceTraining(job, node)
                 marketCost = chosenMarket,
                 goldCost = chosenGold,
                 currentPurchaseCost = chosenGold,
+                effectiveLevelingCost = chosenMarket,
+                estimatedResaleSurplus = 0,
                 quality = "complete",
             },
         }
@@ -689,8 +798,12 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
         return
     end
 
-    local metricCost = resolveMetricCost(cost, job.metric)
+    local metricCost = resolveMetricCost(cost, job.metric, job.objective)
     if metricCost == nil then
+        return
+    end
+    if job.objective == "smartest" and numberOrZero(metricCost) < 0 then
+        addMissingReason(job.missing, "negative_smartest_edge")
         return
     end
 
@@ -699,7 +812,8 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
         node.recipeMask,
         job.recipeCodec,
         cost,
-        job.metric
+        job.metric,
+        job.objective
     )
     nextAcquired = applyProducedKeys(nextAcquired, recipe)
 
@@ -710,6 +824,14 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
             or cost.expectedMarketCostPerSkillUp
     ) + extraGold
     local edgeMetric = numberOrZero(metricCost) + extraMetric
+    local edgeEffective = numberOrZero(cost.expectedEffectiveCostPerSkillUp) + extraMarket
+    local edgeSurplus = selectedEstimatedSurplus(cost)
+    if job.objective == "smartest"
+        and (extraMetric < 0 or edgeMetric < 0 or edgeEffective < 0)
+    then
+        addMissingReason(job.missing, "negative_smartest_edge")
+        return
+    end
     local nextSkill = math.min(job.targetSkill, node.skill + 1)
     nextRecipeMask = normalizeRecipeMask(job.recipeCodec, nextRecipeMask, nextSkill)
 
@@ -730,6 +852,11 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
         totalMarketCost = node.totalMarketCost + edgeMarket,
         totalGoldCost = node.totalGoldCost + edgeGold,
         totalCurrentPurchaseCost = node.totalCurrentPurchaseCost + edgeCurrent,
+        totalEffectiveLevelingCost =
+            node.totalEffectiveLevelingCost + edgeEffective,
+        totalExpectedCrafts =
+            node.totalExpectedCrafts + numberOrZero(cost.expectedCraftsPerSkillUp),
+        totalEstimatedSurplus = node.totalEstimatedSurplus + edgeSurplus,
         previous = node,
         quality = (node.quality == "stale" or cost.quality == "stale")
             and "stale"
@@ -746,6 +873,8 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
             marketCost = edgeMarket,
             goldCost = edgeGold,
             currentPurchaseCost = edgeCurrent,
+            effectiveLevelingCost = edgeEffective,
+            estimatedResaleSurplus = edgeSurplus,
             acquisitionGoldCost = acquisitionGoldCost,
             quality = cost.quality,
             cost = cost,
@@ -776,7 +905,7 @@ local function finalizeLayeredRouteJob(job)
     local finalNode
     for _, node in pairs(job.current or {}) do
         if node.skill >= job.targetSkill
-            and (not finalNode or node.totalCost < finalNode.totalCost)
+            and (not finalNode or nodeBetter(job, node, finalNode))
         then
             finalNode = node
         end
@@ -790,16 +919,12 @@ local function finalizeLayeredRouteJob(job)
         result.totalMarketCost = finalNode.totalMarketCost
         result.totalGoldCost = finalNode.totalGoldCost
         result.totalCurrentPurchaseCost = finalNode.totalCurrentPurchaseCost
+        result.totalEffectiveLevelingCost = finalNode.totalEffectiveLevelingCost
+        result.totalExpectedCrafts = finalNode.totalExpectedCrafts
+        result.totalEstimatedResaleSurplus = finalNode.totalEstimatedSurplus
         result.quality = finalNode.quality
         result.complete = true
         result.fallbackToStaticGuide = false
-
-        for actionIndex = 1, table.getn(result.actions) do
-            if result.actions[actionIndex].type == "craft" then
-                result.totalExpectedCrafts = result.totalExpectedCrafts
-                    + numberOrZero(result.actions[actionIndex].expectedCrafts)
-            end
-        end
     end
 
     job.status = "completed"
@@ -879,7 +1004,7 @@ local function performRouteJobOperation(job)
         if not group then
             group = { nodes = {}, bestSwitchNode = node }
             job.groups[groupKey] = group
-        elseif node.totalCost < group.bestSwitchNode.totalCost then
+        elseif nodeBetter(job, node, group.bestSwitchNode) then
             group.bestSwitchNode = node
         end
         table.insert(group.nodes, node)
@@ -983,6 +1108,9 @@ local function createLayeredRouteJob(
         totalMarketCost = 0,
         totalGoldCost = 0,
         totalCurrentPurchaseCost = 0,
+        totalEffectiveLevelingCost = 0,
+        totalExpectedCrafts = 0,
+        totalEstimatedSurplus = 0,
         previous = nil,
         transition = nil,
         quality = "complete",
@@ -1009,6 +1137,8 @@ local function createLayeredRouteJob(
         targetSkill = targetSkill,
         startingCap = startingCap,
         metric = metric,
+        objective = result.objective,
+        availableOnly = result.availableOnly,
         maxStates = maxStates,
         costRecipe = costRecipe,
         recipeCodec = recipeCodec,
@@ -1037,6 +1167,8 @@ local function createLayeredRouteJob(
         result.totalMarketCost = 0
         result.totalGoldCost = 0
         result.totalCurrentPurchaseCost = 0
+        result.totalEffectiveLevelingCost = 0
+        result.totalEstimatedResaleSurplus = 0
         result.quality = "complete"
         job.status = "completed"
         job.phase = "done"
@@ -1078,9 +1210,18 @@ function addonTable.createCheapestProfessionRouteJob(recipes, skillContext, stat
     else
         metric = "market"
     end
+    local objective = options.objective == "smartest" and "smartest" or "cheapest"
+    local availableOnly = options.availableOnly == true
+        or options.requireAvailableNow == true
     local maxStates = tonumber(options.maxStates) or DEFAULT_MAX_STATES
     local costRecipe = options.costRecipe or addonTable.calculateRecipeCost
-    local result = newRouteResult(startSkill, targetSkill, metric)
+    local result = newRouteResult(
+        startSkill,
+        targetSkill,
+        metric,
+        objective,
+        availableOnly
+    )
 
     return createLayeredRouteJob(
         recipes,

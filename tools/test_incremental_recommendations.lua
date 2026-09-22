@@ -78,6 +78,11 @@ addonTable.calculateRecipeCost = function(recipe)
         expectedMarketCostPerSkillUp = cost,
         goldNeededNowPerCraft = cost,
         expectedGoldNeededNowPerSkillUp = cost,
+        effectiveCostPerCraft = cheap and 50 or 10,
+        expectedEffectiveCostPerSkillUp = cheap and 50 or 10,
+        estimatedSurplus = cheap and 0 or 40,
+        expectedEstimatedSurplusPerSkillUp = cheap and 0 or 40,
+        selectedExecutionMethod = cheap and "direct" or "scroll",
         oneTimeCosts = {},
         reagentCosts = {},
         quality = "complete",
@@ -186,10 +191,13 @@ local syncAvailable = addonTable.computeDynamicProfessionRecommendation(
     context,
     {
         targetSkill = 1,
-        requireAvailableNow = true,
+        availableOnly = true,
     }
 )
 assertEqual(syncAvailable.currentSegment.recipeID, 11, "synchronous Available semantics")
+assertEqual(syncAvailable.objective, "cheapest", "Available remains a Cheapest constraint")
+assertEqual(syncAvailable.availableOnly, true, "Available maps to orthogonal constraint")
+assertEqual(syncAvailable.requireAvailableNow, true, "legacy availability alias remains true")
 
 addonTable.noteRuntimeInventoryChanged()
 local pendingAvailable = addonTable.computeDynamicProfessionRecommendation(
@@ -197,7 +205,7 @@ local pendingAvailable = addonTable.computeDynamicProfessionRecommendation(
     context,
     {
         targetSkill = 1,
-        requireAvailableNow = true,
+        availableOnly = true,
         incrementalRoute = true,
     }
 )
@@ -205,6 +213,46 @@ assertEqual(pendingAvailable.available, false, "Available mode stays pending bef
 local asyncAvailable = finishPending(pendingAvailable)
 assertEqual(asyncAvailable.currentSegment.recipeID, syncAvailable.currentSegment.recipeID, "Available exact equivalence")
 assertEqual(asyncAvailable.routeComplete, true, "Available exact route complete")
+
+addonTable.noteRuntimeInventoryChanged()
+local syncSmartest = addonTable.computeDynamicProfessionRecommendation(
+    cache,
+    context,
+    {
+        targetSkill = 1,
+        objective = "smartest",
+    }
+)
+assertEqual(syncSmartest.currentSegment.recipeID, 11, "Smartest can choose higher gross-cost resale-aware recipe")
+assert(syncSmartest ~= syncCheapest, "objective participates in recommendation cache key")
+
+addonTable.noteRuntimeInventoryChanged()
+local pendingSmartest = addonTable.computeDynamicProfessionRecommendation(
+    cache,
+    context,
+    {
+        targetSkill = 1,
+        objective = "smartest",
+        incrementalRoute = true,
+    }
+)
+local replacementPending = addonTable.computeDynamicProfessionRecommendation(
+    cache,
+    context,
+    {
+        targetSkill = 1,
+        objective = "cheapest",
+        incrementalRoute = true,
+    }
+)
+local objectiveStatus, objectiveResult = addonTable.stepDynamicProfessionRecommendation(
+    pendingSmartest,
+    1,
+    function() return 1 end
+)
+assertEqual(objectiveStatus, "cancelled", "new objective invalidates old incremental request")
+assertEqual(objectiveResult.reason, "runtime_inputs_changed", "objective change cannot publish stale route")
+addonTable.cancelDynamicProfessionRecommendation(replacementPending, "test_cleanup")
 
 addonTable.noteRuntimeInventoryChanged()
 local stalePending = addonTable.computeDynamicProfessionRecommendation(

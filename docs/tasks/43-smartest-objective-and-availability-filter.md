@@ -1,6 +1,6 @@
 # Task 43 — Smartest objective and availability filter
 
-Status: BLOCKED  
+Status: REVIEW  
 Phase: 9 — Resale-aware Smartest optimization  
 Depends on: Tasks 39 and 42
 
@@ -140,7 +140,22 @@ Fix only the recorded findings, rerun the full route/regression suite, record ev
 
 ### Agent 1 implementation
 
-Pending.
+Implemented on current `master` as Task 43 only.
+
+- Added `objective = cheapest | smartest` and orthogonal `availableOnly` inputs while retaining `requireAvailableNow` as a compatibility alias.
+- Extended the shared layered route engine instead of cloning it. Smartest compares routes lexicographically by total expected effective leveling cost, then expected crafts, then selected-scroll estimated surplus, then stable route/recipe ID order.
+- Smartest aggregates recipe acquisition/training costs outside resale credit and rejects any negative Smartest edge explicitly.
+- Existing Cheapest metric selection remains unchanged.
+- Current-recipe fallback ranking uses the same Smartest tie-break order when Smartest is requested.
+- Recommendation cache keys and incremental generation tokens now include objective and availability. A newer request with different objective/filter inputs invalidates the older pending job.
+- Availability remains a feasibility constraint and now includes the selected vellum when scroll execution wins. Vellum resale economics do not bypass fresh purchase evidence.
+- Added deterministic settings migration from legacy `dynamic | available | static` into `optimized/static + recommendationObjective + recommendationAvailableOnly`, preserving unrelated settings. Existing UI projection remains temporarily compatible; Task 44 owns the visible UI redesign.
+- Added regressions for Smartest vs Cheapest, efficiency-before-surplus, surplus tie-breaks, deterministic final ties, negative-edge rejection, vellum availability, saved-setting migration, synchronous/incremental equivalence, objective-driven stale cancellation, and cache separation.
+
+Validation:
+- Full repository validation is pending the Agent 1 implementation commit.
+
+Task 43 is REVIEW after the implementation commit passes validation. Task 44 remains blocked pending independent Agent 2 review.
 
 ### Agent 2 review
 

@@ -21,6 +21,7 @@ local recommendationCacheEntries = 0
 local recommendationCacheToken = 0
 local RECOMMENDATION_CACHE_TTL = 15
 local RECOMMENDATION_CACHE_MAX_ENTRIES = 8
+local activeRecommendationRequestKey
 
 local canonicalOptimizerRecipes = {}
 local canonicalOptimizerRecipeCount = 0
@@ -961,6 +962,28 @@ local function applyLiveSkillType(cost, recipe, skill, currentSkill)
     return cost
 end
 
+local function stableRecipeIDLess(left, right)
+    local leftNumber = tonumber(left)
+    local rightNumber = tonumber(right)
+    if leftNumber and rightNumber then
+        return leftNumber < rightNumber
+    end
+    if leftNumber then
+        return true
+    end
+    if rightNumber then
+        return false
+    end
+    return tostring(left or "") < tostring(right or "")
+end
+
+local function candidateEstimatedSurplus(cost)
+    if not cost or cost.selectedExecutionMethod ~= "scroll" then
+        return 0
+    end
+    return math.max(0, tonumber(cost.expectedEstimatedSurplusPerSkillUp) or 0)
+end
+
 local function rankCurrentRecipesInternal(recipes, skillContext, state, skill, options)
     local ranked = {}
     local currentSkill = tonumber(skillContext and skillContext.baseSkill) or 0
@@ -992,9 +1015,17 @@ local function rankCurrentRecipesInternal(recipes, skillContext, state, skill, o
             and cost.skillUpChance
             and cost.skillUpChance > 0
         then
+            local objective = options and options.objective == "smartest"
+                and "smartest"
+                or "cheapest"
             local expectedCost
             local perCraft
-            if options and options.requireAvailableNow then
+            local expectedCrafts = tonumber(cost.expectedCraftsPerSkillUp) or math.huge
+            local estimatedSurplus = candidateEstimatedSurplus(cost)
+            if objective == "smartest" then
+                expectedCost = cost.expectedEffectiveCostPerSkillUp
+                perCraft = cost.effectiveCostPerCraft
+            elseif options and (options.availableOnly or options.requireAvailableNow) then
                 expectedCost = cost.expectedGoldNeededNowPerSkillUp
                     or cost.expectedCurrentPurchaseCostPerSkillUp
                     or cost.expectedMarketCostPerSkillUp
@@ -1013,8 +1044,11 @@ local function rankCurrentRecipesInternal(recipes, skillContext, state, skill, o
                     recipe = recipe,
                     recipeID = getRecipeID(recipe),
                     cost = cost,
+                    objective = objective,
                     expectedCostPerSkillUp = expectedCost,
                     costPerCraft = perCraft,
+                    expectedCraftsPerSkillUp = expectedCrafts,
+                    estimatedSurplusPerSkillUp = estimatedSurplus,
                     difficulty = cost.difficulty,
                     liveSkillType = recipe.liveSkillType,
                     skillUpChance = cost.skillUpChance,
@@ -1027,6 +1061,19 @@ local function rankCurrentRecipesInternal(recipes, skillContext, state, skill, o
     end
 
     table.sort(ranked, function(left, right)
+        if left.objective == "smartest" then
+            if left.expectedCostPerSkillUp ~= right.expectedCostPerSkillUp then
+                return left.expectedCostPerSkillUp < right.expectedCostPerSkillUp
+            end
+            if left.expectedCraftsPerSkillUp ~= right.expectedCraftsPerSkillUp then
+                return left.expectedCraftsPerSkillUp < right.expectedCraftsPerSkillUp
+            end
+            if left.estimatedSurplusPerSkillUp ~= right.estimatedSurplusPerSkillUp then
+                return left.estimatedSurplusPerSkillUp > right.estimatedSurplusPerSkillUp
+            end
+            return stableRecipeIDLess(left.recipeID, right.recipeID)
+        end
+
         if left.expectedCostPerSkillUp ~= right.expectedCostPerSkillUp then
             return left.expectedCostPerSkillUp < right.expectedCostPerSkillUp
         end
@@ -1130,7 +1177,7 @@ local function adaptiveRouteCost(recipe, skill, skillContext, state, options)
         return cost
     end
 
-    if options and options.requireAvailableNow
+    if options and (options.availableOnly or options.requireAvailableNow)
         and skill == currentSkill
         and cost.availableNow ~= true
     then
@@ -1156,6 +1203,9 @@ end
 
 function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillContext, options)
     options = options or {}
+    local objective = options.objective == "smartest" and "smartest" or "cheapest"
+    local availableOnly = options.availableOnly == true
+        or options.requireAvailableNow == true
 
     local result = {
         available = false,
@@ -1171,7 +1221,9 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         currentCost = nil,
         candidates = {},
         availableCandidates = {},
-        requireAvailableNow = options.requireAvailableNow == true,
+        objective = objective,
+        availableOnly = availableOnly,
+        requireAvailableNow = availableOnly,
         priceLookup = nil,
         routeComplete = false,
         routeReason = nil,
@@ -1248,11 +1300,13 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         tostring(inventoryRevision),
         tostring(eligibilityRevision),
         tostring(modeRevision),
-        result.requireAvailableNow and "available" or "cheapest",
+        result.objective,
+        result.availableOnly and "available" or "all",
         tostring(options.optimizeFor or "current"),
         tostring(options.targetSkill or ""),
         tostring(acquisitionRevision),
     }, "|")
+    activeRecommendationRequestKey = cacheKey
     local cacheNow = runtimeNow()
     local cachedRecommendation = recommendationCache[cacheKey]
     if cachedRecommendation
@@ -1268,6 +1322,9 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
 
     local capturedRevisions = revisions
     local function dependenciesStillCurrent()
+        if activeRecommendationRequestKey ~= cacheKey then
+            return false
+        end
         if type(addonTable.getRuntimeRevisions) == "function" then
             local current = addonTable.getRuntimeRevisions()
             for _, key in ipairs({
@@ -1322,6 +1379,8 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
                 fallbackToStaticGuide = true,
                 reason = "runtime_inputs_changed",
                 providerName = result.providerName,
+                objective = result.objective,
+                availableOnly = result.availableOnly,
                 requireAvailableNow = result.requireAvailableNow,
                 routeComplete = false,
             }
@@ -1364,7 +1423,9 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     costOptions.priceLookup = cachedPriceLookup or costOptions.priceLookup
     costOptions.unitPriceChooser = costOptions.unitPriceChooser or addonTable.chooseUsableUnitPrice
     costOptions.costRecipe = cachedRecipeCost
-    costOptions.requireAvailableNow = result.requireAvailableNow
+    costOptions.objective = result.objective
+    costOptions.availableOnly = result.availableOnly
+    costOptions.requireAvailableNow = result.availableOnly
     costOptions.materialCostCache = {}
     result.priceLookup = cachedPriceLookup
 
@@ -1410,7 +1471,7 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         state,
         targetSkill,
         costOptions,
-        result.requireAvailableNow
+        result.availableOnly
     )
     candidates = candidates or {}
     local availableCandidates = {}
@@ -1424,13 +1485,17 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
     for key, value in pairs(costOptions) do
         routeCostOptions[key] = value
     end
-    routeCostOptions.requireAvailableNow = result.requireAvailableNow
+    routeCostOptions.objective = result.objective
+    routeCostOptions.availableOnly = result.availableOnly
+    routeCostOptions.requireAvailableNow = result.availableOnly
     routeCostOptions.baseCostRecipe = cachedRecipeCost
     routeCostOptions.allowGreenRoute = state.fullCatalog == true
 
     local routeOptions = {
         startSkill = skillContext.baseSkill,
         targetSkill = targetSkill,
+        objective = result.objective,
+        availableOnly = result.availableOnly,
         optimizeFor = options.optimizeFor or "current",
         maxStates = options.maxStates,
         costRecipe = adaptiveRouteCost,
@@ -1476,7 +1541,7 @@ function addonTable.computeDynamicProfessionRecommendation(recipeCache, skillCon
         if not route or not route.complete then
             result.routeReason = route and route.reason or "no_complete_route"
             if not result.currentSegment then
-                result.reason = result.requireAvailableNow
+                result.reason = result.availableOnly
                     and "no_available_recipe"
                     or "no_current_priced_recipe"
             end
@@ -1617,6 +1682,8 @@ function addonTable.stepDynamicProfessionRecommendation(pending, budgetMs, clock
             fallbackToStaticGuide = true,
             reason = "runtime_inputs_changed",
             providerName = pending.providerName,
+            objective = pending.objective,
+            availableOnly = pending.availableOnly,
             requireAvailableNow = pending.requireAvailableNow,
             routeComplete = false,
         }
@@ -1628,6 +1695,8 @@ function addonTable.stepDynamicProfessionRecommendation(pending, budgetMs, clock
             fallbackToStaticGuide = true,
             reason = "optimizer_error",
             providerName = pending.providerName,
+            objective = pending.objective,
+            availableOnly = pending.availableOnly,
             requireAvailableNow = pending.requireAvailableNow,
             routeComplete = false,
         }
