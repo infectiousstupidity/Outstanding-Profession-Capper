@@ -1316,6 +1316,8 @@ local function createLayeredRouteJob(
         result.totalMarketCost = 0
         result.totalGoldCost = 0
         result.totalCurrentPurchaseCost = 0
+        result.totalGrossLevelingCost = 0
+        result.totalResaleCredit = 0
         result.totalEffectiveLevelingCost = 0
         result.totalEstimatedResaleSurplus = 0
         result.quality = "complete"
