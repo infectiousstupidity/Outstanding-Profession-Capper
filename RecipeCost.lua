@@ -713,6 +713,12 @@ local function chooseConfirmedAvailableEquivalentPurchase(item, quantity, option
         or "no_confirmed_purchase_source"
 end
 
+local function requiresAvailableNow(options)
+    return options
+        and (options.availableOnly == true or options.requireAvailableNow == true)
+        or false
+end
+
 local function materialCostCacheKey(recipe, state, options)
     local acquired = state and (state.acquiredOneTime or state.acquiredReusable) or {}
     local parts = {}
@@ -725,7 +731,7 @@ local function materialCostCacheKey(recipe, state, options)
 
     return table.concat({
         tostring(recipe and (recipe.spellID or recipe.recipeID or recipe.id) or recipe),
-        options and options.requireAvailableNow and "available" or "priced",
+        requiresAvailableNow(options) and "available" or "priced",
         table.concat(parts, "\031"),
     }, "|")
 end
@@ -743,6 +749,8 @@ local function buildDirectExecutionEconomics(variableMarket, fixedMarket)
         vellumCost = nil,
         vellumPriceType = nil,
         vellumSource = nil,
+        vellumAvailableNow = nil,
+        vellumAvailabilityReason = nil,
         scrollOutputItemID = nil,
         resaleEstimate = nil,
         resaleOptimizationValue = 0,
@@ -808,7 +816,8 @@ local function buildExecutionEconomics(
     fixedMarket,
     priceLookup,
     priceChooser,
-    options
+    options,
+    state
 )
     local economics = buildDirectExecutionEconomics(variableMarket, fixedMarket)
     local spellID = recipe and (recipe.spellID or recipe.recipeID)
@@ -848,6 +857,32 @@ local function buildExecutionEconomics(
     economics.vellumPriceType = vellum.choice and vellum.choice.priceType or nil
     economics.vellumSource = vellum.choice and vellum.choice.source or nil
     economics.scrollGrossCost = economics.directGrossCost + vellum.cost
+
+    local vellumOwned = getInventoryCount(
+        state and state.inventory,
+        { itemID = vellum.itemID },
+        state
+    )
+    if vellumOwned >= 1 then
+        economics.vellumAvailableNow = true
+        economics.vellumAvailabilityReason = "owned"
+    else
+        local vellumAvailability, vellumAvailabilityReason =
+            chooseConfirmedAvailableEquivalentPurchase(
+                vellum.itemID,
+                1,
+                {
+                    priceLookup = priceLookup,
+                    unitPriceChooser = priceChooser,
+                    now = options and options.now,
+                }
+            )
+        economics.vellumAvailableNow = vellumAvailability ~= nil
+        economics.vellumAvailabilityReason = vellumAvailability
+            and vellumAvailability.availabilityReason
+            or vellumAvailabilityReason
+            or "no_confirmed_purchase_source"
+    end
 
     local resale
     if type(addonTable.evaluateResaleValue) == "function" then
@@ -896,6 +931,8 @@ local function applyExecutionEconomics(result, economics, expectedCrafts)
     result.vellumCost = economics.vellumCost
     result.vellumPriceType = economics.vellumPriceType
     result.vellumSource = economics.vellumSource
+    result.vellumAvailableNow = economics.vellumAvailableNow
+    result.vellumAvailabilityReason = economics.vellumAvailabilityReason
     result.scrollOutputItemID = economics.scrollOutputItemID
     result.resaleEstimate = economics.resaleEstimate
     result.resaleOptimizationValue = economics.resaleOptimizationValue
@@ -972,6 +1009,8 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
         vellumItemID = nil,
         vellumTier = nil,
         vellumCost = nil,
+        vellumAvailableNow = nil,
+        vellumAvailabilityReason = nil,
         scrollOutputItemID = nil,
         resaleEstimate = nil,
         resaleOptimizationValue = 0,
@@ -1185,7 +1224,7 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
                 end
 
                 local craftMarket = marketChoice.totalCost
-                local currentGoldChoice = options.requireAvailableNow
+                local currentGoldChoice = requiresAvailableNow(options)
                     and availabilityChoice
                     or neededPurchaseChoice
                 local craftGold = currentGoldChoice and currentGoldChoice.totalCost or 0
@@ -1291,8 +1330,22 @@ function addonTable.calculateRecipeCost(recipe, baseSkill, skillContext, state, 
             fixedMarket,
             priceLookup,
             priceChooser,
-            options
+            options,
+            state
         )
+
+        if executionEconomics
+            and executionEconomics.selectedExecutionMethod == "scroll"
+            and executionEconomics.vellumAvailableNow ~= true
+        then
+            allPurchasesAvailableNow = false
+            table.insert(result.availabilityIssues, {
+                item = executionEconomics.vellumItemID,
+                kind = "vellum",
+                reason = executionEconomics.vellumAvailabilityReason
+                    or "no_confirmed_purchase_source",
+            })
+        end
     end
 
     if materialCache and materialKey then

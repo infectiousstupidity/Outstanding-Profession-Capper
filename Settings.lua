@@ -4,7 +4,10 @@ local defaults = {
     enabled = true,
     attached = true,
     locked = false,
-    recommendationMode = "dynamic",
+    recommendationMode = "optimized",
+    recommendationObjective = "cheapest",
+    recommendationAvailableOnly = false,
+    recommendationSettingsVersion = 2,
     detailMode = "compact",
     enchantRepeatMode = "until_change",
     enchantRepeatCount = 5,
@@ -14,8 +17,44 @@ local defaults = {
     y = 700,
 }
 
+local function migrateRecommendationSettings(db)
+    if tonumber(db.recommendationSettingsVersion) == 2 then
+        return
+    end
+
+    local legacyMode = db.recommendationMode
+    if legacyMode == "static" then
+        db.recommendationMode = "static"
+        if db.recommendationObjective == nil then
+            db.recommendationObjective = "cheapest"
+        end
+        if db.recommendationAvailableOnly == nil then
+            db.recommendationAvailableOnly = false
+        end
+    elseif legacyMode == "available" then
+        db.recommendationMode = "optimized"
+        db.recommendationObjective = "cheapest"
+        db.recommendationAvailableOnly = true
+    elseif legacyMode == "dynamic" then
+        db.recommendationMode = "optimized"
+        db.recommendationObjective = "cheapest"
+        db.recommendationAvailableOnly = false
+    else
+        db.recommendationMode = "optimized"
+        if db.recommendationObjective ~= "smartest" then
+            db.recommendationObjective = "cheapest"
+        end
+        if db.recommendationAvailableOnly == nil then
+            db.recommendationAvailableOnly = false
+        end
+    end
+
+    db.recommendationSettingsVersion = 2
+end
+
 local function getDB()
     ProfessionCapperDB = ProfessionCapperDB or {}
+    migrateRecommendationSettings(ProfessionCapperDB)
     for key, value in pairs(defaults) do
         if ProfessionCapperDB[key] == nil then
             ProfessionCapperDB[key] = value
@@ -89,17 +128,66 @@ function addonTable.setEnabled(enabled)
     getDB().enabled = enabled and true or false
 end
 
+local function notifyRecommendationSettingsChanged(changed)
+    if changed and type(addonTable.noteRuntimeModeChanged) == "function" then
+        addonTable.noteRuntimeModeChanged()
+    end
+end
+
 function addonTable.setRecommendationMode(mode)
-    if mode ~= "dynamic" and mode ~= "available" and mode ~= "static" then
+    if mode ~= "dynamic"
+        and mode ~= "available"
+        and mode ~= "static"
+        and mode ~= "optimized"
+    then
         return false
     end
 
     local db = getDB()
-    local changed = db.recommendationMode ~= mode
-    db.recommendationMode = mode
-    if changed and type(addonTable.noteRuntimeModeChanged) == "function" then
-        addonTable.noteRuntimeModeChanged()
+    local oldMode = db.recommendationMode
+    local oldObjective = db.recommendationObjective
+    local oldAvailableOnly = db.recommendationAvailableOnly
+
+    if mode == "static" then
+        db.recommendationMode = "static"
+    elseif mode == "available" then
+        db.recommendationMode = "optimized"
+        db.recommendationObjective = "cheapest"
+        db.recommendationAvailableOnly = true
+    elseif mode == "dynamic" then
+        db.recommendationMode = "optimized"
+        db.recommendationObjective = "cheapest"
+        db.recommendationAvailableOnly = false
+    else
+        db.recommendationMode = "optimized"
     end
+
+    notifyRecommendationSettingsChanged(
+        oldMode ~= db.recommendationMode
+        or oldObjective ~= db.recommendationObjective
+        or oldAvailableOnly ~= db.recommendationAvailableOnly
+    )
+    return true
+end
+
+function addonTable.setRecommendationObjective(objective)
+    if objective ~= "cheapest" and objective ~= "smartest" then
+        return false
+    end
+
+    local db = getDB()
+    local changed = db.recommendationObjective ~= objective
+    db.recommendationObjective = objective
+    notifyRecommendationSettingsChanged(changed)
+    return true
+end
+
+function addonTable.setRecommendationAvailableOnly(availableOnly)
+    local db = getDB()
+    local value = availableOnly and true or false
+    local changed = db.recommendationAvailableOnly ~= value
+    db.recommendationAvailableOnly = value
+    notifyRecommendationSettingsChanged(changed)
     return true
 end
 

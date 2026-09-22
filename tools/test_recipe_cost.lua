@@ -400,12 +400,30 @@ assertEqual(gathererDirect.expectedMarketCostPerSkillUp, 100, "Cheapest market f
 
 prices[38960].marketValue = 80
 prices[38960].minBuyout = 80
+prices[43145].ageSeconds = 60
+prices[43145].numAuctions = 1
 local gathererYellow = addonTable.calculateRecipeCost(gathererRecipe, 105, nil, {}, {})
 assertEqual(gathererYellow.selectedExecutionMethod, "scroll", "resale can make Gatherer scroll path cheaper")
 assertEqual(gathererYellow.scrollEffectiveCostPerCraft, 50, "Gatherer resale-adjusted scroll cost")
 assertNear(gathererYellow.skillUpChance, 0.75, 0.0001, "Task 42 preserves exact skill-up chance")
 assertNear(gathererYellow.expectedEffectiveCostPerSkillUp, 50 * 4 / 3, 0.0001, "effective cost scales by exact chance")
 assertNear(gathererYellow.expectedMarketCostPerSkillUp, 100 * 4 / 3, 0.0001, "Cheapest expected market cost remains unchanged")
+assertEqual(gathererYellow.vellumAvailableNow, true, "selected scroll vellum has confirmed current purchase evidence")
+assertEqual(gathererYellow.availableNow, true, "selected scroll path is available when vellum is available")
+
+prices[43145].numAuctions = nil
+local unavailableVellum = addonTable.calculateRecipeCost(
+    gathererRecipe,
+    105,
+    nil,
+    { inventory = { [1001] = 1 } },
+    { availableOnly = true }
+)
+assertEqual(unavailableVellum.selectedExecutionMethod, "scroll", "resale economics still selects scroll path")
+assertEqual(unavailableVellum.vellumAvailableNow, false, "selected vellum without confirmed quantity is unavailable")
+assertEqual(unavailableVellum.availableNow, false, "availability constraint includes selected vellum")
+assertEqual(unavailableVellum.availabilityIssues[1].kind, "vellum", "vellum availability issue is explicit")
+prices[43145].numAuctions = 1
 
 prices[38979] = {
     available = true,

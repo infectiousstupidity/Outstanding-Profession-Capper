@@ -359,4 +359,45 @@ assert(string.find(tostring(errorText), "fixture optimizer failure", 1, true), "
 addonTable.cancelCheapestProfessionRouteJob(errorJob, "optimizer_error")
 assert(addonTable.getCheapestProfessionRouteJobMetrics(errorJob).released == true, "failed job releases state")
 
+local smartestRecipes = {
+    { id = 2, effective = 0, crafts = 2, surplus = 100 },
+    { id = 1, effective = 0, crafts = 1, surplus = 10 },
+}
+local function smartestFixture(recipe)
+    return {
+        available = true,
+        useful = true,
+        expectedCraftsPerSkillUp = recipe.crafts,
+        expectedMarketCostPerSkillUp = 100,
+        expectedGoldNeededNowPerSkillUp = 100,
+        expectedCurrentPurchaseCostPerSkillUp = 100,
+        expectedEffectiveCostPerSkillUp = recipe.effective,
+        expectedEstimatedSurplusPerSkillUp = recipe.surplus,
+        selectedExecutionMethod = "scroll",
+        oneTimeCosts = {},
+        quality = "complete",
+        skillUpChance = 1 / recipe.crafts,
+    }
+end
+local smartestOptions = {
+    startSkill = 0,
+    targetSkill = 1,
+    objective = "smartest",
+    costRecipe = smartestFixture,
+}
+local smartestSync = addonTable.solveCheapestProfessionRoute(
+    smartestRecipes,
+    nil,
+    { currentCap = 1 },
+    smartestOptions
+)
+local smartestIncremental = runIncremental(
+    smartestRecipes,
+    nil,
+    { currentCap = 1 },
+    smartestOptions
+)
+assertEqual(signature(smartestIncremental), signature(smartestSync), "Smartest synchronous/incremental equivalence")
+assertEqual(smartestIncremental.actions[1].recipeID, 1, "Smartest incremental uses lexicographic efficiency tie-break")
+
 print("Incremental route execution tests passed")

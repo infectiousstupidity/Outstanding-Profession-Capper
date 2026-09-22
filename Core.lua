@@ -1570,7 +1570,7 @@ local function getRecommendationMode()
     local db = addonTable.getSettings()
     if db.recommendationMode == "static" then
         return "static"
-    elseif db.recommendationMode == "available" then
+    elseif db.recommendationAvailableOnly == true then
         return "available"
     end
     return "dynamic"
@@ -3410,12 +3410,16 @@ local function getCraftingToDoInternal()
                 routeReason = "optimizer_error",
             }
         else
+            local settings = addonTable.getSettings()
             local optimizerOK, recommendationOrError = pcall(
                 addonTable.computeDynamicProfessionRecommendation,
                 recipeCache,
                 professionContext,
                 {
-                    requireAvailableNow = recommendationMode == "available",
+                    objective = settings.recommendationObjective == "smartest"
+                        and "smartest"
+                        or "cheapest",
+                    availableOnly = settings.recommendationAvailableOnly == true,
                     incrementalRoute = true,
                 }
             )
