@@ -44,7 +44,7 @@ local COMPARE_CONTENT_TOP = 132
 local COMPARE_FOOTER_SPACE = 58
 local COMPARE_MIN_HEIGHT = 356
 
-local DETAILS_PANEL_HEIGHT = 96
+local DETAILS_PANEL_HEIGHT = 114
 local DETAILS_PANEL_GAP = 10
 
 local tradeSkillStateMutation = false
@@ -1566,18 +1566,37 @@ local function updateProfessionHeader()
     end
 end
 
-local function getRecommendationMode()
+local function getRecommendationState()
     local db = addonTable.getSettings()
-    if db.recommendationMode == "static" then
-        return "static"
-    elseif db.recommendationAvailableOnly == true then
-        return "available"
+    if type(addonTable.getRecommendationPresentationState) == "function" then
+        return addonTable.getRecommendationPresentationState(db)
     end
-    return "dynamic"
+
+    local objective = db.recommendationObjective == "smartest"
+        and "smartest"
+        or "cheapest"
+    local static = db.recommendationMode == "static"
+    return {
+        mode = static and "static" or objective,
+        objective = objective,
+        static = static,
+        cheapest = not static and objective == "cheapest",
+        smartest = not static and objective == "smartest",
+        availableOnly = db.recommendationAvailableOnly == true,
+        availableEnabled = not static,
+    }
+end
+
+local function getRecommendationMode()
+    return getRecommendationState().mode
 end
 
 local function isOptimizedMode(mode)
-    return mode == "dynamic" or mode == "available"
+    return mode == "cheapest" or mode == "smartest"
+end
+
+local function isAvailableOnly()
+    return getRecommendationState().availableOnly == true
 end
 
 local function getDetailMode()
@@ -1673,11 +1692,29 @@ local function setModeButtonState(button, selected)
 end
 
 local function updateModeControls()
-    local mode = getRecommendationMode()
+    local state = getRecommendationState()
+    local mode = state.mode
 
-    setModeButtonState(MainFrameCoreCheapestMode, mode == "dynamic")
-    setModeButtonState(MainFrameCoreAvailableMode, mode == "available")
+    setModeButtonState(MainFrameCoreCheapestMode, mode == "cheapest")
+    setModeButtonState(MainFrameCoreSmartestMode, mode == "smartest")
     setModeButtonState(MainFrameCoreStaticMode, mode == "static")
+
+    if MainFrameCoreAvailableOnly then
+        MainFrameCoreAvailableOnly:SetChecked(state.availableOnly)
+        if state.availableEnabled then
+            MainFrameCoreAvailableOnly:Enable()
+            MainFrameCoreAvailableOnly:SetAlpha(1)
+            if txtAvailableOnlyLabel then
+                txtAvailableOnlyLabel:SetTextColor(0.78, 0.78, 0.78)
+            end
+        else
+            MainFrameCoreAvailableOnly:Disable()
+            MainFrameCoreAvailableOnly:SetAlpha(0.45)
+            if txtAvailableOnlyLabel then
+                txtAvailableOnlyLabel:SetTextColor(0.45, 0.45, 0.45)
+            end
+        end
+    end
 
     if MainFrameCoreRoute then
         local staticRouteAvailable = mode == "static"
