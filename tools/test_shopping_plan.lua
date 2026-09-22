@@ -79,6 +79,10 @@ local consumer = {
 
 local route = {
     complete = true,
+    totalGrossLevelingCost = 900,
+    totalResaleCredit = 200,
+    totalEffectiveLevelingCost = 700,
+    totalEstimatedResaleSurplus = 50,
     segments = {
         { recipeID = "producer", skillStart = 0, skillEnd = 1, expectedMaterialCost = 250 },
         { recipeID = "consumer", skillStart = 1, skillEnd = 2, expectedMaterialCost = 350 },
@@ -110,6 +114,10 @@ end
 assertEqual(segmentTotal, plan.estimatedMarketValueCost, "total equals cost segments")
 assertEqual(plan.acquisitionCost, 50, "recipe plus training acquisition")
 assertEqual(plan.totalExpectedCrafts, 3, "total expected crafts")
+assertEqual(plan.totalGrossLevelingCost, 900, "route gross leveling total carried into plan")
+assertEqual(plan.totalResaleCredit, 200, "route resale credit carried into plan")
+assertEqual(plan.totalEffectiveLevelingCost, 700, "route effective total carried into plan")
+assertEqual(plan.totalEstimatedResaleSurplus, 50, "route surplus carried into plan")
 
 local base = findMaterial(plan, 1001)
 assertEqual(base.totalExpectedQuantity, 6, "aggregate repeated reagent quantity")
