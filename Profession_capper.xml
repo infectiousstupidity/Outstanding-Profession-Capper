@@ -420,7 +420,7 @@
           <Anchors><Anchor point="TOP"><Offset><AbsDimension x="0" y="-168"/></Offset></Anchor></Anchors>
         </FontString>
         <FontString name="txtCompareFooter" inherits="GameFontDisableSmall" justifyH="RIGHT">
-          <Size><AbsDimension x="608" y="34"/></Size>
+          <Size><AbsDimension x="450" y="34"/></Size>
           <Anchors><Anchor point="BOTTOMRIGHT"><Offset><AbsDimension x="-16" y="14"/></Offset></Anchor></Anchors>
         </FontString>
       </Layer>
