@@ -3264,6 +3264,7 @@ local function renderStaticRouteView()
     setRouteHeadersVisible(true)
     MainFrameCoreCompareShowMore:Hide()
     txtCompareSubtitle:SetText(addonTable.L["static_route_subtitle"])
+    txtCompareRouteCostHeader:SetText(addonTable.L["compare_route_cost_header"])
 
     local playerLevel
     if type(UnitLevel) == "function" then
@@ -4173,6 +4174,12 @@ function fnOnLoad()
     if MainFrameCoreCheapestMode then
         MainFrameCoreCheapestMode:SetText(L["mode_cheapest"])
     end
+    if MainFrameCoreSmartestMode then
+        MainFrameCoreSmartestMode:SetText(L["mode_smartest"])
+    end
+    if txtAvailableOnlyLabel then
+        txtAvailableOnlyLabel:SetText(L["mode_available_only"])
+    end
     if MainFrameCoreStaticMode then
         MainFrameCoreStaticMode:SetText(L["mode_static"])
     end
@@ -4386,22 +4393,24 @@ local function displayRecipeInternal()
         local requestedDynamic = isOptimizedMode(recommendationMode)
         if usingDynamic then
             txtCraftStats:SetText("")
-            txtRecipeStatus:SetText(
-                recommendationMode == "available"
-                    and L["available_preferred"]
-                    or L["dynamic_preferred"]
-            )
+            local status = recommendationMode == "smartest"
+                and L["smartest_preferred"]
+                or L["cheapest_preferred"]
+            if isAvailableOnly() then
+                status = status .. L["available_filter_suffix"]
+            end
+            txtRecipeStatus:SetText(status)
             txtRecipeStatus:SetTextColor(0.45, 1, 0.35)
         elseif requestedDynamic then
             txtCraftStats:SetText(string.format(L[statsKey], formatSkillUps(skillUpsNeeded), data.numAvailable, plannedCrafts))
             if dynamicRecommendation and dynamicRecommendation.calculating then
                 txtRecipeStatus:SetText(L["dynamic_calculating_short"])
+            elseif isAvailableOnly() then
+                txtRecipeStatus:SetText(L["available_filter_fallback_short"])
+            elseif recommendationMode == "smartest" then
+                txtRecipeStatus:SetText(L["smartest_fallback_short"])
             else
-                txtRecipeStatus:SetText(
-                    recommendationMode == "available"
-                        and L["available_fallback_short"]
-                        or L["dynamic_fallback_short"]
-                )
+                txtRecipeStatus:SetText(L["dynamic_fallback_short"])
             end
             txtRecipeStatus:SetTextColor(1, 0.72, 0.22)
         else
