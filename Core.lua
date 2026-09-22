@@ -1840,6 +1840,25 @@ local function smartestEconomics(cost)
     return addonTable.getSmartestEconomicsPresentation(cost)
 end
 
+local function currentSmartestEconomics()
+    local economics = smartestEconomics(
+        dynamicRecommendation and dynamicRecommendation.currentCost
+    )
+    local segment = dynamicRecommendation and dynamicRecommendation.currentSegment
+    if economics
+        and segment
+        and tonumber(segment.effectiveLevelingCost)
+    then
+        local skillUps = math.max(
+            1,
+            (tonumber(segment.skillEnd) or 0) - (tonumber(segment.skillStart) or 0)
+        )
+        economics.effectiveCostPerSkillUp =
+            math.max(0, tonumber(segment.effectiveLevelingCost) or 0) / skillUps
+    end
+    return economics
+end
+
 local function smartestResaleWarning(economics)
     if not economics or economics.method ~= "scroll" then
         return ""
@@ -1860,7 +1879,7 @@ local function smartestResaleWarning(economics)
     return addonTable.L["smartest_market_disclaimer"]
 end
 
-local function addSmartestEconomicsToTooltip(cost)
+local function addSmartestEconomicsToTooltip(cost, effectiveCostPerSkillUp)
     local economics = smartestEconomics(cost)
     if not economics then
         return
@@ -1900,7 +1919,11 @@ local function addSmartestEconomicsToTooltip(cost)
 
     GameTooltip:AddLine(string.format(
         addonTable.L["smartest_tooltip_effective"],
-        formatEconomicCopper(economics.effectiveCostPerSkillUp)
+        formatEconomicCopper(
+            effectiveCostPerSkillUp ~= nil
+                and math.max(0, tonumber(effectiveCostPerSkillUp) or 0)
+                or economics.effectiveCostPerSkillUp
+        )
     ), 0.55, 1, 0.45, true)
 
     if economics.hasPositiveSurplus then
@@ -2002,7 +2025,7 @@ local function updateDetailPanel()
     end
 
     if mode == "smartest" then
-        local economics = smartestEconomics(dynamicRecommendation.currentCost)
+        local economics = currentSmartestEconomics()
         if not economics then
             txtDetailsSource:SetText("")
             txtDetailsRoute:SetText(addonTable.L["details_route_incomplete"])
@@ -2157,7 +2180,7 @@ local function updateRecommendationSummary()
     if isOptimizedMode(mode) and dynamicRecommendation and dynamicRecommendation.available then
         local cost = dynamicRecommendation.currentCost or {}
         if mode == "smartest" then
-            local economics = smartestEconomics(cost)
+            local economics = currentSmartestEconomics()
             if economics then
                 txtMetricApplicationValue:SetText("~" .. formatEconomicCopper(
                     economics.grossCostPerCraft
@@ -2595,7 +2618,10 @@ local function compareRowOnEnter(self)
     end
     if getRecommendationMode() == "smartest" then
         GameTooltip:AddLine(difficulty, 0.82, 0.82, 0.82, true)
-        addSmartestEconomicsToTooltip(candidate.cost)
+        addSmartestEconomicsToTooltip(
+            candidate.cost,
+            candidate.expectedCostPerSkillUp
+        )
     else
         GameTooltip:AddLine(string.format(
             addonTable.L["compare_material_costs"],
@@ -2772,7 +2798,16 @@ local function routeRowOnEnter(self)
             and self.rowType == "craft"
             and segment.firstCost
         then
-            addSmartestEconomicsToTooltip(segment.firstCost)
+            local skillUps = math.max(
+                1,
+                (tonumber(segment.skillEnd) or 0) - (tonumber(segment.skillStart) or 0)
+            )
+            addSmartestEconomicsToTooltip(
+                segment.firstCost,
+                tonumber(segment.effectiveLevelingCost)
+                    and (tonumber(segment.effectiveLevelingCost) / skillUps)
+                    or nil
+            )
         end
 
         if self.rowType == "static"
@@ -3179,8 +3214,11 @@ local function renderRouteView()
             ))
             row.step:SetTextColor(0.95, 0.82, 0.42)
             row.crafts:SetText(addonTable.L["metric_unknown"])
-            if segment.acquisitionCost ~= nil then
-                row.cost:SetText("~" .. addonTable.formatCopperShort(segment.acquisitionCost))
+            local acquisitionDisplayCost = smartest
+                and (segment.acquisitionMarketCost or segment.acquisitionCost)
+                or segment.acquisitionCost
+            if acquisitionDisplayCost ~= nil then
+                row.cost:SetText("~" .. addonTable.formatCopperShort(acquisitionDisplayCost))
             else
                 row.cost:SetText(addonTable.L["metric_unknown"])
             end
@@ -3213,7 +3251,7 @@ local function renderRouteView()
                 craftCost = math.max(
                     0,
                     (tonumber(segment.effectiveLevelingCost) or 0)
-                        - (tonumber(segment.acquisitionCost) or 0)
+                        - (tonumber(segment.acquisitionMarketCost) or 0)
                 )
             else
                 craftCost = math.max(
