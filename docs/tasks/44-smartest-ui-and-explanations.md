@@ -153,7 +153,7 @@ Fix the recorded issues, rerun tests and required visual checks, record evidence
 
 ### Agent 1 implementation
 
-Implemented on PR #2, with implementation head `d99ab475cd3e28db8560cc49c40f114eb940a4e8`.
+Implemented on PR #2 and merged to `master` as `98705a24153bea3389e3ff5d758c1bcc0191c1a1`. Final validated PR head: `3fc1dcf3a36947162624121519a9c26967bf011e`.
 
 Implemented:
 - the main mode row is now Cheapest / Smartest / Static;
@@ -170,7 +170,7 @@ Automated validation:
 - `tools/test_recommendation_presentation.lua` covers saved-setting migration/control state, Available-now behavior, direct execution, vellum execution, missing/suspicious resale evidence, zero effective cost with positive surplus, Compare presentation, Full route totals, and Static presentation;
 - `tools/test_route_solver.lua` verifies Smartest gross/resale-credit/effective route totals;
 - `tools/test_shopping_plan.lua` verifies those totals reach the Full route read model;
-- GitHub Actions `Validate addon` run 131 passed on implementation head `d99ab475cd3e28db8560cc49c40f114eb940a4e8`, including Lua 5.1 syntax, all pre-existing tests/validators, the new presentation suite, and Task 43 adversarial regressions.
+- GitHub Actions `Validate addon` run 134 passed on final PR head `3fc1dcf3a36947162624121519a9c26967bf011e`, including Lua 5.1 syntax, all pre-existing tests/validators, the new presentation suite, and Task 43 adversarial regressions.
 
 Still required before DONE:
 - independent Agent 2 review;
