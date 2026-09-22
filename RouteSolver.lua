@@ -580,6 +580,8 @@ local function buildSegments(actions)
                 last.expectedMaterialCost = last.expectedMaterialCost + numberOrZero(action.marketCost)
                 last.expectedGoldNeededNow = last.expectedGoldNeededNow + numberOrZero(action.goldCost)
                 last.acquisitionCost = last.acquisitionCost + numberOrZero(action.acquisitionGoldCost)
+                last.acquisitionMarketCost = last.acquisitionMarketCost
+                    + numberOrZero(action.acquisitionMarketCost)
                 last.effectiveLevelingCost = last.effectiveLevelingCost
                     + numberOrZero(action.effectiveLevelingCost)
                 last.estimatedResaleCredit = last.estimatedResaleCredit
@@ -601,6 +603,7 @@ local function buildSegments(actions)
                     expectedMaterialCost = numberOrZero(action.marketCost),
                     expectedGoldNeededNow = numberOrZero(action.goldCost),
                     acquisitionCost = numberOrZero(action.acquisitionGoldCost),
+                    acquisitionMarketCost = numberOrZero(action.acquisitionMarketCost),
                     effectiveLevelingCost = numberOrZero(action.effectiveLevelingCost),
                     estimatedResaleCredit = actionResaleCredit(action),
                     estimatedResaleSurplus = numberOrZero(action.estimatedResaleSurplus),
@@ -967,10 +970,13 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
     nextRecipeMask = normalizeRecipeMask(job.recipeCodec, nextRecipeMask, nextSkill)
 
     local acquisitionGoldCost = 0
+    local acquisitionMarketCost = 0
     for acquiredIndex = 1, table.getn(acquiredNow) do
         if acquiredNow[acquiredIndex].kind == "recipe_acquisition" then
             acquisitionGoldCost = acquisitionGoldCost
                 + numberOrZero(acquiredNow[acquiredIndex].goldCost)
+            acquisitionMarketCost = acquisitionMarketCost
+                + numberOrZero(acquiredNow[acquiredIndex].marketCost)
         end
     end
 
@@ -1019,6 +1025,7 @@ local function jobEvaluateCraft(job, node, recipe, recipeIndex)
             effectiveLevelingCost = edgeEffective,
             estimatedResaleSurplus = edgeSurplus,
             acquisitionGoldCost = acquisitionGoldCost,
+            acquisitionMarketCost = acquisitionMarketCost,
             quality = cost.quality,
             cost = cost,
         },
