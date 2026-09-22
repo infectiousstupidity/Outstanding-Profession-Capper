@@ -923,15 +923,38 @@ local function applyLiveSkillType(cost, recipe, skill, currentSkill)
     cost.skillUpChance = chance
 
     if chance and chance > 0 then
-        cost.expectedCraftsPerSkillUp = 1 / chance
+        local expectedCrafts = 1 / chance
+        cost.expectedCraftsPerSkillUp = expectedCrafts
         if cost.materialMarketValuePerCraft ~= nil then
-            cost.expectedMarketCostPerSkillUp = cost.materialMarketValuePerCraft / chance
+            cost.expectedMarketCostPerSkillUp = cost.materialMarketValuePerCraft * expectedCrafts
         end
         if cost.goldNeededNowPerCraft ~= nil then
-            cost.expectedGoldNeededNowPerSkillUp = cost.goldNeededNowPerCraft / chance
+            cost.expectedGoldNeededNowPerSkillUp = cost.goldNeededNowPerCraft * expectedCrafts
         end
         if cost.currentPurchaseCostPerCraft ~= nil then
-            cost.expectedCurrentPurchaseCostPerSkillUp = cost.currentPurchaseCostPerCraft / chance
+            cost.expectedCurrentPurchaseCostPerSkillUp = cost.currentPurchaseCostPerCraft * expectedCrafts
+        end
+
+        if cost.effectiveCostPerCraft ~= nil then
+            local effectiveCost = math.max(0, tonumber(cost.effectiveCostPerCraft) or 0)
+            local fixedOneTimeCost = math.max(
+                0,
+                tonumber(cost.fixedOneTimeMaterialCost) or 0
+            )
+            cost.expectedEffectiveCostPerSkillUp =
+                effectiveCost * expectedCrafts + fixedOneTimeCost
+        end
+        if cost.estimatedSurplus ~= nil then
+            local estimatedSurplus = math.max(0, tonumber(cost.estimatedSurplus) or 0)
+            cost.expectedEstimatedSurplusPerSkillUp =
+                estimatedSurplus * expectedCrafts
+        end
+
+        if type(cost.executionEconomics) == "table" then
+            cost.executionEconomics.expectedEffectiveCostPerSkillUp =
+                cost.expectedEffectiveCostPerSkillUp
+            cost.executionEconomics.expectedEstimatedSurplusPerSkillUp =
+                cost.expectedEstimatedSurplusPerSkillUp
         end
     end
 

@@ -1,6 +1,6 @@
 # Task 42 — Resale-aware Enchanting craft economics
 
-Status: FIX  
+Status: DONE  
 Phase: 9 — Resale-aware Smartest optimization  
 Depends on: Tasks 40 and 41
 
@@ -219,4 +219,15 @@ Task 42 moves to **FIX** for Agent 3. Task 43 remains blocked and was not starte
 
 ### Agent 3 fixes
 
-Pending.
+Resolved only the two findings recorded by Agent 2.
+
+- Live skill-up reconciliation now rescales all Task 42 chance-derived fields from the final numeric chance used by the production recommendation path. `expectedEffectiveCostPerSkillUp` preserves fixed one-time material cost outside the per-craft multiplier, `expectedEstimatedSurplusPerSkillUp` uses the same final expected craft count, and the mirrored `executionEconomics` values are kept consistent.
+- Informational surplus now follows the Task 42 result contract: `estimatedSurplus = max(0, resaleEstimate - scrollGrossCost)`. Optimization remains conservative because `resaleCredit` still uses only Task 41's optimization-eligible value and is still capped at `scrollGrossCost`.
+- Added recipe-cost regressions proving stale and suspicious high resale estimates retain informational surplus while granting zero route credit and leaving direct execution selected.
+- Added a dynamic recommendation production-path regression where live `medium` difficulty reconciles a stale `green` cost result from 40% to 75% skill-up chance, then verifies legacy expected cost, Task 42 expected effective cost/surplus, and the mirrored execution-economics values all use the same final chance.
+- No Cheapest objective/order, vellum compatibility, price-provider/cache ownership, one-time cost treatment, or Task 43 implementation was changed.
+
+Validation:
+- Full repository validation must pass on the Agent 3 fix commit before this task is considered closed.
+
+Task 42 is DONE after the Agent 3 fix commit passes full validation. Task 43 becomes the next available task but was not started.

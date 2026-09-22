@@ -54,6 +54,15 @@ addonTable.calculateRecipeCost = function(recipe, skill, _, _, options)
             expectedCurrentPurchaseCostPerSkillUp = 750,
             materialMarketValuePerCraft = 300,
             expectedMarketCostPerSkillUp = 750,
+            effectiveCostPerCraft = 60,
+            fixedOneTimeMaterialCost = 10,
+            estimatedSurplus = 30,
+            expectedEffectiveCostPerSkillUp = 160,
+            expectedEstimatedSurplusPerSkillUp = 75,
+            executionEconomics = {
+                expectedEffectiveCostPerSkillUp = 160,
+                expectedEstimatedSurplusPerSkillUp = 75,
+            },
             quality = "complete",
             reagentCosts = {},
             availableNow = true,
@@ -184,6 +193,12 @@ assert(recommendation.candidates[1].recipeID == 11, "candidates should be sorted
 assert(recommendation.candidates[2].recipeID == 10, "second priced orange/yellow recipe")
 assert(recommendation.candidates[2].difficulty == "yellow", "live game difficulty must override stale static color")
 assert(math.abs(recommendation.candidates[2].skillUpChance - 0.75) < 0.0001, "mismatched live yellow uses safe current estimate")
+assert(math.abs(recommendation.candidates[2].cost.expectedCraftsPerSkillUp - (4 / 3)) < 0.0001, "live yellow rescale uses final chance")
+assert(math.abs(recommendation.candidates[2].cost.expectedCurrentPurchaseCostPerSkillUp - 400) < 0.0001, "legacy expected cost uses final live chance")
+assert(math.abs(recommendation.candidates[2].cost.expectedEffectiveCostPerSkillUp - 90) < 0.0001, "Task 42 effective cost uses final live chance")
+assert(math.abs(recommendation.candidates[2].cost.expectedEstimatedSurplusPerSkillUp - 40) < 0.0001, "Task 42 surplus uses final live chance")
+assert(math.abs(recommendation.candidates[2].cost.executionEconomics.expectedEffectiveCostPerSkillUp - 90) < 0.0001, "mirrored effective economics use final live chance")
+assert(math.abs(recommendation.candidates[2].cost.executionEconomics.expectedEstimatedSurplusPerSkillUp - 40) < 0.0001, "mirrored surplus economics use final live chance")
 assert(recommendation.routeComplete == false, "full route should remain explicitly incomplete")
 assert(recommendation.routeReason == "no_complete_route", "full-route failure reason should be preserved")
 assert(solverCalls == 1, "solver should still attempt full route")
