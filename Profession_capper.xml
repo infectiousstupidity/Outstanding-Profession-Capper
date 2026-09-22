@@ -227,7 +227,7 @@
       <Button name="$parentCheapestMode" text="Cheapest" inherits="UIPanelButtonTemplate">
         <Size><AbsDimension x="70" y="25"/></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="244" y="-52"/></Offset></Anchor></Anchors>
-        <Scripts><OnClick>setRecommendationMode("dynamic");</OnClick></Scripts>
+        <Scripts><OnClick>setRecommendationMode("cheapest");</OnClick></Scripts>
       </Button>
       <Button name="$parentSmartestMode" text="Smartest" inherits="UIPanelButtonTemplate">
         <Size><AbsDimension x="76" y="25"/></Size>
