@@ -1,6 +1,6 @@
 # Task 43 — Smartest objective and availability filter
 
-Status: FIX  
+Status: DONE  
 Phase: 9 — Resale-aware Smartest optimization  
 Depends on: Tasks 39 and 42
 
@@ -247,4 +247,17 @@ Task 43 is **FIX**. Task 44 remains blocked until Agent 3 fixes the three findin
 
 ### Agent 3 fixes
 
-Pending.
+Resolved only the three Agent 2 findings in commit `44a22cc7ef93b76dd3fffb8efc21b07486526130` (`fix: resolve task 43 review findings`).
+
+Fixes:
+- Cheapest current-recipe fallback now always uses the historical current-purchase-cost ordering. `availableOnly` only filters candidates by `availableNow`; it no longer substitutes a different gold-needed-now objective.
+- Smartest current-recipe fallback now adds unapplied recipe-acquisition market cost to expected effective leveling cost before comparison, matching the authoritative route edge semantics. Reusable/tool cost remains inside Task 42 effective economics rather than being double-counted.
+- Smartest route evaluation now rejects malformed or non-finite effective cost, expected crafts, selected-scroll surplus, recipe-acquisition cost, and training cost. Negative Smartest costs still report `negative_smartest_edge`; malformed values report `malformed_smartest_edge`. Aggregate Smartest totals are also checked for non-finite overflow before publication.
+
+Validation:
+- GitHub Actions `Validate addon` run 123 completed successfully on fix commit `44a22cc7ef93b76dd3fffb8efc21b07486526130`.
+- Lua 5.1 syntax and every pre-existing repository test/validator passed.
+- The Agent 2 adversarial suite `tools/test_task43_review.lua` also passed, including the three previously failing regressions plus pruning/determinism/migration checks.
+- No Task 44 code was implemented.
+
+Task 43 is **DONE**. Task 44 is unblocked and is the next available Phase 9 task.
